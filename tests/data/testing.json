@@ -1,0 +1,59 @@
+{
+    "name": "testing",
+    "plan": [
+        "Step 1",
+        "Step 2"
+    ],
+    "steps": [
+        {
+            "teaching_material": "## Step Content",
+            "questions": {
+                "questions": [
+                    {
+                        "question": "Q1?",
+                        "options": [
+                            "A",
+                            "B"
+                        ],
+                        "correct_answer": "A"
+                    }
+                ]
+            },
+            "user_answers": [
+                "A"
+            ],
+            "feedback": [
+                {
+                    "is_correct": true,
+                    "feedback": "That's correct! Great job."
+                }
+            ],
+            "score": 100.0
+        },
+        {
+            "teaching_material": "## Step Content",
+            "questions": {
+                "questions": [
+                    {
+                        "question": "Q1?",
+                        "options": [
+                            "A",
+                            "B"
+                        ],
+                        "correct_answer": "A"
+                    }
+                ]
+            },
+            "user_answers": [
+                "C"
+            ],
+            "feedback": [
+                {
+                    "is_correct": false,
+                    "feedback": "Not quite. The correct answer was A. Keep trying!"
+                }
+            ],
+            "score": 0.0
+        }
+    ]
+}
