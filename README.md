@@ -13,30 +13,32 @@ This is a Flask-based web application that serves as a proof-of-concept for a pe
 - **Q&A Chat:** Ask questions about the study material and get answers from an AI assistant.
 - **Instant Feedback:** Receive immediate feedback on your answers.
 - **Local AI Integration:** Designed to connect with locally-hosted AI services (LLM, TTS) for privacy and control.
+- **Export to Markdown:** At the end of a course, you can export the entire study plan and content to a markdown file, perfect for importing into note-taking apps like Notion, Obsidian, or NotebookLM.
 - **Comprehensive Test Suite:** Includes a full suite of unit tests to verify application logic.
 
-## Getting Started
+## Setup and Installation
 
 Follow these instructions to get the application running on your local machine.
 
-### Prerequisites
+### 1. Clone the Repository
 
-- Python 3.9+
-- Access to a running instance of:
-  - An Ollama-compatible LLM service.
-  - A Coqui or Piper TTS service.
-
-### 1. Setup Environment Variables
-
-The application is configured using a `.env` file. Copy the example file and edit it with the URLs and models for your local AI services.
+First, clone this repository to your local machine:
 
 ```bash
-cp .env.example .env
+git clone <repository-url>
+cd <repository-directory>
 ```
 
-Now, open the `.env` file and customize the settings for your environment.
+### 2. Create a Conda Environment
 
-### 2. Install Dependencies
+We recommend using Conda to manage your Python environment. Create and activate a new environment with Python 3.9:
+
+```bash
+conda create -n personalized-learning python=3.9
+conda activate personalized-learning
+```
+
+### 3. Install Dependencies
 
 Install the required Python packages using pip:
 
@@ -44,7 +46,49 @@ Install the required Python packages using pip:
 pip install -r requirements.txt
 ```
 
-### 3. Run the Application
+### 4. Setup Environment Variables
+
+The application is configured using a `.env` file. Copy the example file and edit it with the URLs and models for your local AI services.
+
+```bash
+cp .env.example .env
+```
+
+Now, open the `.env` file and customize the settings for your environment. You will need to provide the URLs for your Ollama and TTS services.
+
+## Running the Application
+
+To run the application, you need to have three components running: the Ollama LLM server, the Coqui TTS server, and the main Flask application.
+
+### 1. Ollama (LLM Server)
+
+Ensure your Ollama instance is running and accessible over the network. If you are running Ollama in Docker, make sure to expose its port (default 11434).
+
+You can install Ollama from the official website: [https://ollama.com/](https://ollama.com/)
+
+For GPU support with Docker, you can run Ollama using the following command:
+```bash
+docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
+```
+
+### 2. Coqui TTS Server (TTS)
+
+This service provides high-quality, human-like text-to-speech. The repository includes a `Dockerfile` for Coqui TTS in the `coqui_tts` directory.
+
+First, build the Docker image:
+```bash
+cd coqui_tts
+sudo docker build -t coqui-chanakya-tts .
+cd ..
+```
+
+Then, run the Docker container:
+```bash
+sudo docker run -d -p 5001:5002 --gpus all --restart unless-stopped --name coqui-tts-server coqui-chanakya-tts
+```
+This will start the TTS server on port 5001 of your host machine, connected to port 5002 inside the container.
+
+### 3. Main Application
 
 Once the dependencies are installed and your `.env` file is configured, you can start the Flask development server:
 
@@ -52,11 +96,11 @@ Once the dependencies are installed and your `.env` file is configured, you can 
 python app.py
 ```
 
-The application will be available at `http://127.0.0.1:5001`.
+The application will be available at `http://127.0.0.1:5002`.
 
-### 4. Run the Tests
+## For Developers: Running Tests
 
-This project includes a comprehensive test suite that mocks the external AI services, allowing you to verify the application's internal logic without needing a live connection to them.
+This project includes a comprehensive test suite that mocks the external AI services. This allows you to verify the application's internal logic without needing a live connection to the AI services.
 
 To run the tests, execute the following command in your terminal:
 
