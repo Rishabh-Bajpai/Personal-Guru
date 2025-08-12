@@ -37,7 +37,7 @@ def generate_audio(text, step_index, tts_engine="coqui"):
             os.remove(os.path.join('static', filename))
 
     output_filename = os.path.join("static", f"step_{step_index}.wav")
-    server_url = os.getenv("COQUI_TTS_URL")
+    server_url = os.getenv("TTS_URL")
     if not server_url:
         return None, "Coqui TTS URL not set."
 
