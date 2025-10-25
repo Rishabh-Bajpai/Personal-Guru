@@ -59,13 +59,14 @@ def generate_audio(text, step_index, tts_engine="coqui"):
 def index():
     if request.method == 'POST':
         topic_name = request.form['topic']
+        user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
 
         # Check if topic already exists
         if load_topic(topic_name):
             return redirect(url_for('learn_topic', topic_name=topic_name, step_index=0))
 
         # Use the PlannerAgent to generate the study plan
-        plan_steps, error = planner.generate_study_plan(topic_name)
+        plan_steps, error = planner.generate_study_plan(topic_name, user_background)
         if error:
             return f"<h1>Error Generating Plan</h1><p>{plan_steps}</p>"
 
@@ -80,6 +81,13 @@ def index():
 
     topics = get_all_topics()
     return render_template('index.html', topics=topics)
+
+@app.route('/background', methods=['GET', 'POST'])
+def set_background():
+    if request.method == 'POST':
+        session['user_background'] = request.form['user_background']
+        return redirect(url_for('index'))
+    return render_template('background.html')
 
 @app.route('/learn/<topic_name>/<int:step_index>')
 def learn_topic(topic_name, step_index):

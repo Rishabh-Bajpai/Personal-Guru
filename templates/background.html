@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Set Your Background{% endblock %}
+
+{% block content %}
+<h1>Set Your Learning Background</h1>
+<form method="post">
+    <textarea name="user_background" rows="5" cols="50" placeholder="Describe your background... (e.g., beginner, intermediate in Python)">{{ session.get('user_background', '') }}</textarea>
+    <br>
+    <input type="submit" value="Save Background" class="button">
+</form>
+{% endblock %}
