@@ -60,6 +60,7 @@ def index():
     if request.method == 'POST':
         topic_name = request.form['topic']
         user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+        print(f"DEBUG: User background in index: {user_background}")
 
         # Check if topic already exists
         if load_topic(topic_name):
@@ -87,7 +88,9 @@ def set_background():
     if request.method == 'POST':
         session['user_background'] = request.form['user_background']
         return redirect(url_for('index'))
-    return render_template('background.html')
+
+    current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    return render_template('background.html', user_background=current_background)
 
 @app.route('/learn/<topic_name>/<int:step_index>')
 def learn_topic(topic_name, step_index):

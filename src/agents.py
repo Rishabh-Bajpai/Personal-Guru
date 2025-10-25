@@ -47,6 +47,7 @@ def _call_ollama(prompt, is_json=False):
 
 class PlannerAgent:
     def generate_study_plan(self, topic, user_background):
+        print(f"DEBUG: Generating study plan for user with background: {user_background}")
         prompt = f"""
 You are an expert in creating personalized study plans. For the topic '{topic}', create a high-level learning plan with 4-7 manageable steps, depending on the complexity of the topic.
 The user's background is: '{user_background}'
