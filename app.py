@@ -4,6 +4,9 @@ import uuid
 from flask import Flask, render_template, request, url_for, session, redirect, make_response
 from dotenv import load_dotenv
 import requests
+from weasyprint import HTML
+import datetime
+from markdown_it import MarkdownIt
 
 # Import the agents
 from src.agents import PlannerAgent, AssessorAgent, FeedbackAgent, ChatAgent, TopicTeachingAgent
@@ -20,6 +23,7 @@ assessor = AssessorAgent()
 feedback_agent = FeedbackAgent()
 chat_agent = ChatAgent()
 teacher = TopicTeachingAgent()
+md = MarkdownIt()
 
 # Ensure the static directory exists
 if not os.path.exists('static'):
@@ -199,18 +203,9 @@ def chat(topic_name, step_index):
 
 @app.route('/complete/<topic_name>')
 def complete_topic(topic_name):
-    topic_data = load_topic(topic_name)
+    topic_data, average_score = _get_topic_data_and_score(topic_name)
     if not topic_data:
         return "Topic not found", 404
-
-    total_score = 0
-    answered_questions = 0
-    for step in topic_data['steps']:
-        if 'score' in step and step.get('user_answers'):
-            total_score += step['score']
-            answered_questions += 1
-
-    average_score = (total_score / answered_questions) if answered_questions > 0 else 0
 
     return render_template('complete.html', topic_name=topic_name, average_score=average_score)
 
@@ -228,6 +223,66 @@ def export_topic(topic_name):
     response = make_response(markdown_content)
     response.headers["Content-Disposition"] = f"attachment; filename={topic_name}.md"
     response.headers["Content-Type"] = "text/markdown"
+    return response
+
+def _get_topic_data_and_score(topic_name):
+    topic_data = load_topic(topic_name)
+    if not topic_data:
+        return None, 0
+
+    total_score = 0
+    answered_questions = 0
+    for step in topic_data['steps']:
+        if 'teaching_material' in step:
+            step['teaching_material'] = md.render(step['teaching_material'])
+        if 'score' in step and step.get('user_answers'):
+            total_score += step['score']
+            answered_questions += 1
+
+    average_score = (total_score / answered_questions) if answered_questions > 0 else 0
+    return topic_data, average_score
+
+@app.route('/export/<topic_name>/pdf')
+def export_topic_pdf(topic_name):
+    topic_data, average_score = _get_topic_data_and_score(topic_name)
+    if not topic_data:
+        return "Topic not found", 404
+
+    html = render_template('pdf_export_template.html', topic=topic_data, average_score=average_score)
+    pdf = HTML(string=html).write_pdf(
+        document_metadata={
+            'title': topic_name,
+            'created': datetime.date.today().isoformat()
+        }
+    )
+
+    response = make_response(pdf)
+    response.headers["Content-Disposition"] = f"attachment; filename={topic_name}.pdf"
+    response.headers["Content-Type"] = "application/pdf"
+    return response
+
+@app.route('/export/<topic_name>/xml')
+def export_topic_xml(topic_name):
+    topic_data, average_score = _get_topic_data_and_score(topic_name)
+    if not topic_data:
+        return "Topic not found", 404
+
+    xml = render_template('xml_export_template.xml', topic=topic_data, average_score=average_score)
+    response = make_response(xml)
+    response.headers["Content-Disposition"] = f"attachment; filename={topic_name}.xml"
+    response.headers["Content-Type"] = "application/xml"
+    return response
+
+@app.route('/export/<topic_name>/html')
+def export_topic_html(topic_name):
+    topic_data, average_score = _get_topic_data_and_score(topic_name)
+    if not topic_data:
+        return "Topic not found", 404
+
+    html = render_template('html_export_template.html', topic=topic_data, average_score=average_score)
+    response = make_response(html)
+    response.headers["Content-Disposition"] = f"attachment; filename={topic_name}.html"
+    response.headers["Content-Type"] = "text/html"
     return response
 
 @app.route('/delete/<topic_name>')
