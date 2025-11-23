@@ -4,3 +4,4 @@ requests
 pytest
 pytest-mock
 WeasyPrint
+markdown-it-py

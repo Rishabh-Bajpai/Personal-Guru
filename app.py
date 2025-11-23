@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import requests
 from weasyprint import HTML
 import datetime
+from markdown_it import MarkdownIt
 
 # Import the agents
 from src.agents import PlannerAgent, AssessorAgent, FeedbackAgent, ChatAgent, TopicTeachingAgent
@@ -22,6 +23,7 @@ assessor = AssessorAgent()
 feedback_agent = FeedbackAgent()
 chat_agent = ChatAgent()
 teacher = TopicTeachingAgent()
+md = MarkdownIt()
 
 # Ensure the static directory exists
 if not os.path.exists('static'):
@@ -201,18 +203,9 @@ def chat(topic_name, step_index):
 
 @app.route('/complete/<topic_name>')
 def complete_topic(topic_name):
-    topic_data = load_topic(topic_name)
+    topic_data, average_score = _get_topic_data_and_score(topic_name)
     if not topic_data:
         return "Topic not found", 404
-
-    total_score = 0
-    answered_questions = 0
-    for step in topic_data['steps']:
-        if 'score' in step and step.get('user_answers'):
-            total_score += step['score']
-            answered_questions += 1
-
-    average_score = (total_score / answered_questions) if answered_questions > 0 else 0
 
     return render_template('complete.html', topic_name=topic_name, average_score=average_score)
 
@@ -240,6 +233,8 @@ def _get_topic_data_and_score(topic_name):
     total_score = 0
     answered_questions = 0
     for step in topic_data['steps']:
+        if 'teaching_material' in step:
+            step['teaching_material'] = md.render(step['teaching_material'])
         if 'score' in step and step.get('user_answers'):
             total_score += step['score']
             answered_questions += 1

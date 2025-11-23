@@ -6,7 +6,7 @@
         {% for step in topic.steps %}
         <step>
             <title>{{ topic.plan[loop.index0] }}</title>
-            <content>{{ step.teaching_material }}</content>
+            <content><![CDATA[{{ step.teaching_material | safe }}]]></content>
             {% if step.questions %}
             <questions>
                 {% for question in step.questions.questions %}
