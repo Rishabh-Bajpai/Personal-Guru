@@ -9,8 +9,6 @@
 <div class="navigation">
     <a href="{{ url_for('export_topic', topic_name=topic_name) }}" class="button">Export as Markdown</a>
     <a href="{{ url_for('export_topic_pdf', topic_name=topic_name) }}" class="button">Export as PDF</a>
-    <a href="{{ url_for('export_topic_xml', topic_name=topic_name) }}" class="button">Export as XML</a>
-    <a href="{{ url_for('export_topic_html', topic_name=topic_name) }}" class="button">Export as HTML</a>
     <a href="{{ url_for('index') }}" class="button">Back to Home</a>
 </div>
 {% endblock %}
