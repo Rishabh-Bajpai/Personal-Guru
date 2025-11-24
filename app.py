@@ -261,30 +261,6 @@ def export_topic_pdf(topic_name):
     response.headers["Content-Type"] = "application/pdf"
     return response
 
-@app.route('/export/<topic_name>/xml')
-def export_topic_xml(topic_name):
-    topic_data, average_score = _get_topic_data_and_score(topic_name)
-    if not topic_data:
-        return "Topic not found", 404
-
-    xml = render_template('xml_export_template.xml', topic=topic_data, average_score=average_score)
-    response = make_response(xml)
-    response.headers["Content-Disposition"] = f"attachment; filename={topic_name}.xml"
-    response.headers["Content-Type"] = "application/xml"
-    return response
-
-@app.route('/export/<topic_name>/html')
-def export_topic_html(topic_name):
-    topic_data, average_score = _get_topic_data_and_score(topic_name)
-    if not topic_data:
-        return "Topic not found", 404
-
-    html = render_template('html_export_template.html', topic=topic_data, average_score=average_score)
-    response = make_response(html)
-    response.headers["Content-Disposition"] = f"attachment; filename={topic_name}.html"
-    response.headers["Content-Type"] = "text/html"
-    return response
-
 @app.route('/delete/<topic_name>')
 def delete_topic_route(topic_name):
     delete_topic(topic_name)
