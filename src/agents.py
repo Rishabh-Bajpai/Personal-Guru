@@ -80,14 +80,14 @@ Now, generate a similar plan for the topic: '{topic}'.
 
 
 class AssessorAgent:
-    def generate_question(self, step_text):
+    def generate_question(self, step_text, user_background):
         prompt = f"""
 You are an expert assessor. Based on the following learning material, create between 1 and 5 concise multiple-choice questions to test understanding.
 The number of questions should be appropriate for the length and complexity of the material.
 Each question should have 4 options (A, B, C, D) and one correct answer.
 Return a JSON object with a single key "questions", which is an array of question objects.
 Each question object should have keys "question", "options" (an array of 4 strings), and "correct_answer" (the letter 'A', 'B', 'C', or 'D').
-
+The user's background is: '{user_background}'
 Learning Material: "{step_text}"
 
 Example JSON response:
@@ -132,11 +132,11 @@ class FeedbackAgent:
         return {"is_correct": is_correct, "feedback": feedback}, None
 
 class ChatAgent:
-    def get_answer(self, question, context):
+    def get_answer(self, question, context, user_background):
         prompt = f"""
 You are a helpful teaching assistant. The user is asking a question about the following learning material.
 Provide a concise and helpful answer to the user's question.
-
+The user's background is: '{user_background}'
 Learning Material: "{context}"
 
 User's Question: "{question}"
@@ -151,7 +151,7 @@ User's Question: "{question}"
         return answer, None
 
 class TopicTeachingAgent:
-    def generate_teaching_material(self, topic, full_plan, incorrect_questions=None):
+    def generate_teaching_material(self, topic, full_plan, user_background, incorrect_questions=None):
         incorrect_questions_text = "None"
         if incorrect_questions:
             incorrect_questions_text = "\n".join([f"- {q['question']}" for q in incorrect_questions])
@@ -162,7 +162,7 @@ class TopicTeachingAgent:
 You are an expert teacher. Your role is to teach a topic in detail.
 The full study plan is:
 {full_plan_text}
-
+The user's background is: '{user_background}'
 The current topic is: "{topic}"
 
 The user has previously answered the following questions incorrectly:

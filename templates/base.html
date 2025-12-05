@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,13 +9,16 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     {% block head %}{% endblock %}
 </head>
+
 <body class="dark-mode">
     <div id="loader">
         <div class="spinner"></div>
     </div>
     <div class="container">
         <div style="text-align: right; margin-bottom: 1rem;">
+            {% if request.path == '/' %}
             <a href="{{ url_for('set_background') }}" class="button">Set Background</a>
+            {% endif %}
             <button id="theme-switcher" class="button">Toggle Theme</button>
         </div>
         {% block content %}{% endblock %}
@@ -53,4 +57,5 @@
     </script>
     {% block scripts %}{% endblock %}
 </body>
+
 </html>

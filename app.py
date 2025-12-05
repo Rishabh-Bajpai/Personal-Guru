@@ -2,7 +2,7 @@ import os
 import urllib.parse
 import uuid
 from flask import Flask, render_template, request, url_for, session, redirect, make_response
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key, find_dotenv
 import requests
 
 # Import the agents
@@ -87,6 +87,7 @@ def index():
 def set_background():
     if request.method == 'POST':
         session['user_background'] = request.form['user_background']
+        set_key(find_dotenv(), "USER_BACKGROUND", session['user_background'])
         return redirect(url_for('index'))
 
     current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
@@ -106,12 +107,13 @@ def learn_topic(topic_name, step_index):
 
     if 'teaching_material' not in current_step_data:
         incorrect_questions = session.get('incorrect_questions')
-        teaching_material, error = teacher.generate_teaching_material(plan_steps[step_index], plan_steps, incorrect_questions)
+        current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+        teaching_material, error = teacher.generate_teaching_material(plan_steps[step_index], plan_steps, current_background, incorrect_questions)
         if error:
             return f"<h1>Error Generating Teaching Material</h1><p>{teaching_material}</p>"
         current_step_data['teaching_material'] = teaching_material
-
-        question_data, error = assessor.generate_question(teaching_material)
+        current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+        question_data, error = assessor.generate_question(teaching_material, current_background)
         if not error:
             current_step_data['questions'] = question_data
 
@@ -200,8 +202,8 @@ def chat(topic_name, step_index):
 
     current_step_data = topic_data['steps'][step_index]
     teaching_material = current_step_data.get('teaching_material', '')
-
-    answer, error = chat_agent.get_answer(user_question, teaching_material)
+    current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    answer, error = chat_agent.get_answer(user_question, teaching_material, current_background)
 
     if error:
         return {"error": answer}, 500
