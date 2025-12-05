@@ -3,3 +3,5 @@ python-dotenv
 requests
 pytest
 pytest-mock
+WeasyPrint
+markdown-it-py
