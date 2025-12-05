@@ -9,6 +9,7 @@ This is a Flask-based web application that serves as a proof-of-concept for a pe
 - **Interactive Learning:** Progress through the plan one step at a time.
 - **Text-to-Speech:** Listen to each learning step with integrated TTS audio.
 - **Knowledge Assessment:** Answer multiple-choice questions after each step to test your understanding.
+- **Personalized Background:** Set your own background (e.g., "I am a beginner") to tailor the learning content to your level.
 - **Adaptive Learning:** The study plan adapts to your performance on the "Check Your Understanding" questions.
 - **Q&A Chat:** Ask questions about the study material and get answers from an AI assistant.
 - **Instant Feedback:** Receive immediate feedback on your answers.

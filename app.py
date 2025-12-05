@@ -2,8 +2,11 @@ import os
 import urllib.parse
 import uuid
 from flask import Flask, render_template, request, url_for, session, redirect, make_response
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key, find_dotenv
 import requests
+from weasyprint import HTML
+import datetime
+from markdown_it import MarkdownIt
 
 # Import the agents
 from src.agents import PlannerAgent, AssessorAgent, FeedbackAgent, ChatAgent, TopicTeachingAgent
@@ -20,6 +23,7 @@ assessor = AssessorAgent()
 feedback_agent = FeedbackAgent()
 chat_agent = ChatAgent()
 teacher = TopicTeachingAgent()
+md = MarkdownIt()
 
 # Ensure the static directory exists
 if not os.path.exists('static'):
@@ -59,13 +63,15 @@ def generate_audio(text, step_index, tts_engine="coqui"):
 def index():
     if request.method == 'POST':
         topic_name = request.form['topic']
+        user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+        print(f"DEBUG: User background in index: {user_background}")
 
         # Check if topic already exists
         if load_topic(topic_name):
             return redirect(url_for('learn_topic', topic_name=topic_name, step_index=0))
 
         # Use the PlannerAgent to generate the study plan
-        plan_steps, error = planner.generate_study_plan(topic_name)
+        plan_steps, error = planner.generate_study_plan(topic_name, user_background)
         if error:
             return f"<h1>Error Generating Plan</h1><p>{plan_steps}</p>"
 
@@ -81,6 +87,16 @@ def index():
     topics = get_all_topics()
     return render_template('index.html', topics=topics)
 
+@app.route('/background', methods=['GET', 'POST'])
+def set_background():
+    if request.method == 'POST':
+        session['user_background'] = request.form['user_background']
+        set_key(find_dotenv(), "USER_BACKGROUND", session['user_background'])
+        return redirect(url_for('index'))
+
+    current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    return render_template('background.html', user_background=current_background)
+
 @app.route('/learn/<topic_name>/<int:step_index>')
 def learn_topic(topic_name, step_index):
     topic_data = load_topic(topic_name)
@@ -95,12 +111,13 @@ def learn_topic(topic_name, step_index):
 
     if 'teaching_material' not in current_step_data:
         incorrect_questions = session.get('incorrect_questions')
-        teaching_material, error = teacher.generate_teaching_material(plan_steps[step_index], plan_steps, incorrect_questions)
+        current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+        teaching_material, error = teacher.generate_teaching_material(plan_steps[step_index], plan_steps, current_background, incorrect_questions)
         if error:
             return f"<h1>Error Generating Teaching Material</h1><p>{teaching_material}</p>"
         current_step_data['teaching_material'] = teaching_material
-
-        question_data, error = assessor.generate_question(teaching_material)
+        current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+        question_data, error = assessor.generate_question(teaching_material, current_background)
         if not error:
             current_step_data['questions'] = question_data
 
@@ -189,8 +206,8 @@ def chat(topic_name, step_index):
 
     current_step_data = topic_data['steps'][step_index]
     teaching_material = current_step_data.get('teaching_material', '')
-
-    answer, error = chat_agent.get_answer(user_question, teaching_material)
+    current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    answer, error = chat_agent.get_answer(user_question, teaching_material, current_background)
 
     if error:
         return {"error": answer}, 500
@@ -199,18 +216,9 @@ def chat(topic_name, step_index):
 
 @app.route('/complete/<topic_name>')
 def complete_topic(topic_name):
-    topic_data = load_topic(topic_name)
+    topic_data, average_score = _get_topic_data_and_score(topic_name)
     if not topic_data:
         return "Topic not found", 404
-
-    total_score = 0
-    answered_questions = 0
-    for step in topic_data['steps']:
-        if 'score' in step and step.get('user_answers'):
-            total_score += step['score']
-            answered_questions += 1
-
-    average_score = (total_score / answered_questions) if answered_questions > 0 else 0
 
     return render_template('complete.html', topic_name=topic_name, average_score=average_score)
 
@@ -228,6 +236,42 @@ def export_topic(topic_name):
     response = make_response(markdown_content)
     response.headers["Content-Disposition"] = f"attachment; filename={topic_name}.md"
     response.headers["Content-Type"] = "text/markdown"
+    return response
+
+def _get_topic_data_and_score(topic_name):
+    topic_data = load_topic(topic_name)
+    if not topic_data:
+        return None, 0
+
+    total_score = 0
+    answered_questions = 0
+    for step in topic_data['steps']:
+        if 'teaching_material' in step:
+            step['teaching_material'] = md.render(step['teaching_material'])
+        if 'score' in step and step.get('user_answers'):
+            total_score += step['score']
+            answered_questions += 1
+
+    average_score = (total_score / answered_questions) if answered_questions > 0 else 0
+    return topic_data, average_score
+
+@app.route('/export/<topic_name>/pdf')
+def export_topic_pdf(topic_name):
+    topic_data, average_score = _get_topic_data_and_score(topic_name)
+    if not topic_data:
+        return "Topic not found", 404
+
+    html = render_template('pdf_export_template.html', topic=topic_data, average_score=average_score)
+    pdf = HTML(string=html).write_pdf(
+        document_metadata={
+            'title': topic_name,
+            'created': datetime.date.today().isoformat()
+        }
+    )
+
+    response = make_response(pdf)
+    response.headers["Content-Disposition"] = f"attachment; filename={topic_name}.pdf"
+    response.headers["Content-Type"] = "application/pdf"
     return response
 
 @app.route('/delete/<topic_name>')
