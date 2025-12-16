@@ -67,9 +67,12 @@ def index():
 
         # If user selected a non-chapter learning mode, show the placeholder page.
         if mode and mode != 'chapter':
+            topic_data = load_topic(topic_name) or {}
+            flashcards = topic_data.get('flashcards', [])
+
             # Expect templates named like 'chat_mode.html', 'quiz_mode.html', etc.
             try:
-                return render_template(f"{mode}_mode.html", topic_name=topic_name)
+                return render_template(f"{mode}_mode.html", topic_name=topic_name, flashcards=flashcards)
             except Exception:
                 # Fallback: render index with an error message
                 return render_template('index.html', topics=get_all_topics(), error=f"Mode {mode} not available")
@@ -214,26 +217,37 @@ def generate_audio_route(step_index):
 @app.route('/flashcards/generate', methods=['POST'])
 def generate_flashcards_route():
     data = request.get_json() or {}
-    topic = data.get('topic')
+    topic_name = data.get('topic')
     count = data.get('count', 'auto')
 
-    if not topic:
+    if not topic_name:
         return {"error": "No topic provided"}, 400
 
-    # Normalize count
+    user_background = os.getenv('USER_BACKGROUND', 'a beginner')
+
+    # Determine flashcard count
     if isinstance(count, str) and count.lower() == 'auto':
-        num = 25
+        num, error = teacher.get_flashcard_count_for_topic(topic_name, user_background=user_background)
+        if error:
+            # Log the error and proceed with a default
+            print(f"Error getting flashcard count: {error}")
+            num = 25
     else:
         try:
             num = int(count)
-        except Exception:
+        except (ValueError, TypeError):
             num = 25
 
     user_background = os.getenv('USER_BACKGROUND', 'a beginner')
 
-    cards, error = teacher.generate_flashcards(topic, count=num, user_background=user_background)
+    cards, error = teacher.generate_flashcards(topic_name, count=num, user_background=user_background)
     if error:
         return {"error": cards}, 500
+
+    # Persist flashcards
+    topic_data = load_topic(topic_name) or {"name": topic_name, "plan": [], "steps": []}
+    topic_data['flashcards'] = cards
+    save_topic(topic_name, topic_data)
 
     return {"flashcards": cards}
 

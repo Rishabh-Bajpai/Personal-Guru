@@ -204,13 +204,18 @@ Don't include any extra commentary outside the JSON.
         if not isinstance(data, dict) or 'flashcards' not in data or not isinstance(data['flashcards'], list):
             return "Error: Invalid flashcards format from LLM.", "Invalid format"
 
-        # Basic normalization: ensure each card has term and definition
+        # Defensive parsing and validation
         cards = []
-        for c in data['flashcards']:
-            term = c.get('term') if isinstance(c, dict) else None
-            definition = c.get('definition') if isinstance(c, dict) else None
-            if term and definition:
-                cards.append({'term': term, 'definition': definition})
+        if 'flashcards' in data and isinstance(data['flashcards'], list):
+            for c in data['flashcards']:
+                if isinstance(c, dict):
+                    term = c.get('term')
+                    definition = c.get('definition')
+                    if term and definition and isinstance(term, str) and isinstance(definition, str):
+                        cards.append({'term': term.strip(), 'definition': definition.strip()})
+
+        if not cards:
+            return "Error: LLM returned no valid flashcards.", "Invalid format"
 
         # If LLM returned fewer cards than requested, attempt to generate the remainder
         # by asking for additional cards (avoid duplicates). Retry a few times.
@@ -251,3 +256,28 @@ Return a JSON object with key "flashcards" which is an array of objects with key
             cards = cards[:count]
 
         return cards, None
+
+    def get_flashcard_count_for_topic(self, topic, user_background=None):
+        """
+        Estimate the number of flashcards needed for a topic based on its complexity.
+        Returns (count, None) on success or (default_count, error) on failure.
+        """
+        if user_background is None:
+            user_background = os.getenv("USER_BACKGROUND", "a beginner")
+
+        prompt = f"""
+Analyze the complexity of the topic '{topic}' for a user with background: '{user_background}'.
+Based on the topic's breadth and depth, suggest an ideal number of flashcards to generate for a comprehensive review.
+Return a JSON object with a single key "count".
+For a very simple topic, suggest 10-15 cards. For a moderately complex topic, 20-30. For a very complex topic, 40-50.
+"""
+        data, error = _call_ollama(prompt, is_json=True)
+        if error:
+            return 25, error  # Default on error
+
+        if isinstance(data, dict) and 'count' in data and isinstance(data['count'], int):
+            count = data['count']
+            # Clamp the value to a reasonable range
+            return max(10, min(50, count)), None
+
+        return 25, "Invalid format from LLM"
