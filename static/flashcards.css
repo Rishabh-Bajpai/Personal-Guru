@@ -14,6 +14,8 @@
     border: 1px solid #ccc;
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    background-color: #87CEEB; /* sky blue */
+    color: #003366; /* dark slate for contrast */
 }
 
 .flashcard.flipped {
@@ -34,10 +36,12 @@
 }
 
 .flashcard-front {
-    background-color: #f9f9f9;
+    background-color: transparent;
+    color: inherit;
 }
 
 .flashcard-back {
-    background-color: #eef;
+    background-color: rgba(255,255,255,0.85);
+    color: #003366;
     transform: rotateY(180deg);
 }
