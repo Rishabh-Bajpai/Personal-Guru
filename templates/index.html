@@ -6,6 +6,24 @@
 <h1>What would you like to learn today?</h1>
 <form method="post" onsubmit="showLoader()">
     <input type="text" name="topic" size="50" placeholder="Enter a new topic...">
+    <div class="learning-modes">
+        <p>Choose a learning mode:</p>
+        <label>
+            <input type="radio" name="mode" value="chapter" checked> Chapter Mode
+        </label>
+        <label>
+            <input type="radio" name="mode" value="chat"> Chat Mode
+        </label>
+        <label>
+            <input type="radio" name="mode" value="quiz"> Quiz Mode
+        </label>
+        <label>
+            <input type="radio" name="mode" value="reel"> Reel Mode
+        </label>
+        <label>
+            <input type="radio" name="mode" value="flashcard"> Flash Card Mode
+        </label>
+    </div>
     <input type="submit" value="Start Learning" class="button">
 </form>
 

@@ -63,26 +63,40 @@ def generate_audio(text, step_index, tts_engine="coqui"):
 def index():
     if request.method == 'POST':
         topic_name = request.form['topic']
+        mode = request.form.get('mode', 'chapter')
+
+        # If user selected a non-chapter learning mode, show the placeholder page.
+        if mode and mode != 'chapter':
+            # Expect templates named like 'chat_mode.html', 'quiz_mode.html', etc.
+            try:
+                return render_template(f"{mode}_mode.html", topic_name=topic_name)
+            except Exception:
+                # Fallback: render index with an error message
+                return render_template('index.html', topics=get_all_topics(), error=f"Mode {mode} not available")
+        mode = request.form.get('mode', 'chapter')
         user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
         print(f"DEBUG: User background in index: {user_background}")
 
-        # Check if topic already exists
-        if load_topic(topic_name):
+        if mode == 'chapter':
+            # Check if topic already exists
+            if load_topic(topic_name):
+                return redirect(url_for('learn_topic', topic_name=topic_name, step_index=0))
+
+            # Use the PlannerAgent to generate the study plan
+            plan_steps, error = planner.generate_study_plan(topic_name, user_background)
+            if error:
+                return f"<h1>Error Generating Plan</h1><p>{plan_steps}</p>"
+
+            topic_data = {
+                "name": topic_name,
+                "plan": plan_steps,
+                "steps": [{} for _ in plan_steps]
+            }
+            save_topic(topic_name, topic_data)
+
             return redirect(url_for('learn_topic', topic_name=topic_name, step_index=0))
-
-        # Use the PlannerAgent to generate the study plan
-        plan_steps, error = planner.generate_study_plan(topic_name, user_background)
-        if error:
-            return f"<h1>Error Generating Plan</h1><p>{plan_steps}</p>"
-
-        topic_data = {
-            "name": topic_name,
-            "plan": plan_steps,
-            "steps": [{} for _ in plan_steps]
-        }
-        save_topic(topic_name, topic_data)
-
-        return redirect(url_for('learn_topic', topic_name=topic_name, step_index=0))
+        else:
+            render_template(f'{mode}_mode.html')
 
     topics = get_all_topics()
     return render_template('index.html', topics=topics)
