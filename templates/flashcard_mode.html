@@ -4,5 +4,89 @@
 
 {% block content %}
 <h1>Flash Card Mode</h1>
-<p>This feature is coming soon.</p>
+
+<div class="flashcard-controls">
+	<p>Choose generation mode:</p>
+	<label><input type="radio" name="flashcount" value="auto" checked> Auto</label>
+	<label><input type="radio" name="flashcount" value="25"> 25</label>
+	<label><input type="radio" name="flashcount" value="50"> 50</label>
+	<div>
+		<button id="generate-flashcards" class="button">Generate Flashcards</button>
+	</div>
+</div>
+
+<div id="flashcard-container" style="display:none; margin-top:20px;">
+	<div id="flashcard" class="flashcard">
+		<h2 id="flash-term"></h2>
+		<p id="flash-definition"></p>
+	</div>
+	<div style="margin-top:10px;">
+		<button id="prev-card" class="button small">Previous</button>
+		<button id="next-card" class="button small">Next</button>
+	</div>
+	<p id="flash-index"></p>
+</div>
+
+<div id="flash-error" style="color:red; margin-top:10px;"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+	const generateBtn = document.getElementById('generate-flashcards');
+	const container = document.getElementById('flashcard-container');
+	const err = document.getElementById('flash-error');
+	const termEl = document.getElementById('flash-term');
+	const defEl = document.getElementById('flash-definition');
+	const indexEl = document.getElementById('flash-index');
+	const prevBtn = document.getElementById('prev-card');
+	const nextBtn = document.getElementById('next-card');
+
+	let cards = [];
+	let idx = 0;
+
+	function renderCard(i){
+		if(!cards || cards.length === 0) return;
+		const c = cards[i];
+		termEl.textContent = c.term;
+		defEl.textContent = c.definition;
+		indexEl.textContent = `${i+1} / ${cards.length}`;
+		container.style.display = 'block';
+	}
+
+	prevBtn.addEventListener('click', ()=>{
+		if(idx > 0) { idx--; renderCard(idx); }
+	});
+	nextBtn.addEventListener('click', ()=>{
+		if(idx < cards.length - 1) { idx++; renderCard(idx); }
+	});
+
+	generateBtn.addEventListener('click', async ()=>{
+		err.textContent = '';
+		const sel = document.querySelector('input[name="flashcount"]:checked').value;
+		const payload = { topic: '{{ topic_name }}', count: sel };
+		generateBtn.disabled = true;
+		generateBtn.textContent = 'Generating...';
+		try{
+			const res = await fetch('/flashcards/generate', {
+				method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+			});
+			const data = await res.json();
+			if(res.ok){
+				cards = data.flashcards || [];
+				if(cards.length === 0){ err.textContent = 'No flashcards generated.'; }
+				idx = 0;
+				renderCard(idx);
+			} else {
+				err.textContent = data.error || 'Error generating flashcards';
+			}
+		} catch(e){
+			err.textContent = e.toString();
+		} finally{
+			generateBtn.disabled = false;
+			generateBtn.textContent = 'Generate Flashcards';
+		}
+	});
+});
+</script>
 {% endblock %}

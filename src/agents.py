@@ -181,3 +181,73 @@ The output should be a single string of markdown-formatted text.
         teaching_material = re.sub(r'<think>.*?</think>', '', teaching_material, flags=re.DOTALL).strip()
 
         return teaching_material, None
+
+    def generate_flashcards(self, topic, count=50, user_background=None):
+        """
+        Generate `count` concise flashcards (term + short definition) for `topic`.
+        Returns (list_of_flashcards, None) on success or (error_message, error) on failure.
+        Expected return JSON from LLM: {"flashcards": [{"term": "...", "definition": "..."}, ...]}
+        """
+        if user_background is None:
+            user_background = os.getenv("USER_BACKGROUND", "a beginner")
+
+        prompt = f"""
+You are an expert educator. Generate {count} concise flashcards for the topic '{topic}', tailored to a user with background: '{user_background}'.
+Return a JSON object with key "flashcards" which is an array of objects with keys "term" and "definition".
+Each definition should be one to two sentences maximum and focused on the most important concepts.
+Don't include any extra commentary outside the JSON.
+"""
+        data, error = _call_ollama(prompt, is_json=True)
+        if error:
+            return data, error
+
+        if not isinstance(data, dict) or 'flashcards' not in data or not isinstance(data['flashcards'], list):
+            return "Error: Invalid flashcards format from LLM.", "Invalid format"
+
+        # Basic normalization: ensure each card has term and definition
+        cards = []
+        for c in data['flashcards']:
+            term = c.get('term') if isinstance(c, dict) else None
+            definition = c.get('definition') if isinstance(c, dict) else None
+            if term and definition:
+                cards.append({'term': term, 'definition': definition})
+
+        # If LLM returned fewer cards than requested, attempt to generate the remainder
+        # by asking for additional cards (avoid duplicates). Retry a few times.
+        try_count = 0
+        seen_terms = {c['term'].strip().lower() for c in cards}
+        while len(cards) < count and try_count < 3:
+            remaining = count - len(cards)
+            try_count += 1
+            extra_prompt = f"""
+Generate {remaining} additional concise flashcards for the topic '{topic}', tailored to a user with background: '{user_background}'.
+Do NOT repeat any of these terms: {', '.join(sorted(seen_terms))}.
+Return a JSON object with key "flashcards" which is an array of objects with keys "term" and "definition".
+"""
+            extra_data, extra_err = _call_ollama(extra_prompt, is_json=True)
+            if extra_err or not isinstance(extra_data, dict) or 'flashcards' not in extra_data:
+                break
+
+            added = 0
+            for c in extra_data['flashcards']:
+                if not isinstance(c, dict):
+                    continue
+                term = c.get('term')
+                definition = c.get('definition')
+                if not term or not definition:
+                    continue
+                key = term.strip().lower()
+                if key in seen_terms:
+                    continue
+                cards.append({'term': term, 'definition': definition})
+                seen_terms.add(key)
+                added += 1
+            if added == 0:
+                # nothing new added; stop to avoid infinite loop
+                break
+
+        # Trim to requested count in case of over-generation
+        if len(cards) > count:
+            cards = cards[:count]
+
+        return cards, None

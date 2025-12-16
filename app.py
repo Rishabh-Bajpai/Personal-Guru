@@ -210,6 +210,33 @@ def generate_audio_route(step_index):
     audio_url = url_for('static', filename=os.path.basename(audio_path))
     return {"audio_url": audio_url}
 
+
+@app.route('/flashcards/generate', methods=['POST'])
+def generate_flashcards_route():
+    data = request.get_json() or {}
+    topic = data.get('topic')
+    count = data.get('count', 'auto')
+
+    if not topic:
+        return {"error": "No topic provided"}, 400
+
+    # Normalize count
+    if isinstance(count, str) and count.lower() == 'auto':
+        num = 25
+    else:
+        try:
+            num = int(count)
+        except Exception:
+            num = 25
+
+    user_background = os.getenv('USER_BACKGROUND', 'a beginner')
+
+    cards, error = teacher.generate_flashcards(topic, count=num, user_background=user_background)
+    if error:
+        return {"error": cards}, 500
+
+    return {"flashcards": cards}
+
 @app.route('/chat/<topic_name>/<int:step_index>', methods=['POST'])
 def chat(topic_name, step_index):
     user_question = request.json.get('question')
