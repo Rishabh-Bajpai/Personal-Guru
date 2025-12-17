@@ -366,7 +366,13 @@ def submit_quiz(topic_name):
         correct_answer_letter = question.get('correct_answer')
         correct_answer_index = ord(correct_answer_letter.upper()) - ord('A')
         correct_answer_text = question['options'][correct_answer_index]
-        user_answer_text = question['options'][int(user_answer_index)] if user_answer_index is not None else "No answer"
+
+        user_answer_text = "No answer"
+        if user_answer_index is not None:
+            try:
+                user_answer_text = question['options'][int(user_answer_index)]
+            except (ValueError, IndexError):
+                user_answer_text = "Invalid answer"
 
         feedback_results.append({
             'question': question.get('question'),
