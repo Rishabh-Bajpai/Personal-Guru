@@ -29,6 +29,10 @@
 		<button id="next-card" class="button small">Next</button>
 	</div>
 	<p id="flash-index"></p>
+	<div id="export-controls" style="margin-top:15px; display:none;">
+		<p><strong>You've reached the end of the flashcards!</strong></p>
+		<a id="export-pdf-btn" href="#" class="button">Save as PDF</a>
+	</div>
 </div>
 
 <div id="flash-error" style="color:red; margin-top:10px;"></div>
@@ -66,6 +70,14 @@ document.addEventListener('DOMContentLoaded', function(){
         indexEl.textContent = `${i+1} / ${cards.length}`;
         container.style.display = 'block';
         flashcard.classList.remove('flipped');
+        
+        // Show export button if on last card
+        const exportControls = document.getElementById('export-controls');
+        if(i === cards.length - 1){
+            exportControls.style.display = 'block';
+        } else {
+            exportControls.style.display = 'none';
+        }
     }
 
     flashcard.addEventListener('click', () => {
@@ -80,6 +92,16 @@ document.addEventListener('DOMContentLoaded', function(){
         e.stopPropagation();
         if(idx < cards.length - 1) { idx++; renderCard(idx); }
     });
+
+    // Export PDF button handler
+    const exportPdfBtn = document.getElementById('export-pdf-btn');
+    if(exportPdfBtn){
+        exportPdfBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const url = `/export/{{ topic_name }}/pdf`;
+            window.open(url, '_blank');
+        });
+    }
 
     generateBtn.addEventListener('click', async ()=>{
         err.textContent = '';

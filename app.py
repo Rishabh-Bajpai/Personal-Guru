@@ -349,11 +349,30 @@ def _get_topic_data_and_score(topic_name):
 
 @app.route('/export/<topic_name>/pdf')
 def export_topic_pdf(topic_name):
-    topic_data, average_score = _get_topic_data_and_score(topic_name)
+    topic_data = load_topic(topic_name)
     if not topic_data:
         return "Topic not found", 404
 
-    html = render_template('pdf_export_template.html', topic=topic_data, average_score=average_score)
+    # Check if this is a flashcard topic or a chapter topic
+    if topic_data.get('flashcards'):
+        # Render flashcards as PDF
+        html = render_template('flashcard_export_template.html', topic_name=topic_name, flashcards=topic_data.get('flashcards', []))
+    else:
+        # Render chapter/quiz as PDF
+        average_score = 0
+        if topic_data.get('steps'):
+            total_score = 0
+            answered_questions = 0
+            for step in topic_data['steps']:
+                if 'teaching_material' in step:
+                    step['teaching_material'] = md.render(step['teaching_material'])
+                if 'score' in step and step.get('user_answers'):
+                    total_score += step['score']
+                    answered_questions += 1
+            average_score = (total_score / answered_questions) if answered_questions > 0 else 0
+        
+        html = render_template('pdf_export_template.html', topic=topic_data, average_score=average_score)
+    
     pdf = HTML(string=html).write_pdf(
         document_metadata={
             'title': topic_name,
