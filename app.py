@@ -102,7 +102,24 @@ def index():
             render_template(f'{mode}_mode.html')
 
     topics = get_all_topics()
-    return render_template('index.html', topics=topics)
+    # Load topic data to determine which mode to use for each
+    topics_data = []
+    for topic in topics:
+        data = load_topic(topic)
+        if data:
+            has_plan = bool(data.get('plan'))
+            has_flashcards = bool(data.get('flashcards'))
+            has_quiz = bool(data.get('quiz'))
+            topics_data.append({
+                'name': topic,
+                'has_plan': has_plan,
+                'has_flashcards': has_flashcards,
+                'has_quiz': has_quiz
+            })
+        else:
+            topics_data.append({'name': topic, 'has_plan': True, 'has_flashcards': False, 'has_quiz': False})
+    
+    return render_template('index.html', topics=topics_data)
 
 @app.route('/background', methods=['GET', 'POST'])
 def set_background():
@@ -114,13 +131,33 @@ def set_background():
     current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
     return render_template('background.html', user_background=current_background)
 
+@app.route('/flashcard_mode/<topic_name>')
+def flashcard_mode(topic_name):
+    """Display flashcard mode with saved flashcards or generation UI."""
+    topic_data = load_topic(topic_name)
+    if not topic_data:
+        return "Topic not found", 404
+    
+    flashcards = topic_data.get('flashcards', [])
+    return render_template('flashcard_mode.html', topic_name=topic_name, flashcards=flashcards)
+
 @app.route('/learn/<topic_name>/<int:step_index>')
 def learn_topic(topic_name, step_index):
     topic_data = load_topic(topic_name)
     if not topic_data:
         return "Topic not found", 404
 
-    plan_steps = topic_data['plan']
+    plan_steps = topic_data.get('plan', [])
+    
+    # If topic has no plan (quiz/flashcard only), redirect to appropriate mode
+    if not plan_steps:
+        if 'flashcards' in topic_data and topic_data['flashcards']:
+            return redirect(url_for('flashcard_mode', topic_name=topic_name))
+        elif 'quiz' in topic_data:
+            return redirect(url_for('quiz_mode', topic_name=topic_name))
+        else:
+            return redirect(url_for('quiz_mode', topic_name=topic_name))
+    
     if not 0 <= step_index < len(plan_steps):
         return "Invalid step index", 404
 
