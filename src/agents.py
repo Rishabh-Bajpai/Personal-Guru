@@ -117,19 +117,56 @@ Example JSON response:
         return question_data, None
 
 class FeedbackAgent:
-    def evaluate_answer(self, user_answer, correct_answer):
-        """
-        Evaluates if the user's answer is correct.
-        In a real scenario, this could be an LLM call for more nuanced feedback.
-        For this implementation, we'll do a simple check against the correct letter.
-        """
-        is_correct = str(user_answer).strip().upper() == str(correct_answer).strip().upper()
+    def evaluate_answer(self, question_obj, user_answer, answer_is_index=False):
+        correct_answer_letter = question_obj.get('correct_answer')
+
+        try:
+            options = question_obj.get('options', [])
+            question_text = question_obj.get('question')
+            correct_answer_index = ord(correct_answer_letter.upper()) - ord('A')
+            correct_answer_text = options[correct_answer_index]
+
+            is_correct = False
+            user_answer_text = "No answer"
+
+            if user_answer is not None:
+                if answer_is_index:
+                    user_answer_index = int(user_answer)
+                    is_correct = (user_answer_index == correct_answer_index)
+                else: # answer is letter
+                    is_correct = (str(user_answer).strip().upper() == str(correct_answer_letter).strip().upper())
+                    user_answer_index = ord(str(user_answer).upper()) - ord('A')
+
+                if 0 <= user_answer_index < len(options):
+                    user_answer_text = options[user_answer_index]
+                else:
+                    user_answer_text = "Invalid answer"
+
+        except (IndexError, TypeError, ValueError):
+            return {"is_correct": False, "feedback": f"Not quite. The correct answer was {correct_answer_letter}. Keep trying!"}, None
+
         if is_correct:
             feedback = "That's correct! Great job."
-        else:
-            feedback = f"Not quite. The correct answer was {correct_answer}. Keep trying!"
+            return {"is_correct": True, "feedback": feedback}, None
 
-        return {"is_correct": is_correct, "feedback": feedback}, None
+        prompt = f"""
+You are an expert educator providing feedback on a quiz answer.
+The user was asked the following question:
+"{question_text}"
+
+The correct answer is: "{correct_answer_text}"
+The user incorrectly answered: "{user_answer_text}"
+
+Please provide a concise, helpful explanation for why the user's answer is incorrect and why the correct answer is the right choice.
+The explanation should be friendly and encouraging. Limit it to 2-4 sentences.
+"""
+        feedback, error = _call_ollama(prompt)
+        if error:
+            # Fallback on LLM error
+            return {"is_correct": False, "feedback": f"Not quite. The correct answer was {correct_answer_text}. Keep trying!"}, None
+
+        feedback = re.sub(r'<think>.*?</think>', '', feedback, flags=re.DOTALL).strip()
+        return {"is_correct": False, "feedback": feedback}, None
 
 class ChatAgent:
     def get_answer(self, question, context, user_background):
@@ -149,6 +186,46 @@ User's Question: "{question}"
         answer = re.sub(r'<think>.*?</think>', '', answer, flags=re.DOTALL).strip()
 
         return answer, None
+
+class QuizAgent:
+    def generate_quiz(self, topic, user_background):
+        prompt = f"""
+You are an expert in creating educational quizzes. For the topic '{topic}', create a quiz with 5-10 multiple-choice questions.
+The user's background is: '{user_background}'
+The output should be a JSON object with a single key "questions", which is an array of question objects.
+Each question object should have keys "question", "options" (an array of 4 strings), and "correct_answer" (the letter 'A', 'B', 'C', or 'D').
+
+Example JSON response:
+{{
+  "questions": [
+    {{
+      "question": "What will be the output of this C++ code?",
+      "options": ["Compilation Error", "Runtime Error", "Hello, World!", "No Output"],
+      "correct_answer": "C"
+    }},
+    {{
+      "question": "Which of the following describes the difference between a reference and a pointer in C++?",
+      "options": [
+        "A reference is an alias for an existing variable, while a pointer is a variable that stores a memory address.",
+        "A pointer is an alias for an existing variable, while a reference is a variable that stores a memory address.",
+        "There is no difference.",
+        "References and pointers cannot be used in C++."
+      ],
+      "correct_answer": "A"
+    }}
+  ]
+}}
+
+Now, generate a quiz for the topic: '{topic}'.
+"""
+        quiz_data, error = _call_ollama(prompt, is_json=True)
+        if error:
+            return quiz_data, error
+
+        if "questions" not in quiz_data or not isinstance(quiz_data["questions"], list):
+            return "Error: Invalid quiz format from LLM.", "Invalid format"
+
+        return quiz_data, None
 
 class TopicTeachingAgent:
     def generate_teaching_material(self, topic, full_plan, user_background, incorrect_questions=None):

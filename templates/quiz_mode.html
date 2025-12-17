@@ -1,8 +1,23 @@
 {% extends "base.html" %}
 
-{% block title %}Quiz Mode{% endblock %}
+{% block title %}Quiz Mode - {{ topic_name }}{% endblock %}
 
 {% block content %}
-<h1>Quiz Mode</h1>
-<p>This feature is coming soon.</p>
+<h1>Quiz on {{ topic_name }}</h1>
+<form method="post" action="{{ url_for('submit_quiz', topic_name=topic_name) }}">
+    {% for question in quiz_data.questions %}
+    <div class="question">
+        <h2>{{ question.question }}</h2>
+        <div class="options">
+            {% for option in question.options %}
+            <label>
+                <input type="radio" name="answers_{{ loop.parent.loop.index0 }}" value="{{ loop.index0 }}" required>
+                {{ option }}
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+    <input type="submit" value="Submit Quiz" class="button">
+</form>
 {% endblock %}

@@ -9,7 +9,7 @@ import datetime
 from markdown_it import MarkdownIt
 
 # Import the agents
-from src.agents import PlannerAgent, AssessorAgent, FeedbackAgent, ChatAgent, TopicTeachingAgent
+from src.agents import PlannerAgent, AssessorAgent, FeedbackAgent, ChatAgent, TopicTeachingAgent, QuizAgent
 from src.storage import save_topic, load_topic, get_all_topics, delete_topic
 
 load_dotenv()
@@ -23,6 +23,7 @@ assessor = AssessorAgent()
 feedback_agent = FeedbackAgent()
 chat_agent = ChatAgent()
 teacher = TopicTeachingAgent()
+quiz_agent = QuizAgent()
 md = MarkdownIt()
 
 # Ensure the static directory exists
@@ -67,6 +68,8 @@ def index():
 
         # If user selected a non-chapter learning mode, show the placeholder page.
         if mode and mode != 'chapter':
+            if mode == 'quiz':
+                return redirect(url_for('quiz_mode', topic_name=topic_name))
             topic_data = load_topic(topic_name) or {}
             flashcards = topic_data.get('flashcards', [])
 
@@ -167,10 +170,9 @@ def assess_step(topic_name, step_index):
 
     for i, question in enumerate(questions):
         user_answer = user_answers[i]
-        correct_answer = question.get('correct_answer')
 
         if user_answer: # Only score answered questions
-            feedback_data, _ = feedback_agent.evaluate_answer(user_answer, correct_answer)
+            feedback_data, _ = feedback_agent.evaluate_answer(question, user_answer)
             if feedback_data['is_correct']:
                 num_correct += 1
             else:
@@ -333,6 +335,53 @@ def export_topic_pdf(topic_name):
 def delete_topic_route(topic_name):
     delete_topic(topic_name)
     return redirect(url_for('index'))
+
+@app.route('/quiz/<topic_name>')
+def quiz_mode(topic_name):
+    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    quiz_data, error = quiz_agent.generate_quiz(topic_name, user_background)
+
+    if error:
+        return f"<h1>Error Generating Quiz</h1><p>{quiz_data}</p>"
+
+    session['quiz_questions'] = quiz_data.get('questions', [])
+    return render_template('quiz_mode.html', topic_name=topic_name, quiz_data=quiz_data)
+
+@app.route('/quiz/<topic_name>/submit', methods=['POST'])
+def submit_quiz(topic_name):
+    user_answers_indices = [request.form.get(f'answers_{i}') for i in range(len(session.get('quiz_questions', [])))]
+    questions = session.get('quiz_questions', [])
+    num_correct = 0
+    feedback_results = []
+
+    for i, question in enumerate(questions):
+        user_answer_index = user_answers_indices[i]
+
+        feedback_data, _ = feedback_agent.evaluate_answer(question, user_answer_index, answer_is_index=True)
+
+        if feedback_data['is_correct']:
+            num_correct += 1
+
+        # Get the full text for user and correct answers for display
+        correct_answer_letter = question.get('correct_answer')
+        correct_answer_index = ord(correct_answer_letter.upper()) - ord('A')
+        correct_answer_text = question['options'][correct_answer_index]
+        user_answer_text = question['options'][int(user_answer_index)] if user_answer_index is not None else "No answer"
+
+        feedback_results.append({
+            'question': question.get('question'),
+            'user_answer': user_answer_text,
+            'correct_answer': correct_answer_text,
+            'feedback': feedback_data['feedback'],
+            'is_correct': feedback_data['is_correct']
+        })
+
+    score = (num_correct / len(questions) * 100) if questions else 0
+    session.pop('quiz_questions', None)
+    return render_template('quiz_feedback.html',
+                           topic_name=topic_name,
+                           score=score,
+                           feedback_results=feedback_results)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5002)
