@@ -2,6 +2,7 @@ import os
 import requests
 import json
 import re
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -47,45 +48,39 @@ def _call_ollama(prompt, is_json=False):
 
 class PlannerAgent:
     def generate_study_plan(self, topic, user_background):
-        print(f"DEBUG: Generating study plan for user with background: {user_background}")
         prompt = f"""
-You are an expert in creating personalized study plans. For the topic '{topic}', create a high-level learning plan with 4-7 manageable steps, depending on the complexity of the topic.
-The user's background is: '{user_background}'
-The output should be a JSON object with a single key "plan", which is an array of strings. Each string is a step in the learning plan.
-Do not generate the content for each step, only the plan itself.
+You are an expert curriculum designer. Create a structured study plan for the topic '{topic}' tailored to a user with background: '{user_background}'.
+The output should be a JSON object with a single key "plan", which is an array of strings representing the steps of the study plan.
+Each step should be concise (one sentence) and cover a distinct concept or skill within the topic.
+Organize the steps in a logical learning progression, from foundational concepts to more advanced topics.
 
-Example of a good plan for the topic 'Flask':
-"Our Flask Learning Plan:
+Example JSON response:
+{{
+  "plan": [
+    "Understand basic concepts and definitions",
+    "Learn core principles and theory",
+    "Explore practical applications",
+    "Study advanced techniques",
+    "Review and consolidate knowledge"
+  ]
+}}
 
-Introduction to Flask & Setup: What is Flask? Why use it? Setting up a Conda environment and installing Flask. (Today)
-Your First Flask App: A basic "Hello, World!" application. Understanding routes and the app object.
-Templates & Rendering: Using Jinja2 templates to separate logic from presentation. Passing data to templates.
-Static Files: Serving CSS, JavaScript, and images.
-Request Handling: Accessing data sent by the user (form data, URL parameters).
-Forms & User Input: Working with HTML forms and validating user data.
-Databases (SQLite): Connecting to a database and performing basic operations.
-More Advanced Topics (Optional): User authentication, sessions, and scaling."
-
-Now, generate a similar plan for the topic: '{topic}'.
+Now, create a study plan for the topic: '{topic}'.
 """
         plan_data, error = _call_ollama(prompt, is_json=True)
         if error:
             return plan_data, error
 
-        plan_steps = plan_data.get("plan", [])
-        if not plan_steps or not isinstance(plan_steps, list):
-            return "Error: Could not parse study plan from LLM response.", "Invalid format"
+        # Basic validation
+        if "plan" not in plan_data or not isinstance(plan_data["plan"], list):
+            return "Error: Invalid plan format from LLM.", "Invalid format"
 
-        return plan_steps, None
-
+        return plan_data, None
 
 class AssessorAgent:
     def generate_question(self, step_text, user_background):
         prompt = f"""
-You are an expert assessor. Based on the following learning material, create between 1 and 5 concise multiple-choice questions to test understanding.
-The number of questions should be appropriate for the length and complexity of the material.
-Each question should have 4 options (A, B, C, D) and one correct answer.
-Return a JSON object with a single key "questions", which is an array of question objects.
+You are an expert educator. Based on the following learning material, generate a single multiple-choice question to test understanding.
 Each question object should have keys "question", "options" (an array of 4 strings), and "correct_answer" (the letter 'A', 'B', 'C', or 'D').
 The user's background is: '{user_background}'
 Learning Material: "{step_text}"
@@ -97,11 +92,6 @@ Example JSON response:
       "question": "What is the capital of France?",
       "options": ["London", "Berlin", "Paris", "Madrid"],
       "correct_answer": "C"
-    }},
-    {{
-      "question": "What is the currency of Japan?",
-      "options": ["Yen", "Won", "Yuan", "Dollar"],
-      "correct_answer": "A"
     }}
   ]
 }}
@@ -221,6 +211,33 @@ Now, generate a quiz for the topic: '{topic}'.
         quiz_data, error = _call_ollama(prompt, is_json=True)
         if error:
             return quiz_data, error
+
+        # Accept a few alternative shapes from the LLM.
+        # If 'questions' key is missing, look for a candidate list in returned values.
+        if not isinstance(quiz_data, dict):
+            return "Error: Invalid quiz format from LLM.", "Invalid format"
+
+        if "questions" not in quiz_data or not isinstance(quiz_data["questions"], list):
+            # Try to find a list of question-like objects in the response
+            for k, v in quiz_data.items():
+                if isinstance(v, list) and v:
+                    # check first item shape
+                    first = v[0]
+                    if isinstance(first, dict) and 'question' in first and 'options' in first:
+                        quiz_data['questions'] = v
+                        break
+
+        if "questions" not in quiz_data or not isinstance(quiz_data["questions"], list):
+            # Last resort: try to find a JSON-looking string inside any string values
+            for k, v in quiz_data.items():
+                if isinstance(v, str) and '{' in v:
+                    try:
+                        maybe = json.loads(v)
+                        if isinstance(maybe, dict) and 'questions' in maybe and isinstance(maybe['questions'], list):
+                            quiz_data = maybe
+                            break
+                    except Exception:
+                        continue
 
         if "questions" not in quiz_data or not isinstance(quiz_data["questions"], list):
             return "Error: Invalid quiz format from LLM.", "Invalid format"
