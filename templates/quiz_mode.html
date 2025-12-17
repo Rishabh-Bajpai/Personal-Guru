@@ -11,10 +11,12 @@
         <h2>{{ question.question }}</h2>
         <div class="options">
             {% for option in question.options %}
-            <label>
-                <input type="radio" name="answers_{{ question_index }}" value="{{ loop.index0 }}" required>
-                {{ option }}
-            </label>
+            <div class="option">
+                <label>
+                    <input type="radio" name="answers_{{ question_index }}" value="{{ loop.index0 }}" required>
+                    {{ option }}
+                </label>
+            </div>
             {% endfor %}
         </div>
     </div>

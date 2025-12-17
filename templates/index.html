@@ -33,8 +33,12 @@
         <ul>
             {% for topic in topics %}
             <li>
-                <a href="{{ url_for('learn_topic', topic_name=topic, step_index=0) }}">{{ topic }}</a>
-                <a href="{{ url_for('delete_topic_route', topic_name=topic) }}" class="button delete-button">Delete</a>
+                {% if topic.has_plan %}
+                    <a href="{{ url_for('learn_topic', topic_name=topic.name, step_index=0) }}">{{ topic.name }}</a>
+                {% else %}
+                    <a href="{{ url_for('quiz_mode', topic_name=topic.name) }}">{{ topic.name }}</a>
+                {% endif %}
+                <a href="{{ url_for('delete_topic_route', topic_name=topic.name) }}" class="button delete-button">Delete</a>
             </li>
             {% endfor %}
         </ul>

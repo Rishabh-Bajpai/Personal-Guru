@@ -266,12 +266,22 @@ User's Question: "{question}"
         return answer, None
 
 class QuizAgent:
-    def generate_quiz(self, topic, user_background):
+    def generate_quiz(self, topic, user_background, count=10):
+        """
+        Generate a quiz with the specified number of questions.
+        count can be 'auto' (default 10), 25, or 50.
+        """
+        if isinstance(count, str) and count.lower() == 'auto':
+            count = 10
+        else:
+            count = int(count) if count else 10
+        
         prompt = f"""
-You are an expert in creating educational quizzes. For the topic '{topic}', create a quiz with 5-10 multiple-choice questions.
+You are an expert in creating educational quizzes. For the topic '{topic}', create a quiz with {count} multiple-choice questions.
 The user's background is: '{user_background}'
-The output should be a JSON object with a single key "questions", which is an array of question objects.
-Each question object should have keys "question", "options" (an array of 4 strings), and "correct_answer" (the letter 'A', 'B', 'C', or 'D').
+Output ONLY a JSON object with a single key "questions", which is an array of question objects.
+Each question object MUST have keys "question", "options" (an array of exactly 4 strings), and "correct_answer" (one of 'A', 'B', 'C', or 'D').
+Do NOT include any explanatory text, preamble, or markdown code blocks. Return ONLY valid JSON.
 
 Example JSON response:
 {{
@@ -294,15 +304,58 @@ Example JSON response:
   ]
 }}
 
-Now, generate a quiz for the topic: '{topic}'.
+Now, generate a quiz with exactly {count} questions for the topic: '{topic}'.
 """
         quiz_data, error = _call_ollama(prompt, is_json=True)
         if error:
+            # Save raw response for debugging
+            timestamp = datetime.now().isoformat().replace(':', '-')
+            debug_file = f"data/debug-quiz-{timestamp}.txt"
+            try:
+                with open(debug_file, 'w') as f:
+                    f.write(f"Topic: {topic}\n")
+                    f.write(f"User Background: {user_background}\n")
+                    f.write(f"Requested Count: {count}\n")
+                    f.write(f"Raw Response: {str(quiz_data)}\n")
+                print(f"DEBUG: Saved raw LLM response to {debug_file}")
+            except Exception as e:
+                print(f"DEBUG: Failed to save debug file: {e}")
+            
             return quiz_data, error
+
+        # Attempt fallback parsing if the returned data is not in expected format
+        if not isinstance(quiz_data, dict):
+            print(f"DEBUG: quiz_data is not a dict, it's a {type(quiz_data)}")
+            return "Error: Invalid quiz format from LLM (response is not a JSON object).", "Invalid format"
+
+        # If 'questions' key is missing, try to find it in the response
+        if "questions" not in quiz_data:
+            print(f"DEBUG: 'questions' key not found. Available keys: {list(quiz_data.keys())}")
+            # Try to find a list-like value that could be questions
+            for k, v in quiz_data.items():
+                if isinstance(v, list) and v and isinstance(v[0], dict):
+                    if 'question' in v[0] and 'options' in v[0]:
+                        print(f"DEBUG: Found questions under key '{k}'")
+                        quiz_data['questions'] = v
+                        break
 
         # Detailed validation of the quiz structure
         validation_error, error_type = _validate_quiz_structure(quiz_data)
         if validation_error:
+            # Save raw response for debugging on validation failure
+            timestamp = datetime.now().isoformat().replace(':', '-')
+            debug_file = f"data/debug-quiz-{timestamp}.txt"
+            try:
+                with open(debug_file, 'w') as f:
+                    f.write(f"Topic: {topic}\n")
+                    f.write(f"User Background: {user_background}\n")
+                    f.write(f"Requested Count: {count}\n")
+                    f.write(f"Validation Error: {validation_error}\n")
+                    f.write(f"Raw Data: {json.dumps(quiz_data, indent=2)}\n")
+                print(f"DEBUG: Saved validation failure to {debug_file}")
+            except Exception as e:
+                print(f"DEBUG: Failed to save debug file: {e}")
+            
             return validation_error, error_type
 
         return quiz_data, None

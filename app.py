@@ -66,10 +66,11 @@ def index():
         topic_name = request.form['topic']
         mode = request.form.get('mode', 'chapter')
 
-        # If user selected a non-chapter learning mode, show the placeholder page.
+        # If user selected a non-chapter learning mode, show the appropriate selector or mode page.
         if mode and mode != 'chapter':
             if mode == 'quiz':
-                return redirect(url_for('quiz_mode', topic_name=topic_name))
+                # Show quiz question count selector
+                return render_template('quiz_select.html', topic_name=topic_name)
             topic_data = load_topic(topic_name) or {}
             flashcards = topic_data.get('flashcards', [])
 
@@ -105,7 +106,17 @@ def index():
             render_template(f'{mode}_mode.html')
 
     topics = get_all_topics()
-    return render_template('index.html', topics=topics)
+    # Load topic data to determine which mode to use for each
+    topics_data = []
+    for topic in topics:
+        data = load_topic(topic)
+        if data:
+            has_plan = bool(data.get('plan'))
+            topics_data.append({'name': topic, 'has_plan': has_plan})
+        else:
+            topics_data.append({'name': topic, 'has_plan': True})  # Default to chapter mode
+    
+    return render_template('index.html', topics=topics_data)
 
 @app.route('/background', methods=['GET', 'POST'])
 def set_background():
@@ -123,7 +134,15 @@ def learn_topic(topic_name, step_index):
     if not topic_data:
         return "Topic not found", 404
 
-    plan_steps = topic_data['plan']
+    plan_steps = topic_data.get('plan', [])
+    
+    # If topic has no plan (quiz/flashcard only), redirect to quiz mode
+    if not plan_steps:
+        if 'quiz' in topic_data:
+            return redirect(url_for('quiz_mode', topic_name=topic_name))
+        else:
+            return redirect(url_for('quiz_mode', topic_name=topic_name))
+    
     if not 0 <= step_index < len(plan_steps):
         return "Invalid step index", 404
 
@@ -336,16 +355,36 @@ def delete_topic_route(topic_name):
     delete_topic(topic_name)
     return redirect(url_for('index'))
 
-@app.route('/quiz/<topic_name>')
-def quiz_mode(topic_name):
+@app.route('/quiz/generate/<topic_name>/<int:count>', methods=['GET', 'POST'])
+def generate_quiz(topic_name, count):
+    """Generate a quiz with the specified number of questions and save it."""
     user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
-    quiz_data, error = quiz_agent.generate_quiz(topic_name, user_background)
+    quiz_data, error = quiz_agent.generate_quiz(topic_name, user_background, count=count)
 
     if error:
         return f"<h1>Error Generating Quiz</h1><p>{quiz_data}</p>"
 
+    # Save quiz to topic data
+    topic_data = load_topic(topic_name) or {"name": topic_name, "plan": [], "steps": []}
+    topic_data['quiz'] = quiz_data
+    save_topic(topic_name, topic_data)
+
     session['quiz_questions'] = quiz_data.get('questions', [])
     return render_template('quiz_mode.html', topic_name=topic_name, quiz_data=quiz_data)
+
+@app.route('/quiz/<topic_name>')
+def quiz_mode(topic_name):
+    """Load quiz from saved data or generate new one."""
+    topic_data = load_topic(topic_name)
+    
+    # If quiz exists in saved data, use it
+    if topic_data and 'quiz' in topic_data:
+        quiz_data = topic_data['quiz']
+        session['quiz_questions'] = quiz_data.get('questions', [])
+        return render_template('quiz_mode.html', topic_name=topic_name, quiz_data=quiz_data)
+    
+    # Otherwise show the quiz count selector
+    return render_template('quiz_select.html', topic_name=topic_name)
 
 @app.route('/quiz/<topic_name>/submit', methods=['POST'])
 def submit_quiz(topic_name):
