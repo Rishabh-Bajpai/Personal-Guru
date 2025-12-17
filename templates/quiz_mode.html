@@ -6,12 +6,13 @@
 <h1>Quiz on {{ topic_name }}</h1>
 <form method="post" action="{{ url_for('submit_quiz', topic_name=topic_name) }}">
     {% for question in quiz_data.questions %}
+    {% set question_index = loop.index0 %}
     <div class="question">
         <h2>{{ question.question }}</h2>
         <div class="options">
             {% for option in question.options %}
             <label>
-                <input type="radio" name="answers_{{ loop.parent.loop.index0 }}" value="{{ loop.index0 }}" required>
+                <input type="radio" name="answers_{{ question_index }}" value="{{ loop.index0 }}" required>
                 {{ option }}
             </label>
             {% endfor %}

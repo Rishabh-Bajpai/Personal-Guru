@@ -172,7 +172,7 @@ def assess_step(topic_name, step_index):
         user_answer = user_answers[i]
 
         if user_answer: # Only score answered questions
-            feedback_data, _ = feedback_agent.evaluate_answer(question, user_answer)
+            feedback_data, _ = feedback_agent.evaluate_answer(question.get('correct_answer'), user_answer)
             if feedback_data['is_correct']:
                 num_correct += 1
             else:
