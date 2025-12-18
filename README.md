@@ -15,7 +15,49 @@ This is a Flask-based web application that serves as a proof-of-concept for a pe
 - **Instant Feedback:** Receive immediate feedback on your answers.
 - **Local AI Integration:** Designed to connect with locally-hosted AI services (LLM, TTS) for privacy and control.
 - **Export to Markdown:** At the end of a course, you can export the entire study plan and content to a markdown file, perfect for importing into note-taking apps like Notion, Obsidian, or NotebookLM.
+- **Reel Mode:** A TikTok/Reel-style interface for browsing educational short videos.
 - **Comprehensive Test Suite:** Includes a full suite of unit tests to verify application logic.
+
+## Enabling HTTPS for Microphone Access, reels and other security features
+
+Modern web browsers require a secure (HTTPS) connection to allow web pages to access the microphone, and to enable reels mode.
+
+### Method A: Self-Signed Certificate (for Local Development)
+
+This is the simplest way to enable HTTPS for local testing.
+
+1.  **Generate the Certificate:**
+    The repository includes a script to generate a self-signed certificate.
+    ```bash
+    python scripts/generate_cert.py
+    ```
+    This will create a `certs` directory with `cert.pem` and `key.pem` files.
+
+2.  **Run the Application:**
+    Start Personal-Guru as you normally would. The Flask server will automatically detect the certificate and start with HTTPS.
+
+3.  **Trust the Certificate in Your Browser:**
+    When you navigate to `https://localhost:5002`, your browser will show a privacy warning. You must accept the risk to proceed.
+
+### Method B: Reverse Proxy (for Production)
+
+Using a reverse proxy like Nginx or Caddy is the standard way to handle HTTPS in a production environment. The reverse proxy manages the SSL certificates (e.g., from Let's Encrypt) and forwards traffic to the Personal-Guru application, which can run on standard HTTP.
+
+**General Steps:**
+
+1.  **Run Personal-Guru:** Start the Personal-Guru application on its default port (`5002`) without any SSL context.
+2.  **Set Up Reverse Proxy:**
+    -   Configure your reverse proxy (e.g., Nginx Proxy Manager, Caddy) to create a new proxy host.
+    -   **Domain:** Your public domain (e.g., `personal-guru.your-domain.com`).
+    -   **Scheme:** `http`.
+    -   **Forward Hostname/IP:** The IP address of the machine running Personal-Guru.
+    -   **Forward Port:** `5002`.
+    -   **Enable WebSocket Support:** This is critical for the voice communication to work.
+3.  **Enable SSL:**
+    -   In your reverse proxy's SSL settings, request a new SSL certificate (e.g., using Let's Encrypt).
+    -   Enable "Force SSL" and "HTTP/2 Support".
+
+After saving, you can access Personal-Guru securely at your public domain.
 
 ## Setup and Installation
 
@@ -55,20 +97,29 @@ The application is configured using a `.env` file. Copy the example file and edi
 cp .env.example .env
 ```
 
-Now, open the `.env` file and customize the settings for your environment. You will need to provide the URLs for your Ollama and TTS services.
+Now, open the `.env` file and customize the settings. The application uses the OpenAI API protocol for all LLM providers (including Ollama).
+
+**Key Variables:**
+- `LLM_ENDPOINT`: The base URL of your LLM provider.
+    - For **Ollama**: `http://localhost:11434/v1`
+    - For **LMStudio**: `http://localhost:1234/v1`
+    - For **OpenAI**: `https://api.openai.com/v1`
+- `LLM_MODEL_NAME`: The name of the model to use (e.g., `llama3`, `gpt-4o`).
+- `LLM_API_KEY`: API Key (optional for local providers like Ollama).
+- `LLM_NUM_CTX`: Context window size (recommended: `18000` or higher if your hardware supports it).
 
 ## Running the Application
 
-To run the application, you need to have three components running: the Ollama LLM server, the Coqui TTS server (optional), and the main Flask application.
+To run the application, you need to have three components running: the LLM server, the Coqui TTS server (optional), and the main Flask application.
 
-### 1. Ollama (LLM Server)
+### 1. LLM Server (Ollama / LMStudio / etc.)
 
-Ensure your Ollama instance is running and accessible over the network. If you are running Ollama in Docker, make sure to expose its port (default 11434).
+Ensure your LLM server is running and accessible.
 
-You can install Ollama from the official website: [https://ollama.com/](https://ollama.com/)
+**If using Ollama:**
+You can install Ollama from [https://ollama.com/](https://ollama.com/).
 
-For GPU support with Docker, you can run Ollama using the following command:
-
+Run with Docker (GPU support):
 ```bash
 docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
 ```
