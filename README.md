@@ -97,20 +97,29 @@ The application is configured using a `.env` file. Copy the example file and edi
 cp .env.example .env
 ```
 
-Now, open the `.env` file and customize the settings for your environment. You will need to provide the URLs for your Ollama and TTS services.
+Now, open the `.env` file and customize the settings. The application uses the OpenAI API protocol for all LLM providers (including Ollama).
+
+**Key Variables:**
+- `LLM_ENDPOINT`: The base URL of your LLM provider.
+    - For **Ollama**: `http://localhost:11434/v1`
+    - For **LMStudio**: `http://localhost:1234/v1`
+    - For **OpenAI**: `https://api.openai.com/v1`
+- `LLM_MODEL_NAME`: The name of the model to use (e.g., `llama3`, `gpt-4o`).
+- `LLM_API_KEY`: API Key (optional for local providers like Ollama).
+- `LLM_NUM_CTX`: Context window size (recommended: `18000` or higher if your hardware supports it).
 
 ## Running the Application
 
-To run the application, you need to have three components running: the Ollama LLM server, the Coqui TTS server (optional), and the main Flask application.
+To run the application, you need to have three components running: the LLM server, the Coqui TTS server (optional), and the main Flask application.
 
-### 1. Ollama (LLM Server)
+### 1. LLM Server (Ollama / LMStudio / etc.)
 
-Ensure your Ollama instance is running and accessible over the network. If you are running Ollama in Docker, make sure to expose its port (default 11434).
+Ensure your LLM server is running and accessible.
 
-You can install Ollama from the official website: [https://ollama.com/](https://ollama.com/)
+**If using Ollama:**
+You can install Ollama from [https://ollama.com/](https://ollama.com/).
 
-For GPU support with Docker, you can run Ollama using the following command:
-
+Run with Docker (GPU support):
 ```bash
 docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
 ```
