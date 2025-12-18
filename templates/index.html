@@ -6,6 +6,24 @@
 <h1>What would you like to learn today?</h1>
 <form method="post" onsubmit="showLoader()">
     <input type="text" name="topic" size="50" placeholder="Enter a new topic...">
+    <div class="learning-modes">
+        <p>Choose a learning mode:</p>
+        <label>
+            <input type="radio" name="mode" value="chapter" checked> Chapter Mode
+        </label>
+        <label>
+            <input type="radio" name="mode" value="chat"> Chat Mode
+        </label>
+        <label>
+            <input type="radio" name="mode" value="quiz"> Quiz Mode
+        </label>
+        <label>
+            <input type="radio" name="mode" value="reel"> Reel Mode
+        </label>
+        <label>
+            <input type="radio" name="mode" value="flashcard"> Flash Card Mode
+        </label>
+    </div>
     <input type="submit" value="Start Learning" class="button">
 </form>
 
@@ -15,8 +33,16 @@
         <ul>
             {% for topic in topics %}
             <li>
-                <a href="{{ url_for('learn_topic', topic_name=topic, step_index=0) }}">{{ topic }}</a>
-                <a href="{{ url_for('delete_topic_route', topic_name=topic) }}" class="button delete-button">Delete</a>
+                {% if topic.has_plan %}
+                    <a href="{{ url_for('learn_topic', topic_name=topic.name, step_index=0) }}">{{ topic.name }}</a>
+                {% elif topic.has_flashcards %}
+                    <a href="{{ url_for('flashcard_mode', topic_name=topic.name) }}">{{ topic.name }}</a>
+                {% elif topic.has_quiz %}
+                    <a href="{{ url_for('quiz_mode', topic_name=topic.name) }}">{{ topic.name }}</a>
+                {% else %}
+                    <a href="{{ url_for('learn_topic', topic_name=topic.name, step_index=0) }}">{{ topic.name }}</a>
+                {% endif %}
+                <a href="{{ url_for('delete_topic_route', topic_name=topic.name) }}" class="button delete-button">Delete</a>
             </li>
             {% endfor %}
         </ul>

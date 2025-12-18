@@ -47,11 +47,16 @@ h3 {
     padding: 12px 24px;
     text-decoration: none;
     border-radius: 8px;
-    margin-top: 20px;
     border: none;
     cursor: pointer;
     transition: background-color 0.3s ease, transform 0.2s ease;
     font-size: 1em;
+}
+
+a.button {
+    padding: 12px 24px;
+    font-size: 1em;
+    margin-top: 0;
 }
 
 .button:hover {
