@@ -5,3 +5,4 @@ pytest
 pytest-mock
 WeasyPrint
 markdown-it-py
+google-api-python-client
