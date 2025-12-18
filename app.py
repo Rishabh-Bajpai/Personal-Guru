@@ -63,29 +63,63 @@ def generate_audio(text, step_index, tts_engine="coqui"):
 def index():
     if request.method == 'POST':
         topic_name = request.form['topic']
+        mode = request.form.get('mode', 'chapter')
+
+        # If user selected a non-chapter learning mode, show the placeholder page.
+        if mode and mode != 'chapter':
+            topic_data = load_topic(topic_name) or {}
+            flashcards = topic_data.get('flashcards', [])
+
+            # Expect templates named like 'chat_mode.html', 'quiz_mode.html', etc.
+            try:
+                return render_template(f"{mode}_mode.html", topic_name=topic_name, flashcards=flashcards)
+            except Exception:
+                # Fallback: render index with an error message
+                return render_template('index.html', topics=get_all_topics(), error=f"Mode {mode} not available")
+        mode = request.form.get('mode', 'chapter')
         user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
         print(f"DEBUG: User background in index: {user_background}")
 
-        # Check if topic already exists
-        if load_topic(topic_name):
+        if mode == 'chapter':
+            # Check if topic already exists
+            if load_topic(topic_name):
+                return redirect(url_for('learn_topic', topic_name=topic_name, step_index=0))
+
+            # Use the PlannerAgent to generate the study plan
+            plan_steps, error = planner.generate_study_plan(topic_name, user_background)
+            if error:
+                return f"<h1>Error Generating Plan</h1><p>{plan_steps}</p>"
+
+            topic_data = {
+                "name": topic_name,
+                "plan": plan_steps,
+                "steps": [{} for _ in plan_steps]
+            }
+            save_topic(topic_name, topic_data)
+
             return redirect(url_for('learn_topic', topic_name=topic_name, step_index=0))
-
-        # Use the PlannerAgent to generate the study plan
-        plan_steps, error = planner.generate_study_plan(topic_name, user_background)
-        if error:
-            return f"<h1>Error Generating Plan</h1><p>{plan_steps}</p>"
-
-        topic_data = {
-            "name": topic_name,
-            "plan": plan_steps,
-            "steps": [{} for _ in plan_steps]
-        }
-        save_topic(topic_name, topic_data)
-
-        return redirect(url_for('learn_topic', topic_name=topic_name, step_index=0))
+        else:
+            render_template(f'{mode}_mode.html')
 
     topics = get_all_topics()
-    return render_template('index.html', topics=topics)
+    # Load topic data to determine which mode to use for each
+    topics_data = []
+    for topic in topics:
+        data = load_topic(topic)
+        if data:
+            has_plan = bool(data.get('plan'))
+            has_flashcards = bool(data.get('flashcards'))
+            has_quiz = bool(data.get('quiz'))
+            topics_data.append({
+                'name': topic,
+                'has_plan': has_plan,
+                'has_flashcards': has_flashcards,
+                'has_quiz': has_quiz
+            })
+        else:
+            topics_data.append({'name': topic, 'has_plan': True, 'has_flashcards': False, 'has_quiz': False})
+    
+    return render_template('index.html', topics=topics_data)
 
 @app.route('/background', methods=['GET', 'POST'])
 def set_background():
@@ -97,13 +131,33 @@ def set_background():
     current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
     return render_template('background.html', user_background=current_background)
 
+@app.route('/flashcard_mode/<topic_name>')
+def flashcard_mode(topic_name):
+    """Display flashcard mode with saved flashcards or generation UI."""
+    topic_data = load_topic(topic_name)
+    if not topic_data:
+        return "Topic not found", 404
+    
+    flashcards = topic_data.get('flashcards', [])
+    return render_template('flashcard_mode.html', topic_name=topic_name, flashcards=flashcards)
+
 @app.route('/learn/<topic_name>/<int:step_index>')
 def learn_topic(topic_name, step_index):
     topic_data = load_topic(topic_name)
     if not topic_data:
         return "Topic not found", 404
 
-    plan_steps = topic_data['plan']
+    plan_steps = topic_data.get('plan', [])
+    
+    # If topic has no plan (quiz/flashcard only), redirect to appropriate mode
+    if not plan_steps:
+        if 'flashcards' in topic_data and topic_data['flashcards']:
+            return redirect(url_for('flashcard_mode', topic_name=topic_name))
+        elif 'quiz' in topic_data:
+            return redirect(url_for('quiz_mode', topic_name=topic_name))
+        else:
+            return redirect(url_for('quiz_mode', topic_name=topic_name))
+    
     if not 0 <= step_index < len(plan_steps):
         return "Invalid step index", 404
 
@@ -196,6 +250,44 @@ def generate_audio_route(step_index):
     audio_url = url_for('static', filename=os.path.basename(audio_path))
     return {"audio_url": audio_url}
 
+
+@app.route('/flashcards/generate', methods=['POST'])
+def generate_flashcards_route():
+    data = request.get_json() or {}
+    topic_name = data.get('topic')
+    count = data.get('count', 'auto')
+
+    if not topic_name:
+        return {"error": "No topic provided"}, 400
+
+    user_background = os.getenv('USER_BACKGROUND', 'a beginner')
+
+    # Determine flashcard count
+    if isinstance(count, str) and count.lower() == 'auto':
+        num, error = teacher.get_flashcard_count_for_topic(topic_name, user_background=user_background)
+        if error:
+            # Log the error and proceed with a default
+            print(f"Error getting flashcard count: {error}")
+            num = 25
+    else:
+        try:
+            num = int(count)
+        except (ValueError, TypeError):
+            num = 25
+
+    user_background = os.getenv('USER_BACKGROUND', 'a beginner')
+
+    cards, error = teacher.generate_flashcards(topic_name, count=num, user_background=user_background)
+    if error:
+        return {"error": cards}, 500
+
+    # Persist flashcards
+    topic_data = load_topic(topic_name) or {"name": topic_name, "plan": [], "steps": []}
+    topic_data['flashcards'] = cards
+    save_topic(topic_name, topic_data)
+
+    return {"flashcards": cards}
+
 @app.route('/chat/<topic_name>/<int:step_index>', methods=['POST'])
 def chat(topic_name, step_index):
     user_question = request.json.get('question')
@@ -257,11 +349,30 @@ def _get_topic_data_and_score(topic_name):
 
 @app.route('/export/<topic_name>/pdf')
 def export_topic_pdf(topic_name):
-    topic_data, average_score = _get_topic_data_and_score(topic_name)
+    topic_data = load_topic(topic_name)
     if not topic_data:
         return "Topic not found", 404
 
-    html = render_template('pdf_export_template.html', topic=topic_data, average_score=average_score)
+    # Check if this is a flashcard topic or a chapter topic
+    if topic_data.get('flashcards'):
+        # Render flashcards as PDF
+        html = render_template('flashcard_export_template.html', topic_name=topic_name, flashcards=topic_data.get('flashcards', []))
+    else:
+        # Render chapter/quiz as PDF
+        average_score = 0
+        if topic_data.get('steps'):
+            total_score = 0
+            answered_questions = 0
+            for step in topic_data['steps']:
+                if 'teaching_material' in step:
+                    step['teaching_material'] = md.render(step['teaching_material'])
+                if 'score' in step and step.get('user_answers'):
+                    total_score += step['score']
+                    answered_questions += 1
+            average_score = (total_score / answered_questions) if answered_questions > 0 else 0
+        
+        html = render_template('pdf_export_template.html', topic=topic_data, average_score=average_score)
+    
     pdf = HTML(string=html).write_pdf(
         document_metadata={
             'title': topic_name,
