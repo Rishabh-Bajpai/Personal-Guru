@@ -391,4 +391,5 @@ def delete_topic_route(topic_name):
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5002)
+    port = os.getenv("PORT", 5002)
+    app.run(debug=True, host='0.0.0.0', port=port)
