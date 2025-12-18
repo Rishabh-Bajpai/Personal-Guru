@@ -4,7 +4,6 @@
 .env
 .env.local
 .env.*.local
-.env.example
 static/*.wav
 data/*
 example_api_output/
