@@ -456,4 +456,16 @@ def video_event():
 
 if __name__ == '__main__':
     port = os.getenv("PORT", 5002)
-    app.run(debug=True, host='0.0.0.0', port=port)
+    
+    # Auto-detect SSL certificates
+    ssl_context = None
+    cert_path =  os.path.join("certs", "cert.pem")
+    key_path = os.path.join("certs", "key.pem")
+    
+    if os.path.exists(cert_path) and os.path.exists(key_path):
+        print(f"🔒 SSL Certificates found. Starting in HTTPS mode on port {port}...")
+        ssl_context = (cert_path, key_path)
+    else:
+        print(f"🔓 No certificates found. Starting in HTTP mode on port {port}...")
+    
+    app.run(debug=True, host='0.0.0.0', port=port, ssl_context=ssl_context)
