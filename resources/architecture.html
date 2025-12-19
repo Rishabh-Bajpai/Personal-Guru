@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Guru System Architecture</title>
+    <style>
+        :root {
+            --primary-bg: #e3f2fd;
+            --primary-border: #0288d1;
+            --primary-text: #01579b;
+            --user-bg: #e8f5e9;
+            --user-border: #388e3c;
+            --ext-bg: #fafafa;
+            --ext-border: #757575;
+            --mode-bg: #fff8e1; /* Light Amber/Yellow for Modes */
+            --mode-border: #ff8f00;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f8;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            color: #455a64;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        .diagram-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 50px;
+            padding: 30px;
+            position: relative;
+            min-height: 400px; 
+            display: flex;
+            flex-direction: column;
+        }
+
+        svg.connectors {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .node {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: 2px solid transparent;
+            text-align: center;
+            position: relative;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 20;
+            min-width: 100px;
+        }
+
+        .node-title {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .node-desc {
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .node.person { background-color: var(--user-bg); border-color: var(--user-border); border-radius: 20px; }
+        .node.system { background-color: var(--primary-bg); border-color: var(--primary-border); }
+        .node.ext { background-color: var(--ext-bg); border-color: var(--ext-border); color: #666; }
+        .node.db { border-radius: 0 0 10px 10px; border-top: 4px solid var(--primary-border); }
+
+        /* Mode Groups */
+        .mode-group {
+            border: 2px dashed var(--mode-border);
+            background-color: var(--mode-bg);
+            padding: 20px;
+            border-radius: 8px;
+            position: relative;
+            margin: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+        }
+        .mode-group::before {
+            content: attr(data-mode);
+            position: absolute;
+            top: -12px;
+            left: 15px;
+            background: #fff8e1;
+            padding: 0 8px;
+            font-weight: bold;
+            color: var(--mode-border);
+            font-size: 0.9em;
+        }
+
+        .flex-row { display: flex; justify-content: center; align-items: center; gap: 40px; margin-bottom: 20px; flex-wrap: wrap; }
+        .flex-col { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .spacer-y { height: 60px; }
+        .spacer-x { width: 40px; }
+
+        .system-boundary {
+            border: 2px dashed #90a4ae;
+            padding: 40px;
+            border-radius: 8px;
+            background-color: #fffde7;
+            position: relative;
+            margin: 20px;
+        }
+        .system-boundary::before {
+            content: attr(data-label);
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: #fffde7;
+            padding: 0 10px;
+            font-weight: bold;
+            color: #455a64;
+        }
+
+        .class-node {
+            border: 1px solid #333;
+            background: white;
+            border-radius: 0;
+            padding: 0;
+            width: 250px;
+            text-align: left;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+            z-index: 20;
+        }
+        .class-header { background: #eee; padding: 8px; border-bottom: 1px solid #333; font-weight: bold; text-align: center; }
+        .class-methods { padding: 8px; font-family: monospace; font-size: 0.9em; }
+
+    </style>
+</head>
+<body>
+
+    <h1>Personal Guru Architecture</h1>
+
+    <!-- 1. System Context Diagram -->
+    <div class="diagram-container" id="container-context">
+        <h2>1. System Context Diagram (Level 1)</h2>
+        <svg class="connectors" id="svg-context">
+            <defs>
+                <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                    <path d="M0,0 L0,6 L9,3 z" fill="#555" />
+                </marker>
+            </defs>
+        </svg>
+
+        <div class="flex-row">
+            <div class="node person" id="c1-user">
+                <span class="node-title">User (Learner)</span>
+            </div>
+        </div>
+
+        <div class="spacer-y"></div>
+
+        <div class="flex-row">
+            <div class="node system" id="c1-system" style="padding: 20px 40px; font-size: 1.2em;">
+                <span class="node-title">Personal Guru</span>
+                <span class="node-desc">AI Learning Assistant</span>
+            </div>
+        </div>
+
+        <div class="spacer-y"></div>
+
+        <div class="flex-row" style="gap: 80px;">
+            <div class="node ext" id="c1-llm">
+                <span class="node-title">LLM Provider</span>
+            </div>
+            <div class="node ext" id="c1-youtube">
+                <span class="node-title">YouTube</span>
+            </div>
+            <div class="node ext" id="c1-coqui">
+                <span class="node-title">Coqui TTS</span>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 2. Container Diagram -->
+    <div class="diagram-container" id="container-container">
+        <h2>2. Container Diagram (Level 2)</h2>
+        <svg class="connectors" id="svg-container"></svg>
+
+        <div class="flex-row" style="align-items: center; justify-content: space-between; padding: 0 40px;">
+
+            <!-- User -->
+            <div class="node person" id="c2-user">
+                <span class="node-title">User</span>
+            </div>
+
+            <!-- System Boundary -->
+            <div class="system-boundary" data-label="Personal Guru System">
+                <div class="flex-row">
+                    <div class="node system" id="c2-webapp" style="background: #e1f5fe;">
+                        <span class="node-title">Web App</span>
+                        <span class="node-desc">Flask</span>
+                    </div>
+
+                    <div class="spacer-x"></div>
+
+                    <div class="node system" id="c2-agentcore" style="background: #e0f2f1;">
+                        <span class="node-title">Agent Core</span>
+                        <span class="node-desc">Python Logic</span>
+                    </div>
+
+                    <div class="spacer-x"></div>
+                    
+                    <!-- Removed Storage Node per user request -->
+                    <div class="node" id="c2-static" style="border: 1px dashed #333;">
+                        <span class="node-title">Static Assets</span>
+                        <span class="node-desc">Audio/Img</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- External -->
+            <div class="flex-col">
+                <div class="node ext" id="c2-llm">LLM API</div>
+                <div class="node ext" id="c2-youtube">YouTube API</div>
+            </div>
+
+        </div>
+        <p style="text-align: center; font-size: 0.9em; color: #666; margin-top: 30px;">(Storage implementation detail hidden for clarity)</p>
+    </div>
+
+
+    <!-- 3. Component Diagram -->
+    <div class="diagram-container" id="container-component">
+        <h2>3. Component Diagram (Logic by Mode)</h2>
+        <svg class="connectors" id="svg-component"></svg>
+
+        <div class="system-boundary" data-label="Personal Guru Application Logic" style="max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px;">
+            
+            <!-- Controller Layer -->
+            <div class="flex-row">
+                <div class="node system" id="c3-flask" style="background: #e1f5fe; width: 300px;">
+                    <span class="node-title">Flask App (Controller)</span>
+                    <span class="node-desc">Routes / Mode Selection</span>
+                </div>
+            </div>
+
+            <!-- Logic Layer grouped by Mode -->
+            <div class="flex-row" style="align-items: flex-start; justify-content: space-around; width: 100%;">
+                
+                <!-- Chapter Mode -->
+                <div class="mode-group" data-mode="Chapter Mode">
+                    <div class="node system" id="c3-planner">Planner Agent</div>
+                    <div class="node system" id="c3-teacher">Teacher Agent</div>
+                    <div class="node system" id="c3-assessor">Assessor Agent</div>
+                    <div class="node system" id="c3-chat">Chat Agent</div>
+                </div>
+
+                <!-- Flashcard Mode -->
+                <div class="mode-group" data-mode="Flashcard Mode">
+                     <div class="node system" style="opacity: 0.5; border: 1px dashed #ccc;">(Reuses Teacher)</div>
+                </div>
+
+                <!-- Reel Mode -->
+                <div class="mode-group" data-mode="Reel Mode">
+                    <div class="node system" id="c3-search">Reel Search Model</div>
+                    <div class="node system" id="c3-validator">Embed Validator</div>
+                    <div class="node system" id="c3-logger">Session Logger</div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- 4. Agent Class Diagram -->
+    <div class="diagram-container" id="container-class">
+        <h2>4. Agent Class Hierarchy</h2>
+        <svg class="connectors" id="svg-class"></svg>
+        
+        <div class="flex-col">
+            <!-- Children -->
+            <div class="flex-row" style="align-items: flex-start; gap: 20px;">
+                <div class="class-node" id="c4-planner">
+                    <div class="class-header">PlannerAgent</div>
+                    <div class="class-methods">
+                        +generate_plan(topic)
+                    </div>
+                </div>
+
+                <div class="class-node" id="c4-teacher">
+                    <div class="class-header">TopicTeachingAgent</div>
+                    <div class="class-methods">
+                        +generate_material()<br>
+                        +generate_flashcards()
+                    </div>
+                </div>
+
+                <div class="class-node" id="c4-assessor">
+                    <div class="class-header">AssessorAgent</div>
+                    <div class="class-methods">
+                        +generate_question()
+                    </div>
+                </div>
+            </div>
+
+            <div class="spacer-y"></div>
+
+            <!-- Parent/Helper -->
+            <div class="class-node" id="c4-helper" style="background: #fff3e0;">
+                <div class="class-header">LLMHelper (Service)</div>
+                <div class="class-methods">
+                    +_call_llm(prompt, is_json)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script to draw lines -->
+    <script>
+        function connect(svgId, startId, endId, color='#555', label='') {
+            const svg = document.getElementById(svgId);
+            const start = document.getElementById(startId);
+            let end = document.getElementById(endId);
+            
+            // Allow connecting to elements with dashed borders like (Reuses Teacher)
+            // But if endId is not direct ID, maybe try looking up inside mode group
+            if (!end) return; 
+
+            if (!svg || !start) return;
+
+            const svgRect = svg.getBoundingClientRect();
+            const startRect = start.getBoundingClientRect();
+            const endRect = end.getBoundingClientRect();
+
+            // Calculate centers relative to SVG
+            // Clamp coordinates to prevent huge lines if layout is broken
+            const x1 = (startRect.left + startRect.width / 2) - svgRect.left;
+            const y1 = (startRect.bottom) - svgRect.top; // Bottom of source
+            const x2 = (endRect.left + endRect.width / 2) - svgRect.left;
+            const y2 = (endRect.top) - svgRect.top; // Top of target
+
+            // Basic path logic: Vertical down, then Horizontal, then Vertical down
+            let d = '';
+            
+            // Simple straight line for Context/Class diagrams?
+            // Let's use direct lines for now, but cleaner attachment points (Top/Bottom)
+            
+            if (svgId === 'svg-component') {
+                // For component diagram, tree style connectors might look better
+                const midY = (y1 + y2) / 2;
+                d = `M ${x1} ${y1} L ${x1} ${midY} L ${x2} ${midY} L ${x2} ${y2}`;
+                
+                let path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', d);
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke', color);
+                path.setAttribute('stroke-width', '2');
+                path.setAttribute('marker-end', 'url(#arrow)');
+                svg.appendChild(path);
+                return; 
+            }
+
+            // Default straight line behavior
+            const cx1 = (startRect.left + startRect.width / 2) - svgRect.left;
+            const cy1 = (startRect.top + startRect.height / 2) - svgRect.top;
+            const cx2 = (endRect.left + endRect.width / 2) - svgRect.left;
+            const cy2 = (endRect.top + endRect.height / 2) - svgRect.top;
+
+             let line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', cx1);
+            line.setAttribute('y1', cy1);
+            line.setAttribute('x2', cx2);
+            line.setAttribute('y2', cy2);
+            line.setAttribute('stroke', color);
+            line.setAttribute('stroke-width', '2');
+            line.setAttribute('marker-end', 'url(#arrow)');
+            svg.appendChild(line);
+
+            if (label) {
+                let text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                const midX = (cx1 + cx2) / 2;
+                const midY = (cy1 + cy2) / 2;
+                text.setAttribute('x', midX);
+                text.setAttribute('y', midY - 5);
+                text.setAttribute('fill', '#333');
+                text.setAttribute('font-size', '12px');
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('stroke', 'white');
+                text.setAttribute('stroke-width', '4px');
+                text.setAttribute('paint-order', 'stroke');
+                text.textContent = label;
+                svg.appendChild(text);
+            }
+        }
+
+        function drawAll() {
+            // Clear all lines
+            document.querySelectorAll('svg.connectors line, svg.connectors path, svg.connectors text:not(defs)').forEach(e => e.remove());
+
+            // 1. Context Diagram
+            connect('svg-context', 'c1-user', 'c1-system', '#333', 'Use');
+            connect('svg-context', 'c1-system', 'c1-llm', '#555', 'API');
+            connect('svg-context', 'c1-system', 'c1-youtube', '#555', 'API');
+            connect('svg-context', 'c1-system', 'c1-coqui', '#555', 'HTTP');
+
+            // 2. Container Diagram
+            connect('svg-container', 'c2-user', 'c2-webapp', '#333');
+            connect('svg-container', 'c2-webapp', 'c2-agentcore');
+            connect('svg-container', 'c2-webapp', 'c2-static');
+            connect('svg-container', 'c2-agentcore', 'c2-llm');
+            connect('svg-container', 'c2-webapp', 'c2-youtube');
+
+            // 3. Component Diagram (Tree Style)
+            // Chapter Mode
+            connect('svg-component', 'c3-flask', 'c3-planner', '#0288d1');
+            connect('svg-component', 'c3-flask', 'c3-teacher', '#0288d1');
+            connect('svg-component', 'c3-flask', 'c3-assessor', '#0288d1');
+            connect('svg-component', 'c3-flask', 'c3-chat', '#0288d1');
+            
+            // Flashcard Mode - Connect Flask to Teacher (Logic reuse)
+            // We can draw a line directly to teacher again with different color or logic
+            // But for clarity, let's just stick to the main groups
+            
+            // Reel Mode
+            connect('svg-component', 'c3-flask', 'c3-search', '#ff8f00');
+            // Internal Reel Logic
+            connect('svg-component', 'c3-search', 'c3-validator', '#ff8f00');
+            connect('svg-component', 'c3-flask', 'c3-logger', '#ff8f00');
+
+            // 4. Class Diagram
+            connect('svg-class', 'c4-planner', 'c4-helper', '#999', 'Uses');
+            connect('svg-class', 'c4-teacher', 'c4-helper', '#999', 'Uses');
+            connect('svg-class', 'c4-assessor', 'c4-helper', '#999', 'Uses');
+        }
+
+        window.addEventListener('load', drawAll);
+        window.addEventListener('resize', drawAll);
+    </script>
+</body>
+</html>
