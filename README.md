@@ -104,6 +104,7 @@ Now, open the `.env` file and customize the settings. The application uses the O
     - For **Ollama**: `http://localhost:11434/v1`
     - For **LMStudio**: `http://localhost:1234/v1`
     - For **OpenAI**: `https://api.openai.com/v1`
+    - For **Gemini**: `https://generativelanguage.googleapis.com/v1beta/openai/`
 - `LLM_MODEL_NAME`: The name of the model to use (e.g., `llama3`, `gpt-4o`).
 - `LLM_API_KEY`: API Key (optional for local providers like Ollama).
 - `LLM_NUM_CTX`: Context window size (recommended: `18000` or higher if your hardware supports it).
