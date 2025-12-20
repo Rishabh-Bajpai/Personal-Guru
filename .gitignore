@@ -9,6 +9,7 @@ data/*
 example_api_output/
 cookies.txt
 local_settings.py
+certs/
 
 # ==============================================================================
 # PYTHON CORE (Byte-compiled, C extensions)
