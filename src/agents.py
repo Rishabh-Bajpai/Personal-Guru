@@ -281,7 +281,7 @@ The user incorrectly answered: "{user_answer_text}"
 Please provide a concise, helpful explanation for why the user's answer is incorrect and why the correct answer is the right choice.
 The explanation should be friendly and encouraging. Limit it to 2-4 sentences.
 """
-        feedback, error = _call_ollama(prompt)
+        feedback, error = _call_llm(prompt)
         if error:
             # Fallback on LLM error
             return {"is_correct": False, "feedback": f"Not quite. The correct answer was {correct_answer_text}. Keep trying!"}, None
@@ -352,7 +352,7 @@ Example JSON response:
 
 Now, generate a quiz with exactly {count} questions for the topic: '{topic}'.
 """
-        quiz_data, error = _call_ollama(prompt, is_json=True)
+        quiz_data, error = _call_llm(prompt, is_json=True)
         if error:
             # Save raw response for debugging
             timestamp = datetime.now().isoformat().replace(':', '-')
@@ -420,7 +420,7 @@ Based on the topic's breadth and depth, suggest an ideal number of quiz question
 Return a JSON object with a single key "count".
 For a very simple topic, suggest 5-10 questions. For a moderately complex topic, 10-20. For a very complex topic, 20-30.
 """
-        data, error = _call_ollama(prompt, is_json=True)
+        data, error = _call_llm(prompt, is_json=True)
         if error:
             return 10, error
 

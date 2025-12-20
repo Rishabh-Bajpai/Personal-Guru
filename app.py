@@ -547,13 +547,16 @@ def submit_quiz(topic_name):
 
     score = (num_correct / len(questions) * 100) if questions else 0
     
-    # Store results in session for PDF export
-    session['last_quiz_results'] = {
-        'topic_name': topic_name,
-        'score': score,
-        'feedback_results': feedback_results,
-        'date': datetime.date.today().isoformat()
-    }
+    # Store results in topic data (server-side) to avoid cookie size limits
+    topic_data = load_topic(topic_name)
+    if topic_data:
+        topic_data['last_quiz_result'] = {
+            'topic_name': topic_name,
+            'score': score,
+            'feedback_results': feedback_results,
+            'date': datetime.date.today().isoformat()
+        }
+        save_topic(topic_name, topic_data)
     
     session.pop('quiz_questions', None)
     return render_template('quiz_feedback.html',
@@ -563,9 +566,10 @@ def submit_quiz(topic_name):
 
 @app.route('/quiz/<topic_name>/export/pdf')
 def export_quiz_pdf(topic_name):
-    quiz_results = session.get('last_quiz_results')
+    topic_data = load_topic(topic_name)
+    quiz_results = topic_data.get('last_quiz_result') if topic_data else None
     
-    if not quiz_results or quiz_results.get('topic_name') != topic_name:
+    if not quiz_results:
          return "No quiz results found for this topic", 404
 
     # Render a dedicated template for the PDF
