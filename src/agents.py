@@ -272,7 +272,10 @@ class QuizAgent:
         count can be 'auto' (default 10), 25, or 50.
         """
         if isinstance(count, str) and count.lower() == 'auto':
-            count = 10
+            count, error = self.get_quiz_count_for_topic(topic, user_background)
+            if error:
+                 print(f"Error determining quiz count: {error}")
+                 count = 10
         else:
             count = int(count) if count else 10
         
@@ -359,6 +362,31 @@ Now, generate a quiz with exactly {count} questions for the topic: '{topic}'.
             return validation_error, error_type
 
         return quiz_data, None
+
+    def get_quiz_count_for_topic(self, topic, user_background=None):
+        """
+        Estimate the number of quiz questions needed for a topic based on its complexity.
+        Returns (count, None) on success or (default_count, error) on failure.
+        """
+        if user_background is None:
+            user_background = os.getenv("USER_BACKGROUND", "a beginner")
+
+        prompt = f"""
+Analyze the complexity of the topic '{topic}' for a user with background: '{user_background}'.
+Based on the topic's breadth and depth, suggest an ideal number of quiz questions to generate for a comprehensive assessment.
+Return a JSON object with a single key "count".
+For a very simple topic, suggest 5-10 questions. For a moderately complex topic, 10-20. For a very complex topic, 20-30.
+"""
+        data, error = _call_ollama(prompt, is_json=True)
+        if error:
+            return 10, error
+
+        if isinstance(data, dict) and 'count' in data and isinstance(data['count'], int):
+            count = data['count']
+            # Clamp the value to a reasonable range
+            return max(5, min(30, count)), None
+
+        return 10, "Invalid format from LLM"
 
 class TopicTeachingAgent:
     def generate_teaching_material(self, topic, full_plan, user_background, incorrect_questions=None):

@@ -17,5 +17,8 @@
     {% endfor %}
 </div>
 
-<a href="{{ url_for('index') }}" class="button">Back to Home</a>
+<div class="actions" style="margin-top: 20px; display: flex; gap: 10px;">
+    <a href="{{ url_for('index') }}" class="button">Back to Home</a>
+    <a href="{{ url_for('export_quiz_pdf', topic_name=topic_name) }}" class="button secondary">Save as PDF</a>
+</div>
 {% endblock %}

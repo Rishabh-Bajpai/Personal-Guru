@@ -367,10 +367,18 @@ def delete_topic_route(topic_name):
     delete_topic(topic_name)
     return redirect(url_for('index'))
 
-@app.route('/quiz/generate/<topic_name>/<int:count>', methods=['GET', 'POST'])
+@app.route('/quiz/generate/<topic_name>/<count>', methods=['GET', 'POST'])
 def generate_quiz(topic_name, count):
     """Generate a quiz with the specified number of questions and save it."""
     user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    
+    # Handle 'auto' or numeric count
+    if count.lower() != 'auto':
+        try:
+             count = int(count)
+        except ValueError:
+             count = 10 # Default fallback
+             
     quiz_data, error = quiz_agent.generate_quiz(topic_name, user_background, count=count)
 
     if error:
@@ -434,11 +442,42 @@ def submit_quiz(topic_name):
         })
 
     score = (num_correct / len(questions) * 100) if questions else 0
+    
+    # Store results in session for PDF export
+    session['last_quiz_results'] = {
+        'topic_name': topic_name,
+        'score': score,
+        'feedback_results': feedback_results,
+        'date': datetime.date.today().isoformat()
+    }
+    
     session.pop('quiz_questions', None)
     return render_template('quiz_feedback.html',
                            topic_name=topic_name,
                            score=score,
                            feedback_results=feedback_results)
+
+@app.route('/quiz/<topic_name>/export/pdf')
+def export_quiz_pdf(topic_name):
+    quiz_results = session.get('last_quiz_results')
+    
+    if not quiz_results or quiz_results.get('topic_name') != topic_name:
+         return "No quiz results found for this topic", 404
+
+    # Render a dedicated template for the PDF
+    html = render_template('quiz_result_pdf.html', **quiz_results)
+    
+    pdf = HTML(string=html).write_pdf(
+        document_metadata={
+            'title': f"Quiz Results - {topic_name}",
+            'created': quiz_results['date']
+        }
+    )
+
+    response = make_response(pdf)
+    response.headers["Content-Disposition"] = f"attachment; filename=quiz_results_{topic_name}.pdf"
+    response.headers["Content-Type"] = "application/pdf"
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5002)

@@ -13,38 +13,38 @@
 </div>
 
 <script>
-function generateQuiz(count) {
-    const topicName = "{{ topic_name }}";
-    let url;
-    if (count === 'auto') {
-        url = `/quiz/generate/${topicName}/10`;
-    } else {
-        url = `/quiz/generate/${topicName}/${count}`;
+    function generateQuiz(count) {
+        const topicName = "{{ topic_name }}";
+        let url;
+        if (count === 'auto') {
+            url = `/quiz/generate/${topicName}/auto`;
+        } else {
+            url = `/quiz/generate/${topicName}/${count}`;
+        }
+        window.location.href = url;
     }
-    window.location.href = url;
-}
 </script>
 
 <style>
-.flashcard-controls {
-    margin: 20px 0;
-    display: flex;
-    gap: 10px;
-}
+    .flashcard-controls {
+        margin: 20px 0;
+        display: flex;
+        gap: 10px;
+    }
 
-.control-btn {
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    transition: background-color 0.3s;
-}
+    .control-btn {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        transition: background-color 0.3s;
+    }
 
-.control-btn:hover {
-    background-color: #0056b3;
-}
+    .control-btn:hover {
+        background-color: #0056b3;
+    }
 </style>
 {% endblock %}
