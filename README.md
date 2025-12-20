@@ -18,6 +18,32 @@ This is a Flask-based web application that serves as a proof-of-concept for a pe
 - **Reel Mode:** A TikTok/Reel-style interface for browsing educational short videos.
 - **Comprehensive Test Suite:** Includes a full suite of unit tests to verify application logic.
 
+## Software Architecture
+
+We use the [C4 Model](docs/architecture.md) for architectural documentation.
+Key architectural decisions are recorded in [docs/adr](docs/adr).
+
+### System Context
+
+```mermaid
+C4Context
+    title System Context Diagram for Personal Guru
+
+    Person(user, "User", "A person who wants to learn a new topic.")
+    System(personal_guru, "Personal Guru", "Generates study plans, quizzes, and flashcards.")
+
+    System_Ext(openai, "LLM Provider", "OpenAI / Ollama / LMStudio")
+    System_Ext(youtube, "YouTube", "Provides video content for Reel Mode.")
+    System_Ext(coqui, "Coqui TTS", "Text-to-Speech Engine for audio generation.")
+
+    Rel(user, personal_guru, "Uses", "HTTPS")
+    Rel(personal_guru, openai, "Generates Content via", "API")
+    Rel(personal_guru, youtube, "Search & Embeds", "API")
+    Rel(personal_guru, coqui, "Generates Audio via", "API")
+```
+
+See [docs/architecture.md](docs/architecture.md) for Container, Component, and Sequence diagrams.
+
 ## Enabling HTTPS for Microphone Access, reels and other security features
 
 Modern web browsers require a secure (HTTPS) connection to allow web pages to access the microphone, and to enable reels mode.
@@ -28,9 +54,11 @@ This is the simplest way to enable HTTPS for local testing.
 
 1.  **Generate the Certificate:**
     The repository includes a script to generate a self-signed certificate.
+
     ```bash
     python scripts/generate_cert.py
     ```
+
     This will create a `certs` directory with `cert.pem` and `key.pem` files.
 
 2.  **Run the Application:**
@@ -47,15 +75,15 @@ Using a reverse proxy like Nginx or Caddy is the standard way to handle HTTPS in
 
 1.  **Run Personal-Guru:** Start the Personal-Guru application on its default port (`5002`) without any SSL context.
 2.  **Set Up Reverse Proxy:**
-    -   Configure your reverse proxy (e.g., Nginx Proxy Manager, Caddy) to create a new proxy host.
-    -   **Domain:** Your public domain (e.g., `personal-guru.your-domain.com`).
-    -   **Scheme:** `http`.
-    -   **Forward Hostname/IP:** The IP address of the machine running Personal-Guru.
-    -   **Forward Port:** `5002`.
-    -   **Enable WebSocket Support:** This is critical for the voice communication to work.
+    - Configure your reverse proxy (e.g., Nginx Proxy Manager, Caddy) to create a new proxy host.
+    - **Domain:** Your public domain (e.g., `personal-guru.your-domain.com`).
+    - **Scheme:** `http`.
+    - **Forward Hostname/IP:** The IP address of the machine running Personal-Guru.
+    - **Forward Port:** `5002`.
+    - **Enable WebSocket Support:** This is critical for the voice communication to work.
 3.  **Enable SSL:**
-    -   In your reverse proxy's SSL settings, request a new SSL certificate (e.g., using Let's Encrypt).
-    -   Enable "Force SSL" and "HTTP/2 Support".
+    - In your reverse proxy's SSL settings, request a new SSL certificate (e.g., using Let's Encrypt).
+    - Enable "Force SSL" and "HTTP/2 Support".
 
 After saving, you can access Personal-Guru securely at your public domain.
 
@@ -100,11 +128,12 @@ cp .env.example .env
 Now, open the `.env` file and customize the settings. The application uses the OpenAI API protocol for all LLM providers (including Ollama).
 
 **Key Variables:**
+
 - `LLM_ENDPOINT`: The base URL of your LLM provider.
-    - For **Ollama**: `http://localhost:11434/v1`
-    - For **LMStudio**: `http://localhost:1234/v1`
-    - For **OpenAI**: `https://api.openai.com/v1`
-    - For **Gemini**: `https://generativelanguage.googleapis.com/v1beta/openai/`
+  - For **Ollama**: `http://localhost:11434/v1`
+  - For **LMStudio**: `http://localhost:1234/v1`
+  - For **OpenAI**: `https://api.openai.com/v1`
+  - For **Gemini**: `https://generativelanguage.googleapis.com/v1beta/openai/`
 - `LLM_MODEL_NAME`: The name of the model to use (e.g., `llama3`, `gpt-4o`).
 - `LLM_API_KEY`: API Key (optional for local providers like Ollama).
 - `LLM_NUM_CTX`: Context window size (recommended: `18000` or higher if your hardware supports it).
@@ -121,6 +150,7 @@ Ensure your LLM server is running and accessible.
 You can install Ollama from [https://ollama.com/](https://ollama.com/).
 
 Run with Docker (GPU support):
+
 ```bash
 docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
 ```
