@@ -9,7 +9,7 @@ import datetime
 from markdown_it import MarkdownIt
 
 # Import the agents
-from src.agents import PlannerAgent, AssessorAgent, FeedbackAgent, ChatAgent, TopicTeachingAgent
+from src.agents import PlannerAgent, AssessorAgent, FeedbackAgent, ChatAgent, TopicTeachingAgent, QuizAgent
 from src.storage import save_topic, load_topic, get_all_topics, delete_topic
 
 load_dotenv()
@@ -23,6 +23,7 @@ assessor = AssessorAgent()
 feedback_agent = FeedbackAgent()
 chat_agent = ChatAgent()
 teacher = TopicTeachingAgent()
+quiz_agent = QuizAgent()
 md = MarkdownIt()
 
 # Ensure the static directory exists
@@ -62,11 +63,26 @@ def generate_audio(text, step_index, tts_engine="coqui"):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        topic_name = request.form['topic']
+        topic_name = request.form.get('topic', '').strip()
         mode = request.form.get('mode', 'chapter')
 
-        # If user selected a non-chapter learning mode, show the placeholder page.
+        if not topic_name:
+            topics = get_all_topics()
+            topics_data = []
+            for topic in topics:
+                data = load_topic(topic)
+                if data:
+                    has_plan = bool(data.get('plan'))
+                    topics_data.append({'name': topic, 'has_plan': has_plan})
+                else:
+                    topics_data.append({'name': topic, 'has_plan': True})
+            return render_template('index.html', topics=topics_data, error="Please enter a topic name.")
+
+        # If user selected a non-chapter learning mode, show the appropriate selector or mode page.
         if mode and mode != 'chapter':
+            if mode == 'quiz':
+                # Show quiz question count selector
+                return render_template('quiz_select.html', topic_name=topic_name)
             topic_data = load_topic(topic_name) or {}
             flashcards = topic_data.get('flashcards', [])
 
@@ -149,13 +165,11 @@ def learn_topic(topic_name, step_index):
 
     plan_steps = topic_data.get('plan', [])
     
-    # If topic has no plan (quiz/flashcard only), redirect to appropriate mode
+    # If topic has no plan (quiz/flashcard only), redirect to appropriate mod
     if not plan_steps:
         if 'flashcards' in topic_data and topic_data['flashcards']:
             return redirect(url_for('flashcard_mode', topic_name=topic_name))
         elif 'quiz' in topic_data:
-            return redirect(url_for('quiz_mode', topic_name=topic_name))
-        else:
             return redirect(url_for('quiz_mode', topic_name=topic_name))
     
     if not 0 <= step_index < len(plan_steps):
@@ -204,10 +218,9 @@ def assess_step(topic_name, step_index):
 
     for i, question in enumerate(questions):
         user_answer = user_answers[i]
-        correct_answer = question.get('correct_answer')
 
         if user_answer: # Only score answered questions
-            feedback_data, _ = feedback_agent.evaluate_answer(user_answer, correct_answer)
+            feedback_data, _ = feedback_agent.evaluate_answer(question.get('correct_answer'), user_answer)
             if feedback_data['is_correct']:
                 num_correct += 1
             else:
@@ -389,6 +402,118 @@ def export_topic_pdf(topic_name):
 def delete_topic_route(topic_name):
     delete_topic(topic_name)
     return redirect(url_for('index'))
+
+@app.route('/quiz/generate/<topic_name>/<count>', methods=['GET', 'POST'])
+def generate_quiz(topic_name, count):
+    """Generate a quiz with the specified number of questions and save it."""
+    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    
+    # Handle 'auto' or numeric count
+    if count.lower() != 'auto':
+        try:
+             count = int(count)
+        except ValueError:
+             count = 10 # Default fallback
+             
+    quiz_data, error = quiz_agent.generate_quiz(topic_name, user_background, count=count)
+
+    if error:
+        return f"<h1>Error Generating Quiz</h1><p>{quiz_data}</p>"
+
+    # Save quiz to topic data
+    topic_data = load_topic(topic_name) or {"name": topic_name, "plan": [], "steps": []}
+    topic_data['quiz'] = quiz_data
+    save_topic(topic_name, topic_data)
+
+    session['quiz_questions'] = quiz_data.get('questions', [])
+    return render_template('quiz_mode.html', topic_name=topic_name, quiz_data=quiz_data)
+
+@app.route('/quiz/<topic_name>')
+def quiz_mode(topic_name):
+    """Load quiz from saved data or generate new one."""
+    topic_data = load_topic(topic_name)
+    
+    # If quiz exists in saved data, use it
+    if topic_data and 'quiz' in topic_data:
+        quiz_data = topic_data['quiz']
+        session['quiz_questions'] = quiz_data.get('questions', [])
+        return render_template('quiz_mode.html', topic_name=topic_name, quiz_data=quiz_data)
+    
+    # Otherwise show the quiz count selector
+    return render_template('quiz_select.html', topic_name=topic_name)
+
+@app.route('/quiz/<topic_name>/submit', methods=['POST'])
+def submit_quiz(topic_name):
+    user_answers_indices = [request.form.get(f'answers_{i}') for i in range(len(session.get('quiz_questions', [])))]
+    questions = session.get('quiz_questions', [])
+    num_correct = 0
+    feedback_results = []
+
+    for i, question in enumerate(questions):
+        user_answer_index = user_answers_indices[i]
+
+        feedback_data, _ = feedback_agent.evaluate_answer(question, user_answer_index, answer_is_index=True)
+
+        if feedback_data['is_correct']:
+            num_correct += 1
+
+        # Get the full text for user and correct answers for display
+        correct_answer_letter = question.get('correct_answer')
+        correct_answer_index = ord(correct_answer_letter.upper()) - ord('A')
+        correct_answer_text = question['options'][correct_answer_index]
+
+        user_answer_text = "No answer"
+        if user_answer_index is not None:
+            try:
+                user_answer_text = question['options'][int(user_answer_index)]
+            except (ValueError, IndexError):
+                user_answer_text = "Invalid answer"
+
+        feedback_results.append({
+            'question': question.get('question'),
+            'user_answer': user_answer_text,
+            'correct_answer': correct_answer_text,
+            'feedback': feedback_data['feedback'],
+            'is_correct': feedback_data['is_correct']
+        })
+
+    score = (num_correct / len(questions) * 100) if questions else 0
+    
+    # Store results in session for PDF export
+    session['last_quiz_results'] = {
+        'topic_name': topic_name,
+        'score': score,
+        'feedback_results': feedback_results,
+        'date': datetime.date.today().isoformat()
+    }
+    
+    session.pop('quiz_questions', None)
+    return render_template('quiz_feedback.html',
+                           topic_name=topic_name,
+                           score=score,
+                           feedback_results=feedback_results)
+
+@app.route('/quiz/<topic_name>/export/pdf')
+def export_quiz_pdf(topic_name):
+    quiz_results = session.get('last_quiz_results')
+    
+    if not quiz_results or quiz_results.get('topic_name') != topic_name:
+         return "No quiz results found for this topic", 404
+
+    # Render a dedicated template for the PDF
+    html = render_template('quiz_result_pdf.html', **quiz_results)
+    
+    pdf = HTML(string=html).write_pdf(
+        document_metadata={
+            'title': f"Quiz Results - {topic_name}",
+            'created': quiz_results['date']
+        }
+    )
+
+    response = make_response(pdf)
+    response.headers["Content-Disposition"] = f"attachment; filename=quiz_results_{topic_name}.pdf"
+    response.headers["Content-Type"] = "application/pdf"
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5002)

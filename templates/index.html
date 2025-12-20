@@ -5,7 +5,10 @@
 {% block content %}
 <h1>What would you like to learn today?</h1>
 <form method="post" onsubmit="showLoader()">
-    <input type="text" name="topic" size="50" placeholder="Enter a new topic...">
+    <input type="text" name="topic" size="50" placeholder="Enter a new topic..." required>
+    {% if error %}
+    <p class="error" style="color: #ff4d4d; margin-top: 10px;">{{ error }}</p>
+    {% endif %}
     <div class="learning-modes">
         <p>Choose a learning mode:</p>
         <label>
@@ -48,6 +51,6 @@
         </ul>
     </div>
 {% else %}
-    <p>You don't have any saved topics yet.</p>
+<p>You don't have any saved topics yet.</p>
 {% endif %}
 {% endblock %}

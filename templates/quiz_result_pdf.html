@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Quiz Results - {{ topic_name }}</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .score {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 30px;
+            color: #666;
+        }
+
+        .result-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            page-break-inside: avoid;
+        }
+
+        .question {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .answer-row {
+            margin: 5px 0;
+        }
+
+        .label {
+            font-weight: bold;
+            display: inline-block;
+            width: 120px;
+        }
+
+        .correct-answer {
+            color: #2e7d32;
+        }
+
+        .user-answer {
+            color: #333;
+        }
+
+        .user-answer.incorrect {
+            color: #c62828;
+        }
+
+        .feedback {
+            margin-top: 10px;
+            font-style: italic;
+            color: #555;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .status {
+            float: right;
+            font-weight: bold;
+        }
+
+        .status.correct {
+            color: #2e7d32;
+        }
+
+        .status.incorrect {
+            color: #c62828;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Quiz Results: {{ topic_name }}</h1>
+    <div class="score">Score: {{ "%.2f"|format(score) }}%</div>
+
+    {% for result in feedback_results %}
+    <div class="result-item">
+        <div class="status {% if result.is_correct %}correct{% else %}incorrect{% endif %}">
+            {% if result.is_correct %}CORRECT{% else %}INCORRECT{% endif %}
+        </div>
+        <div class="question">{{ loop.index }}. {{ result.question }}</div>
+
+        <div class="answer-row">
+            <span class="label">Your Answer:</span>
+            <span class="user-answer {% if not result.is_correct %}incorrect{% endif %}">
+                {{ result.user_answer }}
+            </span>
+        </div>
+
+        <div class="answer-row">
+            <span class="label">Correct Answer:</span>
+            <span class="correct-answer">{{ result.correct_answer }}</span>
+        </div>
+
+        {% if result.feedback %}
+        <div class="feedback">
+            <strong>Feedback:</strong> {{ result.feedback }}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <div style="margin-top: 50px; text-align: center; color: #999; font-size: 12px;">
+        Generated on {{ date }}
+    </div>
+</body>
+
+</html>
