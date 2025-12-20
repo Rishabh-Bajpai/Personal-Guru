@@ -21,7 +21,7 @@ def load_topic(topic):
 def get_all_topics():
     if not os.path.exists(DATA_DIR):
         return []
-    return [f.replace('.json', '') for f in os.listdir(DATA_DIR) if f.endswith('.json')]
+    return [f.replace('.json', '') for f in os.listdir(DATA_DIR) if f.endswith('.json') and f != '.json' and f.strip() != '.json']
 
 def delete_topic(topic):
     filepath = os.path.join(DATA_DIR, f"{topic}.json")
