@@ -371,16 +371,16 @@ body.dark-mode .container {
 body.dark-mode h1,
 body.dark-mode h2,
 body.dark-mode h3 {
-    color: #ffffff;
+    color: #ECDFCC;
 }
 
 body.dark-mode .button {
-    background: #0056b3;
-    color: #ffffff;
+    background: #697565;
+    color: #ECDFCC;
 }
 
 body.dark-mode .button:hover {
-    background: #007bff;
+    background: #697565;
 }
 
 body.dark-mode .delete-button {
@@ -393,7 +393,7 @@ body.dark-mode .delete-button:hover {
 
 body.dark-mode input[type="text"] {
     background-color: #3a3a3a;
-    color: #e0e0e0;
+    color: #ECDFCC;
     border: 1px solid #555;
 }
 
@@ -403,7 +403,7 @@ body.dark-mode .plan-panel {
 }
 
 body.dark-mode .plan-panel a {
-    color: #e0e0e0;
+    color: #ECDFCC;
 }
 
 body.dark-mode .plan-panel li.active {
@@ -444,7 +444,7 @@ body.dark-mode #loader {
 }
 
 body.dark-mode .spinner {
-    border-top-color: #007bff;
+    border-top-color: #697565;
 }
 
 body.dark-mode .slider {
@@ -452,7 +452,7 @@ body.dark-mode .slider {
 }
 
 body.dark-mode input:checked + .slider {
-    background-color: #0056b3;
+    background-color: #697565;
 }
 
 body.dark-mode .assessment .option:hover {
