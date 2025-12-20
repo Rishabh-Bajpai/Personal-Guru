@@ -1,8 +1,56 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
 
-{% block title %}Reel Mode{% endblock %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Guru Reels</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='reel_style.css') }}">
+</head>
 
-{% block content %}
-<h1>Reel Mode</h1>
-<p>This feature is coming soon.</p>
-{% endblock %}
+<body>
+    <div class="app-wrapper">
+        <!-- Home Button -->
+        <a href="/" class="home-btn" title="Back to Home">🏠 Home</a>
+
+        <!-- Search Header -->
+        <div class="search-header">
+            <div class="header-content">
+                <h1>Personal Guru Reels</h1>
+                <form id="searchForm">
+                    <div class="search-box">
+                        <input type="text" id="topicInput" placeholder="Search reels..." value="{{ topic_name }}"
+                            autocomplete="off">
+                        <button type="submit" class="search-btn">🔍</button>
+                    </div>
+                </form>
+                <div id="errorMessage" class="error-message"></div>
+            </div>
+        </div>
+
+        <!-- Main Reels Container -->
+        <div id="reelsContainer" class="reels-container">
+            <!-- Reels will be displayed here -->
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" class="loading-overlay" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading reels...</p>
+        </div>
+
+        <!-- No Results Message -->
+        <div id="noResults" class="no-results-overlay" style="display: none;">
+            <p>No reels found. Try a different search term.</p>
+        </div>
+
+        <!-- Scroll Indicator -->
+        <div class="scroll-indicator">
+            <span>Scroll or swipe ↓</span>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='reel_script.js') }}"></script>
+</body>
+
+</html>
