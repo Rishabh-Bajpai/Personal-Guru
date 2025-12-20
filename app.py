@@ -124,9 +124,16 @@ def index():
         data = load_topic(topic)
         if data:
             has_plan = bool(data.get('plan'))
-            topics_data.append({'name': topic, 'has_plan': has_plan})
+            has_flashcards = bool(data.get('flashcards'))
+            has_quiz = bool(data.get('quiz'))
+            topics_data.append({
+                'name': topic,
+                'has_plan': has_plan,
+                'has_flashcards': has_flashcards,
+                'has_quiz': has_quiz
+            })
         else:
-            topics_data.append({'name': topic, 'has_plan': True})  # Default to chapter mode
+            topics_data.append({'name': topic, 'has_plan': True, 'has_flashcards': False, 'has_quiz': False})
     
     return render_template('index.html', topics=topics_data)
 
@@ -140,6 +147,16 @@ def set_background():
     current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
     return render_template('background.html', user_background=current_background)
 
+@app.route('/flashcard_mode/<topic_name>')
+def flashcard_mode(topic_name):
+    """Display flashcard mode with saved flashcards or generation UI."""
+    topic_data = load_topic(topic_name)
+    if not topic_data:
+        return "Topic not found", 404
+    
+    flashcards = topic_data.get('flashcards', [])
+    return render_template('flashcard_mode.html', topic_name=topic_name, flashcards=flashcards)
+
 @app.route('/learn/<topic_name>/<int:step_index>')
 def learn_topic(topic_name, step_index):
     topic_data = load_topic(topic_name)
@@ -148,11 +165,11 @@ def learn_topic(topic_name, step_index):
 
     plan_steps = topic_data.get('plan', [])
     
-    # If topic has no plan (quiz/flashcard only), redirect to quiz mode
+    # If topic has no plan (quiz/flashcard only), redirect to appropriate mod
     if not plan_steps:
-        if 'quiz' in topic_data:
-            return redirect(url_for('quiz_mode', topic_name=topic_name))
-        else:
+        if 'flashcards' in topic_data and topic_data['flashcards']:
+            return redirect(url_for('flashcard_mode', topic_name=topic_name))
+        elif 'quiz' in topic_data:
             return redirect(url_for('quiz_mode', topic_name=topic_name))
     
     if not 0 <= step_index < len(plan_steps):
@@ -345,11 +362,30 @@ def _get_topic_data_and_score(topic_name):
 
 @app.route('/export/<topic_name>/pdf')
 def export_topic_pdf(topic_name):
-    topic_data, average_score = _get_topic_data_and_score(topic_name)
+    topic_data = load_topic(topic_name)
     if not topic_data:
         return "Topic not found", 404
 
-    html = render_template('pdf_export_template.html', topic=topic_data, average_score=average_score)
+    # Check if this is a flashcard topic or a chapter topic
+    if topic_data.get('flashcards'):
+        # Render flashcards as PDF
+        html = render_template('flashcard_export_template.html', topic_name=topic_name, flashcards=topic_data.get('flashcards', []))
+    else:
+        # Render chapter/quiz as PDF
+        average_score = 0
+        if topic_data.get('steps'):
+            total_score = 0
+            answered_questions = 0
+            for step in topic_data['steps']:
+                if 'teaching_material' in step:
+                    step['teaching_material'] = md.render(step['teaching_material'])
+                if 'score' in step and step.get('user_answers'):
+                    total_score += step['score']
+                    answered_questions += 1
+            average_score = (total_score / answered_questions) if answered_questions > 0 else 0
+        
+        html = render_template('pdf_export_template.html', topic=topic_data, average_score=average_score)
+    
     pdf = HTML(string=html).write_pdf(
         document_metadata={
             'title': topic_name,
