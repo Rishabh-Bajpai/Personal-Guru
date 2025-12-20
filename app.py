@@ -63,8 +63,20 @@ def generate_audio(text, step_index, tts_engine="coqui"):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        topic_name = request.form['topic']
+        topic_name = request.form.get('topic', '').strip()
         mode = request.form.get('mode', 'chapter')
+
+        if not topic_name:
+            topics = get_all_topics()
+            topics_data = []
+            for topic in topics:
+                data = load_topic(topic)
+                if data:
+                    has_plan = bool(data.get('plan'))
+                    topics_data.append({'name': topic, 'has_plan': has_plan})
+                else:
+                    topics_data.append({'name': topic, 'has_plan': True})
+            return render_template('index.html', topics=topics_data, error="Please enter a topic name.")
 
         # If user selected a non-chapter learning mode, show the appropriate selector or mode page.
         if mode and mode != 'chapter':

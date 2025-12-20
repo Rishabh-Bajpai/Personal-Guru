@@ -5,7 +5,10 @@
 {% block content %}
 <h1>What would you like to learn today?</h1>
 <form method="post" onsubmit="showLoader()">
-    <input type="text" name="topic" size="50" placeholder="Enter a new topic...">
+    <input type="text" name="topic" size="50" placeholder="Enter a new topic..." required>
+    {% if error %}
+    <p class="error" style="color: #ff4d4d; margin-top: 10px;">{{ error }}</p>
+    {% endif %}
     <div class="learning-modes">
         <p>Choose a learning mode:</p>
         <label>
@@ -29,21 +32,21 @@
 
 <h2>Your Saved Topics</h2>
 {% if topics %}
-    <div class="topics-list">
-        <ul>
-            {% for topic in topics %}
-            <li>
-                {% if topic.has_plan %}
-                    <a href="{{ url_for('learn_topic', topic_name=topic.name, step_index=0) }}">{{ topic.name }}</a>
-                {% else %}
-                    <a href="{{ url_for('quiz_mode', topic_name=topic.name) }}">{{ topic.name }}</a>
-                {% endif %}
-                <a href="{{ url_for('delete_topic_route', topic_name=topic.name) }}" class="button delete-button">Delete</a>
-            </li>
-            {% endfor %}
-        </ul>
-    </div>
+<div class="topics-list">
+    <ul>
+        {% for topic in topics %}
+        <li>
+            {% if topic.has_plan %}
+            <a href="{{ url_for('learn_topic', topic_name=topic.name, step_index=0) }}">{{ topic.name }}</a>
+            {% else %}
+            <a href="{{ url_for('quiz_mode', topic_name=topic.name) }}">{{ topic.name }}</a>
+            {% endif %}
+            <a href="{{ url_for('delete_topic_route', topic_name=topic.name) }}" class="button delete-button">Delete</a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
 {% else %}
-    <p>You don't have any saved topics yet.</p>
+<p>You don't have any saved topics yet.</p>
 {% endif %}
 {% endblock %}
