@@ -123,9 +123,14 @@ def index():
     for topic in topics:
         data = load_topic(topic)
         if data:
-            has_plan = bool(data.get('plan'))
-            has_flashcards = bool(data.get('flashcards'))
-            has_quiz = bool(data.get('quiz'))
+            plan = data.get('plan')
+            flashcards = data.get('flashcards')
+            quiz = data.get('quiz')
+            
+            has_plan = plan is not None and len(plan) > 0
+            has_flashcards = flashcards is not None and len(flashcards) > 0
+            has_quiz = quiz is not None and bool(quiz)
+            
             topics_data.append({
                 'name': topic,
                 'has_plan': has_plan,
@@ -133,7 +138,7 @@ def index():
                 'has_quiz': has_quiz
             })
         else:
-            topics_data.append({'name': topic, 'has_plan': True, 'has_flashcards': False, 'has_quiz': False})
+            topics_data.append({'name': topic, 'has_plan': False, 'has_flashcards': False, 'has_quiz': False})
     
     return render_template('index.html', topics=topics_data)
 
