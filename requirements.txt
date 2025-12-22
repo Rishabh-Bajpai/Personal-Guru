@@ -6,3 +6,7 @@ pytest-mock
 WeasyPrint
 markdown-it-py
 google-api-python-client
+
+flask-sqlalchemy
+pgvector
+flask-migrate

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Quiz Results - {{ topic_name }}{% endblock %}
+
+{% block content %}
+<h1>Quiz Results for {{ topic_name }}</h1>
+<h2>Your Score: {{ "%.2f"|format(score) }}%</h2>
+
+<div class="feedback-summary">
+    {% for result in feedback_results %}
+    <div class="feedback-item {% if result.is_correct %}correct{% else %}incorrect{% endif %}">
+        <h3>{{ result.question }}</h3>
+        <p>Your answer: {{ result.user_answer }}</p>
+        <p>Correct answer: {{ result.correct_answer }}</p>
+        <p>Feedback: {{ result.feedback }}</p>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="actions" style="margin-top: 20px; display: flex; gap: 10px;">
+    <a href="{{ url_for('main.index') }}" class="button">Back to Home</a>
+    <a href="{{ url_for('quiz.export_quiz_pdf', topic_name=topic_name) }}" class="button secondary">Save as PDF</a>
+</div>
+{% endblock %}
