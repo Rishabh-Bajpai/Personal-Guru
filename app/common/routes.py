@@ -7,6 +7,12 @@ from dotenv import set_key, find_dotenv
 main_bp = Blueprint('main', __name__)
 
 
+@main_bp.route('/favicon.ico')
+def favicon():
+    # Return empty response to prevent browser favicon requests from being caught by dynamic routes
+    return '', 204
+
+
 @main_bp.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':

@@ -1,9 +1,9 @@
 from flask import Flask, render_template, request, session, redirect, url_for
 from config import Config
-from .extensions import db, migrate
+from .common.extensions import db, migrate
 
 def create_app(config_class=Config):
-    app = Flask(__name__)
+    app = Flask(__name__, template_folder='common/templates')
     app.config.from_object(config_class)
 
     # Initialize Flask extensions
@@ -29,7 +29,7 @@ def create_app(config_class=Config):
     
     from app.core import storage # legacy storage
     
-    from .routes import main_bp
+    from .common.routes import main_bp
     app.register_blueprint(main_bp)
 
     return app
