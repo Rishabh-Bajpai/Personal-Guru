@@ -1,5 +1,6 @@
 import os
-from app.core.agents import call_llm, TopicTeachingAgent
+from app.core.utils import call_llm
+from app.core.agents import TopicTeachingAgent
 
 class FlashcardTeachingAgent(TopicTeachingAgent):
     def generate_teaching_material(self, topic, count=50, user_background=None, **kwargs):

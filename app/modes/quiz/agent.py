@@ -1,7 +1,8 @@
 import os
 import json
 from datetime import datetime
-from app.core.agents import call_llm, validate_quiz_structure
+from app.core.utils import call_llm
+from app.core.agents import validate_quiz_structure
 
 class QuizAgent:
     def generate_quiz(self, topic, user_background, count=10):

@@ -1,5 +1,6 @@
 import re
-from app.core.agents import call_llm, validate_quiz_structure, TopicTeachingAgent
+from app.core.utils import call_llm
+from app.core.agents import validate_quiz_structure, TopicTeachingAgent
 
 class ChapterTeachingAgent(TopicTeachingAgent):
     def generate_teaching_material(self, topic, full_plan, user_background=None, incorrect_questions=None, **kwargs):

@@ -1,5 +1,5 @@
 import re
-from app.core.agents import call_llm
+from app.core.utils import call_llm
 
 class ChatAgent:
     def get_answer(self, question, context, user_background):
