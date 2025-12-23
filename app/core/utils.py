@@ -105,6 +105,33 @@ def call_llm(prompt, is_json=False):
         print(f"Error calling LLM or parsing JSON: {e}")
         return f"Error communicating with LLM: {e}", e
 
+def validate_quiz_structure(quiz_data):
+    """Validates the structure of a quiz JSON object."""
+    if not quiz_data or "questions" not in quiz_data or not isinstance(quiz_data["questions"], list) or not quiz_data["questions"]:
+        return "Error: Invalid quiz format from LLM (missing or empty 'questions' list).", "Invalid format"
+
+    for q in quiz_data["questions"]:
+        if not isinstance(q, dict):
+            return "Error: Invalid quiz format from LLM (question is not a dictionary).", "Invalid format"
+
+        if not all(k in q for k in ["question", "options", "correct_answer"]):
+            return "Error: Invalid quiz format from LLM (missing keys in question object).", "Invalid format"
+
+        if not isinstance(q["question"], str) or not q["question"].strip():
+            return "Error: Invalid quiz format from LLM (question text is empty).", "Invalid format"
+
+        if not isinstance(q["options"], list) or len(q["options"]) != 4:
+            return "Error: Invalid quiz format from LLM (options is not a list of 4).", "Invalid format"
+
+        if not all(isinstance(opt, str) and opt.strip() for opt in q["options"]):
+            return "Error: Invalid quiz format from LLM (one or more options are empty).", "Invalid format"
+
+        correct_answer = q.get("correct_answer", "")
+        if not isinstance(correct_answer, str) or correct_answer.upper() not in ['A', 'B', 'C', 'D']:
+            return "Error: Invalid quiz format from LLM (correct_answer is invalid).", "Invalid format"
+
+    return None, None
+
 
 def generate_audio(text, step_index, tts_engine="coqui"):
     """

@@ -28,11 +28,6 @@ def create_app(config_class=Config):
     # For now, defining here to match the requested structure which implies simple root.
     
     from app.core import storage # legacy storage
-    from app.core.agents import PlannerAgent
-    
-    # Instantiate planner for index page usage if needed
-    # (Checking app.py, planner is used in index for chapter mode, but index route itself is complex)
-    # We will likely move index logic to a separate file, but as per strict request, putting it here or extracting.
     
     from .routes import main_bp
     app.register_blueprint(main_bp)

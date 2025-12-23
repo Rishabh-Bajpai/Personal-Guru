@@ -1,6 +1,6 @@
 import re
-from app.core.utils import call_llm
-from app.core.agents import validate_quiz_structure, TopicTeachingAgent
+from app.core.utils import call_llm, validate_quiz_structure
+from app.core.agents import TopicTeachingAgent
 
 class ChapterTeachingAgent(TopicTeachingAgent):
     def generate_teaching_material(self, topic, full_plan, user_background=None, incorrect_questions=None, **kwargs):
@@ -78,3 +78,40 @@ Example JSON response:
             return validation_error, error_type
 
         return question_data, None
+
+class PlannerAgent:
+    def generate_study_plan(self, topic, user_background):
+        print(f"DEBUG: Generating study plan for user with background: {user_background}")
+        prompt = f"""
+You are an expert in creating personalized study plans. For the topic '{topic}', create a high-level learning plan with 4-7 manageable steps, depending on the complexity of the topic.
+The user's background is: '{user_background}'
+The output should be a JSON object with a single key "plan", which is an array of strings. Each string is a step in the learning plan.
+Do not generate the content for each step, only the plan itself.
+
+Example of a good plan for the topic 'Flask':
+"Our Flask Learning Plan:
+
+Introduction to Flask & Setup: What is Flask? Why use it? Setting up a Conda environment and installing Flask. (Today)
+Your First Flask App: A basic "Hello, World!" application. Understanding routes and the app object.
+Templates & Rendering: Using Jinja2 templates to separate logic from presentation. Passing data to templates.
+Static Files: Serving CSS, JavaScript, and images.
+Request Handling: Accessing data sent by the user (form data, URL parameters).
+Forms & User Input: Working with HTML forms and validating user data.
+Databases (SQLite): Connecting to a database and performing basic operations.
+More Advanced Topics (Optional): User authentication, sessions, and scaling."
+
+Now, generate a similar plan for the topic: '{topic}'.
+"""
+        plan_data, error = call_llm(prompt, is_json=True)
+        if error:
+            return plan_data, error
+
+        plan_steps = plan_data.get("plan", [])
+        if not plan_steps or not isinstance(plan_steps, list):
+            return "Error: Could not parse study plan from LLM response (missing or invalid 'plan' key).", "Invalid format"
+
+        if not all(isinstance(step, str) and step.strip() for step in plan_steps):
+            return "Error: Could not parse study plan from LLM response (plan contains invalid steps).", "Invalid format"
+
+        return plan_steps, None
+

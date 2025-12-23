@@ -1,11 +1,11 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for
 from app.core.storage import get_all_topics, load_topic, save_topic
-from app.core.agents import PlannerAgent
+
 import os
 from dotenv import set_key, find_dotenv
 
 main_bp = Blueprint('main', __name__)
-planner = PlannerAgent()
+
 
 @main_bp.route('/', methods=['GET', 'POST'])
 def index():
@@ -25,46 +25,29 @@ def index():
                     topics_data.append({'name': topic, 'has_plan': True})
             return render_template('index.html', topics=topics_data, error="Please enter a topic name.")
 
-        # If user selected a non-chapter learning mode, show the appropriate selector or mode page.
-        if mode and mode != 'chapter':
-            if mode == 'quiz':
-                return render_template('quiz/select.html', topic_name=topic_name) # Namespace adjusted
+        if mode:
+            if mode == 'chapter':
+                return redirect(url_for('chapter.mode', topic_name=topic_name))
             
+            elif mode == 'quiz':
+                return render_template('quiz/select.html', topic_name=topic_name)
+            
+            # Load topic data only when needed for modes that use it to avoid unnecessary reads
+            # Note: Previously it was loaded for all except quiz/chapter, let's keep it safe.
             topic_data = load_topic(topic_name) or {}
             flashcards = topic_data.get('flashcards', [])
 
             if mode == 'flashcard':
                  return render_template('flashcard/mode.html', topic_name=topic_name, flashcards=flashcards)
             
-            if mode == 'reel':
+            elif mode == 'reel':
                  return render_template('reel/mode.html', topic_name=topic_name)
                  
-            if mode == 'chat':
+            elif mode == 'chat':
                  return render_template('chat/mode.html', topic_name=topic_name)
-                 
-            try:
-                # Fallback
-                return render_template(f"{mode}/mode.html", topic_name=topic_name, flashcards=flashcards)
-            except Exception:
-                return render_template('index.html', topics=get_all_topics(), error=f"Mode {mode} not available")
 
-        # Chapter Mode
-        if mode == 'chapter':
-            if load_topic(topic_name):
-                return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=0))
-
-            user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
-            plan_steps, error = planner.generate_study_plan(topic_name, user_background)
-            if error:
-                return f"<h1>Error Generating Plan</h1><p>{plan_steps}</p>"
-
-            topic_data = {
-                "name": topic_name,
-                "plan": plan_steps,
-                "steps": [{} for _ in plan_steps]
-            }
-            save_topic(topic_name, topic_data)
-            return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=0))
+            else:
+                 return render_template('index.html', topics=get_all_topics(), error=f"Mode {mode} not available")
 
     topics = get_all_topics()
     topics_data = []
