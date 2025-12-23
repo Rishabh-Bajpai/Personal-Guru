@@ -12,7 +12,7 @@ LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME")
 LLM_NUM_CTX = int(os.getenv("LLM_NUM_CTX", 4096))
 LLM_API_KEY = os.getenv("LLM_API_KEY", "dummy")
 
-def _call_llm(prompt, is_json=False):
+def call_llm(prompt, is_json=False):
     """
     A helper function to call the LLM API using OpenAI-compatible protocol.
     Works with OpenAI, Ollama, LMStudio, VLLM, etc.
@@ -80,29 +80,24 @@ def _call_llm(prompt, is_json=False):
             elif "```" in content:
                 content = content.split("```")[1].split("```")[0].strip()
             
-            return json.loads(content), None
             try:
                 # First, try to parse the entire content as JSON
                 return json.loads(content), None
             except json.JSONDecodeError:
                 # If that fails, try to find a JSON object embedded in the text
                 print("Failed to parse content directly, attempting to extract JSON object.")
-
-                # Regex to find a JSON object within the text.
-                match = re.search(r'\{.*\}', content, re.DOTALL)
-
-                if match:
-                    json_str = match.group(0)
-                    try:
+                try:
+                    # Regex to find a JSON object within the text.
+                    # We match from the first { to the last }
+                    match = re.search(r'\{.*\}', content, re.DOTALL)
+                    if match:
+                        json_str = match.group(0)
                         return json.loads(json_str), None
-                    except json.JSONDecodeError as e_inner:
-                        print(f"Failed to parse extracted JSON: {json_str}")
-                        # Re-raise to be caught by the outer block
-                        raise e_inner
-
-                # If we can't find a JSON object, we have to give up.
-                # Re-raise the original parsing error by raising a new one.
-                raise json.JSONDecodeError("No JSON object found in response", content, 0)
+                except json.JSONDecodeError:
+                    pass
+                
+                # Parsing failed
+                return f"Error parsing JSON from LLM response: {content[:100]}...", json.JSONDecodeError("Failed to parse", content, 0)
 
         return content, None
 
@@ -133,7 +128,7 @@ More Advanced Topics (Optional): User authentication, sessions, and scaling."
 
 Now, generate a similar plan for the topic: '{topic}'.
 """
-        plan_data, error = _call_llm(prompt, is_json=True)
+        plan_data, error = call_llm(prompt, is_json=True)
         if error:
             return plan_data, error
 
@@ -146,7 +141,7 @@ Now, generate a similar plan for the topic: '{topic}'.
 
         return plan_steps, None
 
-def _validate_assessment_structure(assessment_data):
+def validate_assessment_structure(assessment_data):
     """Validates the structure of an assessment JSON object (free-form questions)."""
     if not assessment_data or "questions" not in assessment_data or not isinstance(assessment_data["questions"], list) or not assessment_data["questions"]:
         return "Error: Invalid assessment format from LLM (missing or empty 'questions' list).", "Invalid format"
@@ -166,7 +161,7 @@ def _validate_assessment_structure(assessment_data):
 
     return None, None
 
-def _validate_quiz_structure(quiz_data):
+def validate_quiz_structure(quiz_data):
     """Validates the structure of a quiz JSON object."""
     if not quiz_data or "questions" not in quiz_data or not isinstance(quiz_data["questions"], list) or not quiz_data["questions"]:
         return "Error: Invalid quiz format from LLM (missing or empty 'questions' list).", "Invalid format"
@@ -193,50 +188,6 @@ def _validate_quiz_structure(quiz_data):
 
     return None, None
 
-class AssessorAgent:
-    def generate_question(self, step_text, user_background):
-        prompt = f"""
-You are an expert assessor. Based on the following learning material, create between 1 and 3 multiple-choice questions to test understanding.
-The number of questions should be appropriate for the length and complexity of the material.
-Return a JSON object with a single key "questions", which is an array of question objects.
-Each question object MUST have keys:
-- "question": string
-- "options": array of 4 strings
-- "correct_answer": string (one of 'A', 'B', 'C', 'D')
-
-The user's background is: '{user_background}'
-Learning Material: "{step_text}"
-
-Example JSON response:
-{{
-  "questions": [
-    {{
-      "question": "What is the primary function of the Flask `request` object?",
-      "options": [
-        "To render HTML templates.",
-        "To handle incoming HTTP requests and access data.",
-        "To connect to the database.",
-        "To serve static files."
-      ],
-      "correct_answer": "B"
-    }}
-  ]
-}}
-"""
-        question_data, error = _call_llm(prompt, is_json=True)
-        if error:
-            return question_data, error
-
-        # Detailed validation of the assessment structure (reusing quiz validation logic as structure is now same)
-        # We can implement a specific one or reuse _validate_quiz_structure if it fits
-        # _validate_quiz_structure checks for 4 options and A-D answer. Perfect.
-        from app.core.agents import _validate_quiz_structure
-        validation_error, error_type = _validate_quiz_structure(question_data)
-        if validation_error:
-            # Fallback for old structure or retry could go here, but for now return error
-            return validation_error, error_type
-
-        return question_data, None
 
 class FeedbackAgent:
     def evaluate_answer(self, question_obj, user_answer, answer_is_index=False):
@@ -292,7 +243,7 @@ The user incorrectly answered: "{user_answer_text}"
 Please provide a concise, helpful explanation for why the user's answer is incorrect and why the correct answer is the right choice.
 The explanation should be friendly and encouraging. Limit it to 2-4 sentences.
 """
-        feedback, error = _call_llm(prompt)
+        feedback, error = call_llm(prompt)
         if error:
             # Fallback on LLM error
             return {"is_correct": False, "feedback": f"Not quite. The correct answer was {correct_answer_text}. Keep trying!"}, None
@@ -300,276 +251,11 @@ The explanation should be friendly and encouraging. Limit it to 2-4 sentences.
         feedback = re.sub(r'<think>.*?</think>', '', feedback, flags=re.DOTALL).strip()
         return {"is_correct": False, "feedback": feedback}, None
 
-class ChatAgent:
-    def get_answer(self, question, context, user_background):
-        prompt = f"""
-You are a helpful teaching assistant. The user is asking a question about the following learning material.
-Provide a concise and helpful answer to the user's question.
-The user's background is: '{user_background}'
-Learning Material: "{context}"
-
-User's Question: "{question}"
-"""
-        answer, error = _call_llm(prompt)
-        if error:
-            return f"Error getting answer from LLM: {error}", error
-
-        # Filter out content within <think> tags
-        answer = re.sub(r'<think>.*?</think>', '', answer, flags=re.DOTALL).strip()
-
-        return answer, None
-
-class QuizAgent:
-    def generate_quiz(self, topic, user_background, count=10):
-        """
-        Generate a quiz with the specified number of questions.
-        count can be 'auto' (default 10), 25, or 50.
-        """
-        if isinstance(count, str) and count.lower() == 'auto':
-            count, error = self.get_quiz_count_for_topic(topic, user_background)
-            if error:
-                 print(f"Error determining quiz count: {error}")
-                 count = 10
-        else:
-            count = int(count) if count else 10
-        
-        prompt = f"""
-You are an expert in creating educational quizzes. For the topic '{topic}', create a quiz with {count} multiple-choice questions.
-The user's background is: '{user_background}'
-Output ONLY a JSON object with a single key "questions", which is an array of question objects.
-Each question object MUST have keys "question", "options" (an array of exactly 4 strings), and "correct_answer" (one of 'A', 'B', 'C', or 'D').
-Do NOT include any explanatory text, preamble, or markdown code blocks. Return ONLY valid JSON.
-
-Example JSON response:
-{{
-  "questions": [
-    {{
-      "question": "What will be the output of this C++ code?",
-      "options": ["Compilation Error", "Runtime Error", "Hello, World!", "No Output"],
-      "correct_answer": "C"
-    }},
-    {{
-      "question": "Which of the following describes the difference between a reference and a pointer in C++?",
-      "options": [
-        "A reference is an alias for an existing variable, while a pointer is a variable that stores a memory address.",
-        "A pointer is an alias for an existing variable, while a reference is a variable that stores a memory address.",
-        "There is no difference.",
-        "References and pointers cannot be used in C++."
-      ],
-      "correct_answer": "A"
-    }}
-  ]
-}}
-
-Now, generate a quiz with exactly {count} questions for the topic: '{topic}'.
-"""
-        quiz_data, error = _call_llm(prompt, is_json=True)
-        if error:
-            # Save raw response for debugging
-            timestamp = datetime.now().isoformat().replace(':', '-')
-            debug_file = f"data/debug-quiz-{timestamp}.txt"
-            try:
-                with open(debug_file, 'w') as f:
-                    f.write(f"Topic: {topic}\n")
-                    f.write(f"User Background: {user_background}\n")
-                    f.write(f"Requested Count: {count}\n")
-                    f.write(f"Raw Response: {str(quiz_data)}\n")
-                print(f"DEBUG: Saved raw LLM response to {debug_file}")
-            except Exception as e:
-                print(f"DEBUG: Failed to save debug file: {e}")
-            
-            return quiz_data, error
-
-        # Attempt fallback parsing if the returned data is not in expected format
-        if not isinstance(quiz_data, dict):
-            print(f"DEBUG: quiz_data is not a dict, it's a {type(quiz_data)}")
-            return "Error: Invalid quiz format from LLM (response is not a JSON object).", "Invalid format"
-
-        # If 'questions' key is missing, try to find it in the response
-        if "questions" not in quiz_data:
-            print(f"DEBUG: 'questions' key not found. Available keys: {list(quiz_data.keys())}")
-            # Try to find a list-like value that could be questions
-            for k, v in quiz_data.items():
-                if isinstance(v, list) and v and isinstance(v[0], dict):
-                    if 'question' in v[0] and 'options' in v[0]:
-                        print(f"DEBUG: Found questions under key '{k}'")
-                        quiz_data['questions'] = v
-                        break
-
-        # Detailed validation of the quiz structure
-        validation_error, error_type = _validate_quiz_structure(quiz_data)
-        if validation_error:
-            # Save raw response for debugging on validation failure
-            timestamp = datetime.now().isoformat().replace(':', '-')
-            debug_file = f"data/debug-quiz-{timestamp}.txt"
-            try:
-                with open(debug_file, 'w') as f:
-                    f.write(f"Topic: {topic}\n")
-                    f.write(f"User Background: {user_background}\n")
-                    f.write(f"Requested Count: {count}\n")
-                    f.write(f"Validation Error: {validation_error}\n")
-                    f.write(f"Raw Data: {json.dumps(quiz_data, indent=2)}\n")
-                print(f"DEBUG: Saved validation failure to {debug_file}")
-            except Exception as e:
-                print(f"DEBUG: Failed to save debug file: {e}")
-            
-            return validation_error, error_type
-
-        return quiz_data, None
-
-    def get_quiz_count_for_topic(self, topic, user_background=None):
-        """
-        Estimate the number of quiz questions needed for a topic based on its complexity.
-        Returns (count, None) on success or (default_count, error) on failure.
-        """
-        if user_background is None:
-            user_background = os.getenv("USER_BACKGROUND", "a beginner")
-
-        prompt = f"""
-Analyze the complexity of the topic '{topic}' for a user with background: '{user_background}'.
-Based on the topic's breadth and depth, suggest an ideal number of quiz questions to generate for a comprehensive assessment.
-Return a JSON object with a single key "count".
-For a very simple topic, suggest 5-10 questions. For a moderately complex topic, 10-20. For a very complex topic, 20-30.
-"""
-        data, error = _call_llm(prompt, is_json=True)
-        if error:
-            return 10, error
-
-        if isinstance(data, dict) and 'count' in data and isinstance(data['count'], int):
-            count = data['count']
-            # Clamp the value to a reasonable range
-            return max(5, min(30, count)), None
-
-        return 10, "Invalid format from LLM"
 
 class TopicTeachingAgent:
-    def generate_teaching_material(self, topic, full_plan, user_background, incorrect_questions=None):
-        incorrect_questions_text = "None"
-        if incorrect_questions:
-            incorrect_questions_text = "\n".join([f"- {q['question']}" for q in incorrect_questions])
-
-        full_plan_text = "\n".join([f"- {step}" for step in full_plan])
-
-        prompt = f"""
-You are an expert teacher. Your role is to teach a topic in detail.
-The full study plan is:
-{full_plan_text}
-The user's background is: '{user_background}'
-The current topic is: "{topic}"
-
-The user has previously answered the following questions incorrectly:
-{incorrect_questions_text}
-
-Based on the topic, the full study plan, and the user's incorrect answers, generate detailed teaching material for the current topic.
-Avoid generating content that is covered in other steps of the plan.
-The material should be comprehensive and include code examples where appropriate.
-The output should be a single string of markdown-formatted text.
-"""
-        teaching_material, error = _call_llm(prompt)
-        if error:
-            return teaching_material, error
-
-        # Filter out content within <think> tags
-        teaching_material = re.sub(r'<think>.*?</think>', '', teaching_material, flags=re.DOTALL).strip()
-
-        return teaching_material, None
-
-    def generate_flashcards(self, topic, count=50, user_background=None):
+    def generate_teaching_material(self, topic, **kwargs):
         """
-        Generate `count` concise flashcards (term + short definition) for `topic`.
-        Returns (list_of_flashcards, None) on success or (error_message, error) on failure.
-        Expected return JSON from LLM: {"flashcards": [{"term": "...", "definition": "..."}, ...]}
+        Base method for generating teaching material.
+        Subclasses should implement this method.
         """
-        if user_background is None:
-            user_background = os.getenv("USER_BACKGROUND", "a beginner")
-
-        prompt = f"""
-You are an expert educator. Generate {count} concise flashcards for the topic '{topic}', tailored to a user with background: '{user_background}'.
-Return a JSON object with key "flashcards" which is an array of objects with keys "term" and "definition".
-Each definition should be one to two sentences maximum and focused on the most important concepts.
-Don't include any extra commentary outside the JSON.
-"""
-        data, error = _call_llm(prompt, is_json=True)
-        if error:
-            return data, error
-
-        if not isinstance(data, dict) or 'flashcards' not in data or not isinstance(data['flashcards'], list):
-            return "Error: Invalid flashcards format from LLM.", "Invalid format"
-
-        # Defensive parsing and validation
-        cards = []
-        if 'flashcards' in data and isinstance(data['flashcards'], list):
-            for c in data['flashcards']:
-                if isinstance(c, dict):
-                    term = c.get('term')
-                    definition = c.get('definition')
-                    if term and definition and isinstance(term, str) and isinstance(definition, str):
-                        cards.append({'term': term.strip(), 'definition': definition.strip()})
-
-        if not cards:
-            return "Error: LLM returned no valid flashcards.", "Invalid format"
-
-        # If LLM returned fewer cards than requested, attempt to generate the remainder
-        # by asking for additional cards (avoid duplicates). Retry a few times.
-        try_count = 0
-        seen_terms = {c['term'].strip().lower() for c in cards}
-        while len(cards) < count and try_count < 3:
-            remaining = count - len(cards)
-            try_count += 1
-            extra_prompt = f"""
-Generate {remaining} additional concise flashcards for the topic '{topic}', tailored to a user with background: '{user_background}'.
-Do NOT repeat any of these terms: {', '.join(sorted(seen_terms))}.
-Return a JSON object with key "flashcards" which is an array of objects with keys "term" and "definition".
-"""
-            extra_data, extra_err = _call_llm(extra_prompt, is_json=True)
-            if extra_err or not isinstance(extra_data, dict) or 'flashcards' not in extra_data:
-                break
-
-            added = 0
-            for c in extra_data['flashcards']:
-                if not isinstance(c, dict):
-                    continue
-                term = c.get('term')
-                definition = c.get('definition')
-                if not term or not definition:
-                    continue
-                key = term.strip().lower()
-                if key in seen_terms:
-                    continue
-                cards.append({'term': term, 'definition': definition})
-                seen_terms.add(key)
-                added += 1
-            if added == 0:
-                # nothing new added; stop to avoid infinite loop
-                break
-
-        # Trim to requested count in case of over-generation
-        if len(cards) > count:
-            cards = cards[:count]
-
-        return cards, None
-
-    def get_flashcard_count_for_topic(self, topic, user_background=None):
-        """
-        Estimate the number of flashcards needed for a topic based on its complexity.
-        Returns (count, None) on success or (default_count, error) on failure.
-        """
-        if user_background is None:
-            user_background = os.getenv("USER_BACKGROUND", "a beginner")
-
-        prompt = f"""
-Analyze the complexity of the topic '{topic}' for a user with background: '{user_background}'.
-Based on the topic's breadth and depth, suggest an ideal number of flashcards to generate for a comprehensive review.
-Return a JSON object with a single key "count".
-For a very simple topic, suggest 10-15 cards. For a moderately complex topic, 20-30. For a very complex topic, 40-50.
-"""
-        data, error = _call_llm(prompt, is_json=True)
-        if error:
-            return 25, error  # Default on error
-
-        if isinstance(data, dict) and 'count' in data and isinstance(data['count'], int):
-            count = data['count']
-            # Clamp the value to a reasonable range
-            return max(10, min(50, count)), None
-
-        return 25, "Invalid format from LLM"
+        raise NotImplementedError("Subclasses must implement generate_teaching_material")

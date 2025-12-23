@@ -1,10 +1,10 @@
 from flask import render_template, request, session, redirect, url_for
 from . import flashcard_bp
 from app.core.storage import load_topic, save_topic
-from app.core.agents import TopicTeachingAgent
+from .agent import FlashcardTeachingAgent
 import os
 
-teacher = TopicTeachingAgent()
+teacher = FlashcardTeachingAgent()
 
 @flashcard_bp.route('/<topic_name>')
 def mode(topic_name):
@@ -42,7 +42,7 @@ def generate_flashcards_route():
     # Refetch background just in case
     user_background = os.getenv('USER_BACKGROUND', 'a beginner')
 
-    cards, error = teacher.generate_flashcards(topic_name, count=num, user_background=user_background)
+    cards, error = teacher.generate_teaching_material(topic_name, count=num, user_background=user_background)
     if error:
         return {"error": cards}, 500
 
