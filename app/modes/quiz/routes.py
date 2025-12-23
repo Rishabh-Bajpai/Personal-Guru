@@ -1,7 +1,8 @@
 from flask import render_template, request, session, redirect, url_for, make_response
 from . import quiz_bp
 from app.core.storage import load_topic, save_topic
-from app.core.agents import QuizAgent, FeedbackAgent
+from app.core.agents import FeedbackAgent
+from .agent import QuizAgent
 from weasyprint import HTML
 import datetime
 import os

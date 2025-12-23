@@ -1,7 +1,8 @@
 from flask import render_template, request, session, redirect, url_for, make_response
 from . import chapter_bp
 from app.core.storage import load_topic, save_topic
-from app.core.agents import TopicTeachingAgent, AssessorAgent, FeedbackAgent
+from app.core.agents import FeedbackAgent
+from .agent import ChapterTeachingAgent, AssessorAgent, PlannerAgent
 from app.core.utils import generate_audio
 from markdown_it import MarkdownIt
 from weasyprint import HTML
@@ -10,10 +11,57 @@ import os
 import urllib.parse
 
 # Instantiate agents
-teacher = TopicTeachingAgent()
+teacher = ChapterTeachingAgent()
+planner = PlannerAgent()
 assessor = AssessorAgent()
 feedback_agent = FeedbackAgent()
 md = MarkdownIt()
+
+@chapter_bp.route('/<topic_name>')
+def mode(topic_name):
+    topic_data = load_topic(topic_name)
+    
+    # If topic exists and has a plan, go directly to learning
+    if topic_data and topic_data.get('plan'):
+        return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=0))
+    
+    # No plan exists - generate one automatically
+    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    plan_steps, error = planner.generate_study_plan(topic_name, user_background)
+    
+    if error:
+        return f"<h1>Error Generating Plan</h1><p>{plan_steps}</p>"
+    
+    # Save the new plan
+    topic_data = topic_data or {"name": topic_name}
+    topic_data['plan'] = plan_steps
+    topic_data['steps'] = [{} for _ in plan_steps]
+    save_topic(topic_name, topic_data)
+    
+    # Go directly to learning
+    return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=0))
+
+@chapter_bp.route('/generate', methods=['POST'])
+def generate_plan():
+    data = request.get_json()
+    topic_name = data.get('topic')
+    if not topic_name:
+        return {"error": "Topic name required"}, 400
+        
+    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    plan_steps, error = planner.generate_study_plan(topic_name, user_background)
+    
+    if error:
+        return {"error": plan_steps}, 500
+        
+    topic_data = load_topic(topic_name) or {"name": topic_name}
+    topic_data['plan'] = plan_steps
+    # Initialize steps structure
+    topic_data['steps'] = [{} for _ in plan_steps]
+    
+    save_topic(topic_name, topic_data)
+    
+    return {"status": "success", "plan": plan_steps}
 
 @chapter_bp.route('/learn/<topic_name>/<int:step_index>')
 def learn_topic(topic_name, step_index):

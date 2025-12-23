@@ -1,7 +1,7 @@
 from flask import render_template, request, session
 from . import chat_bp
 from app.core.storage import load_topic
-from app.core.agents import ChatAgent
+from .agent import ChatAgent
 import os
 
 chat_agent = ChatAgent()
