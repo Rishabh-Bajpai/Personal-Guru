@@ -207,17 +207,6 @@ input[type="text"] {
     border: 1px solid #e9ecef;
 }
 
-/* Saved topic link styling (default + dark mode) */
-.saved-topic-text {
-    color: #333;
-    text-decoration: none;
-    font-weight: 600;
-}
-.saved-topic-text:hover {
-    color: #0056b3;
-    text-decoration: underline;
-}
-
 /* Loader */
 #loader {
     display: none;
@@ -395,26 +384,17 @@ body.dark-mode .button:hover {
 }
 
 body.dark-mode .delete-button {
-    background-color: #c7233375;
+    background-color: #c82333;
 }
 
 body.dark-mode .delete-button:hover {
-    background-color: #c7233375;
+    background-color: #dc3545;
 }
 
 body.dark-mode input[type="text"] {
     background-color: #3a3a3a;
     color: #ECDFCC;
     border: 1px solid #555;
-}
-
-/* Dark-mode overrides for saved topic link */
-body.dark-mode .saved-topic-text {
-    color: #ECDFCC;
-}
-body.dark-mode .saved-topic-text:hover {
-    color: #697565;
-    text-decoration: underline;
 }
 
 body.dark-mode .plan-panel {
@@ -427,7 +407,7 @@ body.dark-mode .plan-panel a {
 }
 
 body.dark-mode .plan-panel li.active {
-    background-color: #7f9179;
+    background-color: #0056b3;
 }
 
 body.dark-mode .plan-panel li:not(.active):hover {
@@ -451,7 +431,7 @@ body.dark-mode .feedback-item.correct {
 }
 
 body.dark-mode .feedback-item.incorrect {
-    background-color: #c7233375;
+    background-color: #c82333;
 }
 
 body.dark-mode .topics-list li {
