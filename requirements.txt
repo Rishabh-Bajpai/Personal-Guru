@@ -1,4 +1,5 @@
 Flask
+Flask-Session
 python-dotenv
 requests
 pytest

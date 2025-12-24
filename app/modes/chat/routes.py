@@ -9,9 +9,11 @@ chat_agent = ChatAgent()
 @chat_bp.route('/<topic_name>')
 def mode(topic_name):
     # Ensure a clean slate for a new chat session topic
+    # Reset chat history when switching topics
     if session.get('chat_topic') != topic_name:
         session.pop('chat_history', None)
         session['chat_topic'] = topic_name
+        session.modified = True  # Required for Flask to detect mutable object changes
 
     chat_history = session.get('chat_history', [])
 
@@ -25,6 +27,7 @@ def mode(topic_name):
 
         chat_history.append({"role": "assistant", "content": welcome_message})
         session['chat_history'] = chat_history
+        session.modified = True
 
     return render_template('chat/mode.html', topic_name=topic_name, chat_history=chat_history)
 
@@ -55,6 +58,7 @@ def send_message(topic_name):
         chat_history.append({"role": "assistant", "content": answer})
 
     session['chat_history'] = chat_history
+    session.modified = True  # Ensure Flask saves the updated list
 
     return redirect(url_for('chat.mode', topic_name=topic_name))
 

@@ -2,8 +2,10 @@ from flask import Flask, render_template, request, session, redirect, url_for
 from config import Config
 from .common.extensions import db, migrate
 from flask_wtf.csrf import CSRFProtect
+from flask_session import Session  # Server-side sessions for large chat histories
 
 csrf = CSRFProtect()
+sess = Session()
 
 def create_app(config_class=Config):
     app = Flask(__name__, template_folder='common/templates')
@@ -13,6 +15,7 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
+    sess.init_app(app)  # Initialize server-side sessions
 
     # Register Blueprints
     from app.modes.chapter import chapter_bp
