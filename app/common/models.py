@@ -1,7 +1,7 @@
 from app.common.extensions import db
 # from pgvector.sqlalchemy import Vector
 import datetime
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import JSON
 
 class Topic(db.Model):
     __tablename__ = 'topics'
@@ -11,8 +11,8 @@ class Topic(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     
     # Relationships
-    study_plan = db.Column(JSONB) # Storing list of strings as JSON
-    last_quiz_result = db.Column(JSONB) # Store latest quiz result
+    study_plan = db.Column(JSON) # Storing list of strings as JSON
+    last_quiz_result = db.Column(JSON) # Store latest quiz result
     steps = db.relationship('StudyStep', backref='topic', cascade='all, delete-orphan')
     quizzes = db.relationship('Quiz', backref='topic', cascade='all, delete-orphan')
     flashcards = db.relationship('Flashcard', backref='topic', cascade='all, delete-orphan')
@@ -27,9 +27,9 @@ class StudyStep(db.Model):
     content = db.Column(db.Text) # Markdown content
     
     # Questions and Feedback stored as JSON
-    questions = db.Column(JSONB) 
-    user_answers = db.Column(JSONB)
-    feedback = db.Column(JSONB)
+    questions = db.Column(JSON) 
+    user_answers = db.Column(JSON)
+    feedback = db.Column(JSON)
     score = db.Column(db.Float)
     
 class Quiz(db.Model):
@@ -37,7 +37,7 @@ class Quiz(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
-    questions = db.Column(JSONB) # List of question objects
+    questions = db.Column(JSON) # List of question objects
     score = db.Column(db.Float)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 

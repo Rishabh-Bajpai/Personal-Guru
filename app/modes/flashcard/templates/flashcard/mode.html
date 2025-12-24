@@ -111,7 +111,7 @@
         if (exportPdfBtn) {
             exportPdfBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                const url = `/export/${topicName}/pdf`;
+                const url = `/flashcards/${topicName}/export/pdf`;
                 window.open(url, '_blank');
             });
         }
