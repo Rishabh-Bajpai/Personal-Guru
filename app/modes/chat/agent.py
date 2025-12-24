@@ -2,9 +2,20 @@ import re
 from app.core.utils import call_llm
 
 class ChatAgent:
-    def get_answer(self, question, context, user_background):
+    def get_welcome_message(self, topic_name, user_background):
+        from app.modes.chat.prompts import get_welcome_prompt
+        prompt = get_welcome_prompt(topic_name, user_background)
+        answer, error = call_llm(prompt)
+        if error:
+            return f"Error getting welcome message from LLM: {error}", error
+        return answer, None
+
+    def get_answer(self, question, conversation_history, context, user_background):
         from app.modes.chat.prompts import get_chat_answer_prompt
-        prompt = get_chat_answer_prompt(question, context, user_background)
+
+        history_str = "\n".join([f"{msg['role']}: {msg['content']}" for msg in conversation_history]) if conversation_history else "No history yet."
+
+        prompt = get_chat_answer_prompt(question, history_str, context, user_background, bool(conversation_history))
         answer, error = call_llm(prompt)
         if error:
             return f"Error getting answer from LLM: {error}", error

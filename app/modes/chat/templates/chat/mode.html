@@ -1,8 +1,81 @@
 {% extends "base.html" %}
 
-{% block title %}Chat Mode{% endblock %}
+{% block title %}Chat Mode - {{ topic_name }}{% endblock %}
+
+{% block styles %}
+<style>
+    #chat-container {
+        max-width: 800px;
+        margin: 0 auto;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 20px;
+        height: 80vh;
+        display: flex;
+        flex-direction: column;
+    }
+    #chat-window {
+        flex-grow: 1;
+        overflow-y: auto;
+        margin-bottom: 20px;
+        border: 1px solid #eee;
+        padding: 10px;
+        border-radius: 4px;
+        display: flex;
+        flex-direction: column;
+    }
+    .message {
+        margin-bottom: 10px;
+        padding: 8px 12px;
+        border-radius: 18px;
+        max-width: 70%;
+        line-height: 1.4;
+        white-space: pre-wrap; /* Allows text to wrap */
+    }
+    .user-message {
+        background-color: #007bff;
+        color: white;
+        align-self: flex-end;
+    }
+    .assistant-message {
+        background-color: #f1f1f1;
+        color: #333;
+        align-self: flex-start;
+    }
+    #chat-form {
+        display: flex;
+    }
+    #chat-input {
+        flex-grow: 1;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+    #send-button {
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        margin-left: 10px;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<h1>Chat Mode</h1>
-<p>This feature is coming soon.</p>
+<div id="chat-container">
+    <h1>Chat with your AI Tutor about {{ topic_name }}</h1>
+    <div id="chat-window">
+        {% for message in chat_history %}
+            <div class="message {{ 'user-message' if message.role == 'user' else 'assistant-message' }}">
+                {{ message.content }}
+            </div>
+        {% endfor %}
+    </div>
+    <form id="chat-form" method="POST" action="{{ url_for('chat.send_message', topic_name=topic_name) }}">
+        <input type="text" id="chat-input" name="message" placeholder="Ask a question..." autocomplete="off" autofocus>
+        <button id="send-button" type="submit">Send</button>
+    </form>
+</div>
 {% endblock %}
