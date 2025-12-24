@@ -3,14 +3,8 @@ from app.core.utils import call_llm
 
 class ChatAgent:
     def get_answer(self, question, context, user_background):
-        prompt = f"""
-You are a helpful teaching assistant. The user is asking a question about the following learning material.
-Provide a concise and helpful answer to the user's question.
-The user's background is: '{user_background}'
-Learning Material: "{context}"
-
-User's Question: "{question}"
-"""
+        from app.modes.chat.prompts import get_chat_answer_prompt
+        prompt = get_chat_answer_prompt(question, context, user_background)
         answer, error = call_llm(prompt)
         if error:
             return f"Error getting answer from LLM: {error}", error

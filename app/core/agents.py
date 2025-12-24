@@ -44,17 +44,8 @@ class FeedbackAgent:
             feedback = "That's correct! Great job."
             return {"is_correct": True, "feedback": feedback}, None
 
-        prompt = f"""
-You are an expert educator providing feedback on a quiz answer.
-The user was asked the following question:
-"{question_text}"
-
-The correct answer is: "{correct_answer_text}"
-The user incorrectly answered: "{user_answer_text}"
-
-Please provide a concise, helpful explanation for why the user's answer is incorrect and why the correct answer is the right choice.
-The explanation should be friendly and encouraging. Limit it to 2-4 sentences.
-"""
+        from app.core.prompts import get_feedback_prompt
+        prompt = get_feedback_prompt(question_text, correct_answer_text, user_answer_text)
         feedback, error = call_llm(prompt)
         if error:
             # Fallback on LLM error

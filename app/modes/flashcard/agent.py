@@ -12,12 +12,8 @@ class FlashcardTeachingAgent(TopicTeachingAgent):
         if user_background is None:
             user_background = os.getenv("USER_BACKGROUND", "a beginner")
 
-        prompt = f"""
-You are an expert educator. Generate {count} concise flashcards for the topic '{topic}', tailored to a user with background: '{user_background}'.
-Return a JSON object with key "flashcards" which is an array of objects with keys "term" and "definition".
-Each definition should be one to two sentences maximum and focused on the most important concepts.
-Don't include any extra commentary outside the JSON.
-"""
+        from app.modes.flashcard.prompts import get_flashcard_generation_prompt
+        prompt = get_flashcard_generation_prompt(topic, count, user_background)
         data, error = call_llm(prompt, is_json=True)
         if error:
             return data, error
@@ -45,11 +41,8 @@ Don't include any extra commentary outside the JSON.
         while len(cards) < count and try_count < 3:
             remaining = count - len(cards)
             try_count += 1
-            extra_prompt = f"""
-Generate {remaining} additional concise flashcards for the topic '{topic}', tailored to a user with background: '{user_background}'.
-Do NOT repeat any of these terms: {', '.join(sorted(seen_terms))}.
-Return a JSON object with key "flashcards" which is an array of objects with keys "term" and "definition".
-"""
+            from app.modes.flashcard.prompts import get_additional_flashcards_prompt
+            extra_prompt = get_additional_flashcards_prompt(topic, remaining, user_background, seen_terms)
             extra_data, extra_err = call_llm(extra_prompt, is_json=True)
             if extra_err or not isinstance(extra_data, dict) or 'flashcards' not in extra_data:
                 break
@@ -86,12 +79,8 @@ Return a JSON object with key "flashcards" which is an array of objects with key
         if user_background is None:
             user_background = os.getenv("USER_BACKGROUND", "a beginner")
 
-        prompt = f"""
-Analyze the complexity of the topic '{topic}' for a user with background: '{user_background}'.
-Based on the topic's breadth and depth, suggest an ideal number of flashcards to generate for a comprehensive review.
-Return a JSON object with a single key "count".
-For a very simple topic, suggest 10-15 cards. For a moderately complex topic, 20-30. For a very complex topic, 40-50.
-"""
+        from app.modes.flashcard.prompts import get_flashcard_count_prompt
+        prompt = get_flashcard_count_prompt(topic, user_background)
         data, error = call_llm(prompt, is_json=True)
         if error:
             return 25, error  # Default on error
