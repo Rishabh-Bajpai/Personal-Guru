@@ -35,7 +35,11 @@ def send_message(topic_name):
         return redirect(url_for('chat.mode', topic_name=topic_name))
 
     topic_data = load_topic(topic_name)
-    context = topic_data.get('description', f'The topic is {topic_name}')
+    if topic_data:
+        context = topic_data.get('description', f'The topic is {topic_name}')
+    else:
+        context = f'The topic is {topic_name}. No additional details are available yet.'
+    
     user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
 
     chat_history = session.get('chat_history', [])
@@ -59,8 +63,8 @@ def chat(topic_name, step_index):
     user_question = request.json.get('question')
     topic_data = load_topic(topic_name)
 
-    if not user_question or not topic_data:
-        return {"error": "Invalid request"}, 400
+    if not user_question or not topic_data or 'steps' not in topic_data or step_index >= len(topic_data['steps']):
+        return {"error": "Invalid request or topic data missing"}, 400
 
     current_step_data = topic_data['steps'][step_index]
     teaching_material = current_step_data.get('teaching_material', '')
