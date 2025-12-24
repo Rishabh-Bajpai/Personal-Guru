@@ -1,6 +1,6 @@
 from flask import render_template, request, session, redirect, url_for
 from . import chat_bp
-from app.core.storage import load_topic, save_chat_history
+from app.core.storage import load_topic, save_chat_history, save_topic
 from .agent import ChatAgent
 import os
 
@@ -26,7 +26,24 @@ def mode(topic_name):
     if not chat_history:
         # Generate welcome message if chat is new
         user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
-        welcome_message, error = chat_agent.get_welcome_message(topic_name, user_background)
+        
+        # 1. Generate Plan if missing
+        if not topic_data or not topic_data.get('plan'):
+             from app.modes.chapter.agent import PlannerAgent
+             planner = PlannerAgent()
+             plan_steps, error = planner.generate_study_plan(topic_name, user_background)
+             if not error:
+                 # Save plan
+                 if not topic_data: topic_data = {"name": topic_name}
+                 topic_data['plan'] = plan_steps
+                 # Initialize empty steps list to match plan length (required by storage logic)
+                 topic_data['steps'] = [{} for _ in plan_steps]
+                 save_topic(topic_name, topic_data)
+                 # Reload to ensure consistency
+                 topic_data = load_topic(topic_name)
+
+        plan = topic_data.get('plan', []) if topic_data else []
+        welcome_message, error = chat_agent.get_welcome_message(topic_name, user_background, plan)
         if error:
             # Handle error appropriately
             return f"<h1>Error</h1><p>Could not generate a welcome message: {welcome_message}</p>"
@@ -51,8 +68,10 @@ def send_message(topic_name):
     topic_data = load_topic(topic_name)
     if topic_data:
         context = topic_data.get('description', f'The topic is {topic_name}')
+        plan = topic_data.get('plan', [])
     else:
         context = f'The topic is {topic_name}. No additional details are available yet.'
+        plan = []
     
     user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
 
@@ -60,7 +79,7 @@ def send_message(topic_name):
     chat_history.append({"role": "user", "content": user_message})
 
     # Get answer from agent
-    answer, error = chat_agent.get_answer(user_message, chat_history, context, user_background)
+    answer, error = chat_agent.get_answer(user_message, chat_history, context, user_background, plan)
 
     if error:
         # Add an error message to the chat instead of crashing
