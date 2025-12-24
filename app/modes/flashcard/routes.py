@@ -1,7 +1,8 @@
-from flask import render_template, request, session, redirect, url_for
+from flask import render_template, request, session, redirect, url_for, make_response
 from . import flashcard_bp
 from app.core.storage import load_topic, save_topic
 from .agent import FlashcardTeachingAgent
+from weasyprint import HTML
 import os
 
 teacher = FlashcardTeachingAgent()
@@ -11,9 +12,11 @@ def mode(topic_name):
     """Display flashcard mode with saved flashcards or generation UI."""
     topic_data = load_topic(topic_name)
     if not topic_data:
-        return "Topic not found", 404
+        # Topic doesn't exist yet, allow user to generate content
+        flashcards = []
+    else:
+        flashcards = topic_data.get('flashcards', [])
     
-    flashcards = topic_data.get('flashcards', [])
     return render_template('flashcard/mode.html', topic_name=topic_name, flashcards=flashcards)
 
 @flashcard_bp.route('/generate', methods=['POST'])
@@ -52,3 +55,19 @@ def generate_flashcards_route():
     save_topic(topic_name, topic_data)
 
     return {"flashcards": cards}
+
+@flashcard_bp.route('/<topic_name>/export/pdf')
+def export_pdf(topic_name):
+    topic_data = load_topic(topic_name)
+    if not topic_data:
+        return "Topic not found", 404
+    
+    flashcards = topic_data.get('flashcards', [])
+    
+    html = render_template('flashcard/export.html', topic_name=topic_name, flashcards=flashcards)
+    pdf = HTML(string=html).write_pdf()
+    
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'inline; filename={topic_name}_flashcards.pdf'
+    return response
