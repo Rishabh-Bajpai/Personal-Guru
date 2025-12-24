@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='flashcards.css') }}">
     {% block head %}{% endblock %}
+    <!-- Allow child templates to inject custom styles (e.g., Chat mode) -->
+    {% block styles %}{% endblock %}
 </head>
 
 <body class="dark-mode">

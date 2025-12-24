@@ -8,6 +8,7 @@
 
 {% block styles %}
 <style>
+    /* Theme color variables for light and dark modes */
     :root {
         --user-bubble-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         --assistant-bubble-bg: #ffffff;
@@ -17,7 +18,7 @@
     }
 
     body.dark-mode {
-        --user-bubble-bg: linear-gradient(135deg, #697565 0%, #5a6555 100%);
+        --user-bubble-bg: linear-gradient(135deg, #4a6fa5 0%, #6b5b95 100%);
         --assistant-bubble-bg: #2d2d2d;
         --assistant-text: #e0e0e0;
         --chat-bg: #1a1a1a;
@@ -67,10 +68,18 @@
         width: 100%;
     }
 
+    /* Align user messages to the right, AI messages to the left */
+    .message-wrapper.user-wrapper {
+        align-items: flex-end;
+    }
+
+    .message-wrapper.assistant-wrapper {
+        align-items: flex-start;
+    }
+
     .message {
         padding: 16px 20px;
         border-radius: 18px;
-        max-width: 85%;
         line-height: 1.6;
         word-wrap: break-word;
         position: relative;
@@ -78,19 +87,50 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
 
+    /* User messages: purple gradient, compact, right-aligned */
     .user-message {
         background: var(--user-bubble-bg);
         color: white;
-        align-self: flex-end;
         border-bottom-right-radius: 4px;
+        max-width: 70%;
+        font-weight: 500;
     }
 
+    /* AI messages: light/dark background, wider, left-aligned */
     .assistant-message {
         background-color: var(--assistant-bubble-bg);
         color: var(--assistant-text);
-        align-self: flex-start;
         border-bottom-left-radius: 4px;
         border: 1px solid rgba(0, 0, 0, 0.05);
+        max-width: 90%;
+    }
+
+    .message-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
+        opacity: 0.7;
+        color: var(--assistant-text);
+    }
+
+    #chat-input:disabled,
+    #chat-input:read-only {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    #send-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .loading-indicator {
+        font-size: 0.9rem;
+        color: var(--assistant-text);
+        opacity: 0.7;
+        margin-left: 10px;
     }
 
     /* Markdown Styling inside Assistant Bubbles */
@@ -253,10 +293,15 @@
 
     <div id="chat-window">
         {% for message in chat_history %}
-        <div class="message-wrapper">
+        <!-- Message wrapper with role-specific alignment -->
+        <div class="message-wrapper {{ 'user-wrapper' if message.role == 'user' else 'assistant-wrapper' }}">
+            <div class="message-label {{ 'user-label' if message.role == 'user' else 'assistant-label' }}">
+                {{ 'You' if message.role == 'user' else 'AI Tutor' }}
+            </div>
             <div class="message {{ 'user-message' if message.role == 'user' else 'assistant-message' }}">
                 <div class="message-content"></div>
-                <script type="text/template" class="raw-markdown">{{ message.content }}</script>
+                <!-- Hidden div stores raw content; | safe prevents HTML escaping -->
+                <div class="raw-markdown" style="display: none;">{{ message.content | safe }}</div>
             </div>
         </div>
         {% endfor %}
@@ -266,8 +311,9 @@
         <form id="chat-form" method="POST" action="{{ url_for('chat.send_message', topic_name=topic_name) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="text" id="chat-input" name="message" placeholder="Ask your AI tutor a question..."
-                autocomplete="off" autofocus>
+                autocomplete="off" autofocus required>
             <button id="send-button" class="button" type="submit">Send</button>
+            <span id="loading-indicator" class="loading-indicator" style="display: none;">Thinking...</span>
         </form>
     </div>
 </div>
@@ -281,6 +327,7 @@
         breaks: true
     });
 
+    // Extract raw content and render markdown for AI messages
     function renderMarkdown() {
         const messages = document.querySelectorAll('.message');
         messages.forEach(function (messageEl) {
@@ -313,6 +360,28 @@
 
         // Focus input after rendering
         document.getElementById('chat-input').focus();
+
+        // Prevent empty submissions and disable input while loading
+        document.getElementById('chat-form').addEventListener('submit', function(e) {
+            const input = document.getElementById('chat-input');
+            const button = document.getElementById('send-button');
+            const loading = document.getElementById('loading-indicator');
+            
+            // Prevent submission if input is empty
+            if (!input.value.trim()) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // Store the value before disabling (disabled fields aren't submitted)
+            const messageValue = input.value;
+            
+            // Show loading state
+            button.disabled = true;
+            loading.style.display = 'inline';
+            input.readOnly = true;  // Use readOnly instead of disabled to preserve form value
+            input.style.opacity = '0.6';
+        });
     });
 </script>
 {% endblock %}

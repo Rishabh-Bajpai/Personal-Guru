@@ -34,7 +34,9 @@ def mode(topic_name):
 @chat_bp.route('/<topic_name>/send', methods=['POST'])
 def send_message(topic_name):
     user_message = request.form.get('message')
-    if not user_message:
+    
+    # Prevent empty or whitespace-only messages from being processed
+    if not user_message or not user_message.strip():
         return redirect(url_for('chat.mode', topic_name=topic_name))
 
     topic_data = load_topic(topic_name)

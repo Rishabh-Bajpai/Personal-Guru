@@ -7,6 +7,8 @@ The user's background is: "{user_background}".
 Generate a welcoming message that is professional, encouraging, and sets a high standard for this learning session.
 - Start with a friendly but expert greeting.
 - Acknowledge the user's background and show how you will tailor the session.
+- Provide a brief overview of the key topics you'll cover (3-5 main areas).
+- Do NOT include time estimates or duration for any topics.
 - Use structured Markdown:
     - Use ## style headings for major sections.
     - Use bold text for important concepts.
