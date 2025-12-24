@@ -125,10 +125,12 @@ The application is configured using a `.env` file. Copy the example file and edi
 cp .env.example .env
 ```
 
-Now, open the `.env` file and customize the settings. The application uses the OpenAI API protocol for all LLM providers (including Ollama).
+Now, open the `.env` file and customize the settings.
 
 **Key Variables:**
 
+- `DATABASE_URL`: Connection string for the PostgreSQL database (e.g., `postgresql://postgres:postgres@localhost:5433/personal_guru`).
+- `PORT`: The port the application will run on (default `5011`).
 - `LLM_ENDPOINT`: The base URL of your LLM provider.
   - For **Ollama**: `http://localhost:11434/v1`
   - For **LMStudio**: `http://localhost:1234/v1`
@@ -138,24 +140,57 @@ Now, open the `.env` file and customize the settings. The application uses the O
 - `LLM_API_KEY`: API Key (optional for local providers like Ollama).
 - `LLM_NUM_CTX`: Context window size (recommended: `18000` or higher if your hardware supports it).
 
+## Database Setup (Docker)
+
+This application uses a PostgreSQL database running in a Docker container.
+
+### 1. Start the Database
+Run the following command to start the database service:
+
+```bash
+docker compose up -d db
+```
+
+This starts a PostgreSQL instance on `localhost:5433`.
+
+### 2. Inspecting the Database (Optional)
+To manually inspect the database content:
+
+```bash
+docker compose exec db psql -U postgres -d personal_guru
+```
+
 ## Running the Application
 
-To run the application, you need to have three components running: the LLM server, the Coqui TTS server (optional), and the main Flask application.
+To run the application, ensure the database is running, then start the Flask server locally.
 
-### 1. LLM Server (Ollama / LMStudio / etc.)
+### 1. Start the Server
 
-Ensure your LLM server is running and accessible.
+```bash
+python run.py
+```
+
+The application will be available at `http://localhost:5011` (or the port defined in your `.env`).
+
+### 2. Data Migration (Optional)
+If you need to migrate legacy JSON data to the new database, run:
+
+```bash
+python migrate_data.py
+```
+
+### 3. External Services
+Ensure your LLM server (Ollama/LMStudio) and optional TTS server are running as described below.
+
+#### LLM Server (Ollama / LMStudio / etc.)
+Ensure your LLM server is running and accessible. The application uses the OpenAI API protocol for all LLM providers (including Ollama).
 
 **If using Ollama:**
-You can install Ollama from [https://ollama.com/](https://ollama.com/).
-
-Run with Docker (GPU support):
-
 ```bash
 docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
 ```
 
-### 2. Coqui TTS Server (TTS) (Optional: also experimental)
+#### Coqui TTS Server (TTS) (Optional: also experimental)
 
 This service provides high-quality, human-like text-to-speech. The repository includes a `Dockerfile` for Coqui TTS in the `coqui_tts` directory.
 
@@ -174,16 +209,6 @@ sudo docker run -d -p 5001:5002 --gpus all --restart unless-stopped --name coqui
 ```
 
 This will start the TTS server on port 5001 of your host machine, connected to port 5002 inside the container.
-
-### 3. Main Application
-
-Once the dependencies are installed and your `.env` file is configured, you can start the Flask development server:
-
-```bash
-python app.py
-```
-
-The application will be available at `http://127.0.0.1:5002`.
 
 ## For Developers: Running Tests
 
