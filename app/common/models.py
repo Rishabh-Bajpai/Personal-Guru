@@ -1,5 +1,5 @@
 from app.common.extensions import db
-from pgvector.sqlalchemy import Vector
+# from pgvector.sqlalchemy import Vector
 import datetime
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -12,6 +12,7 @@ class Topic(db.Model):
     
     # Relationships
     study_plan = db.Column(JSONB) # Storing list of strings as JSON
+    last_quiz_result = db.Column(JSONB) # Store latest quiz result
     steps = db.relationship('StudyStep', backref='topic', cascade='all, delete-orphan')
     quizzes = db.relationship('Quiz', backref='topic', cascade='all, delete-orphan')
     flashcards = db.relationship('Flashcard', backref='topic', cascade='all, delete-orphan')
@@ -48,10 +49,10 @@ class Flashcard(db.Model):
     term = db.Column(db.String(255), nullable=False)
     definition = db.Column(db.Text, nullable=False)
     
-class VectorEmbedding(db.Model):
-    __tablename__ = 'vector_embeddings'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.Text, nullable=False)
-    embedding = db.Column(Vector(1536)) # Assuming OpenAI Ada-002 dimension
-    metadata_json = db.Column(JSONB)
+# class VectorEmbedding(db.Model):
+#     __tablename__ = 'vector_embeddings'
+#     
+#     id = db.Column(db.Integer, primary_key=True)
+#     content = db.Column(db.Text, nullable=False)
+#     embedding = db.Column(Vector(1536)) # Assuming OpenAI Ada-002 dimension
+#     metadata_json = db.Column(JSONB)

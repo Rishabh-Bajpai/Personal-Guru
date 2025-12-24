@@ -9,7 +9,7 @@ load_dotenv()
 
 LLM_ENDPOINT = os.getenv("LLM_ENDPOINT")
 LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME")
-LLM_NUM_CTX = int(os.getenv("LLM_NUM_CTX", 4096))
+LLM_NUM_CTX = int(os.getenv("LLM_NUM_CTX", 18000))
 LLM_API_KEY = os.getenv("LLM_API_KEY", "dummy")
 
 def call_llm(prompt, is_json=False):
@@ -54,6 +54,7 @@ def call_llm(prompt, is_json=False):
             "model": LLM_MODEL_NAME,
             "messages": messages,
             "temperature": 0.7,
+            "max_tokens": LLM_NUM_CTX,
         }
         
         # Note: Ollama via OpenAI-compat supports 'json_object' in recent versions.

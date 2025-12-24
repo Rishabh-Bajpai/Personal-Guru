@@ -84,7 +84,7 @@ def learn_topic(topic_name, step_index):
 
     current_step_data = topic_data['steps'][step_index]
 
-    if 'teaching_material' not in current_step_data:
+    if not current_step_data.get('teaching_material'):
         incorrect_questions = session.get('incorrect_questions')
         current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
         teaching_material, error = teacher.generate_teaching_material(plan_steps[step_index], plan_steps, current_background, incorrect_questions)
@@ -99,7 +99,7 @@ def learn_topic(topic_name, step_index):
         save_topic(topic_name, topic_data)
         session.pop('incorrect_questions', None)
 
-    show_assessment = 'questions' in current_step_data and 'user_answers' not in current_step_data
+    show_assessment = current_step_data.get('questions') and not current_step_data.get('user_answers')
     return render_template('chapter/learn_step.html',
                            topic=topic_data,
                            step_index=step_index,
@@ -203,22 +203,18 @@ def export_topic_pdf(topic_name):
     if not topic_data:
         return "Topic not found", 404
 
-    # Check if this is a flashcard topic or a chapter topic
-    if topic_data.get('flashcards'):
-        # Render flashcards as PDF
-        # Template moved to app/modes/flashcard/templates/flashcard/export.html ?
-        # Wait, app.py had 'flashcard_export_template.html'. I moved it to ...
-        # logic for flashcard export is in flashcard route? No, app.py had it here.
-        # But if we split, flashcard PDF export should arguably be in Flashcard Blueprint.
-        # However, keeping it here for now if the endpoint is /export/...
-        # But cleanest is to move flashcard export to flashcard_bp.
-        # I will redirect or handle here. Since the route is /export/<topic>/pdf, it implies generic ownership.
-        # But I'll assume Chapter BP handles "General Topic Export".
+    # Prioritize Chapter/Quiz export if plan exists
+    if topic_data.get('plan'):
+        # Render chapter/quiz as PDF
+        average_score = 0
+        topic_data, average_score = _get_topic_data_and_score(topic_name) # Reuse helper
+        html = render_template('chapter/pdf_export.html', topic=topic_data, average_score=average_score)
         
-        # But render_template('flashcard/export.html') requires cross-bp template?
-        # Flask looks in all template folders. So it works.
+    # Fallback to Flashcards if no plan but flashcards exist
+    elif topic_data.get('flashcards'):
         html = render_template('flashcard/export.html', topic_name=topic_name, flashcards=topic_data.get('flashcards', []))
     else:
+        return "No content to export", 404
         # Render chapter/quiz as PDF
         average_score = 0
         topic_data, average_score = _get_topic_data_and_score(topic_name) # Reuse helper
