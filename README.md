@@ -153,7 +153,14 @@ docker compose up -d db
 
 This starts a PostgreSQL instance on `localhost:5433`.
 
-### 2. Inspecting the Database (Optional)
+### 2. Initialize the Database
+Run the following script to create the necessary tables in the database. This is necessary when setting up the project for the first time, or if you have reset your Docker database volume.
+
+```bash
+python scripts/create_tables.py
+```
+
+### 3. Inspecting the Database (Optional)
 To manually inspect the database content:
 
 ```bash
