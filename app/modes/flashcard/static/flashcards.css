@@ -13,16 +13,19 @@
     cursor: pointer;
     border: 1px solid #ccc;
     border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    background-color: #87CEEB; /* sky blue */
-    color: #003366; /* dark slate for contrast */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background-color: #87CEEB;
+    /* sky blue */
+    color: #003366;
+    /* dark slate for contrast */
 }
 
 .flashcard.flipped {
     transform: rotateY(180deg);
 }
 
-.flashcard-front, .flashcard-back {
+.flashcard-front,
+.flashcard-back {
     position: absolute;
     width: 100%;
     height: 100%;
@@ -41,7 +44,21 @@
 }
 
 .flashcard-back {
-    background-color: rgba(255,255,255,0.85);
+    background-color: rgba(255, 255, 255, 0.85);
     color: #003366;
     transform: rotateY(180deg);
+}
+
+.flashcard-nav {
+    margin-top: 10px;
+}
+
+.export-controls {
+    margin-top: 15px;
+    display: none;
+}
+
+.flash-error {
+    color: red;
+    margin-top: 10px;
 }

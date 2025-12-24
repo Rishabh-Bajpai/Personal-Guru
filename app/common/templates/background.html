@@ -11,7 +11,8 @@
             placeholder="Describe your background... (e.g., beginner, intermediate in Python)">{{ user_background }}</textarea>
     </div>
     <br>
+    <br>
     <input type="submit" value="Save Background" class="button">
-    <a href="{{ url_for('main.index') }}" class="button" style="background-color: #6c757d; margin-left: 10px;">Back</a>
+    <a href="{{ url_for('main.index') }}" class="button secondary offset">Back</a>
 </form>
 {% endblock %}

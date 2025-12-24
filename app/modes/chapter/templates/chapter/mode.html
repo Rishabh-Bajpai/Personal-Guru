@@ -2,6 +2,10 @@
 
 {% block title %}Chapter Mode{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('chapter.static', filename='chapter.css') }}">
+{% endblock %}
+
 {% block content %}
 <h1>Chapter Mode: {{ topic_name }}</h1>
 
@@ -11,7 +15,7 @@
     <a href="{{ url_for('chapter.learn_topic', topic_name=topic_name, step_index=0) }}" class="button">Start / Resume
         Learning</a>
 
-    <div class="plan-list" style="margin-top: 20px; text-align: left; display: inline-block;">
+    <div class="plan-list-container">
         <h2>Curriculum</h2>
         <ul>
             {% for step in plan %}
@@ -26,10 +30,10 @@
     <div>
         <button id="generate-plan" class="button">Generate Plan</button>
     </div>
-    <div id="generation-status" style="margin-top: 15px; display: none;">
+    <div id="generation-status" class="generation-status">
         <p>Generating your personalized plan... <span class="spinner">⏳</span></p>
     </div>
-    <div id="generation-error" style="color: red; margin-top: 10px;"></div>
+    <div id="generation-error" class="generation-error"></div>
 </div>
 
 <script>

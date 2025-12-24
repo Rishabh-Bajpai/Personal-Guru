@@ -25,26 +25,7 @@
     }
 </script>
 
-<style>
-    .flashcard-controls {
-        margin: 20px 0;
-        display: flex;
-        gap: 10px;
-    }
+</script>
 
-    .control-btn {
-        padding: 10px 20px;
-        font-size: 16px;
-        cursor: pointer;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        transition: background-color 0.3s;
-    }
-
-    .control-btn:hover {
-        background-color: #0056b3;
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('quiz.static', filename='quiz.css') }}">
 {% endblock %}

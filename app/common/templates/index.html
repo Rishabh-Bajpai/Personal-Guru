@@ -8,7 +8,7 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
     <input type="text" name="topic" size="50" placeholder="Enter a new topic..." required>
     {% if error %}
-    <p class="error" style="color: #ff4d4d; margin-top: 10px;">{{ error }}</p>
+    <p class="error error-text">{{ error }}</p>
     {% endif %}
     <div class="learning-modes">
         <p>Choose a learning mode:</p>

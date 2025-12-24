@@ -25,18 +25,18 @@
             <p id="flash-definition"></p>
         </div>
     </div>
-    <div style="margin-top:10px;">
+    <div class="flashcard-nav">
         <button id="prev-card" class="button small">Previous</button>
         <button id="next-card" class="button small">Next</button>
     </div>
     <p id="flash-index"></p>
-    <div id="export-controls" style="margin-top:15px; display:none;">
+    <div id="export-controls" class="export-controls">
         <p><strong>You've reached the end of the flashcards!</strong></p>
         <a id="export-pdf-btn" href="#" class="button">Save as PDF</a>
     </div>
 </div>
 
-<div id="flash-error" style="color:red; margin-top:10px;"></div>
+<div id="flash-error" class="flash-error"></div>
 {% endblock %}
 
 {% block scripts %}

@@ -18,11 +18,13 @@ body {
     padding: 40px;
     background: #ffffff;
     border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
 /* Headings */
-h1, h2, h3 {
+h1,
+h2,
+h3 {
     color: #2c3e50;
     margin-bottom: 20px;
 }
@@ -50,16 +52,20 @@ h3 {
     border: none;
     cursor: pointer;
     transition: background-color 0.3s ease, transform 0.2s ease;
-    font-size: 1rem; /* Use rem for consistency */
-    font-family: inherit; /* Ensure font matches */
-    line-height: 1.5; /* Explicit line height */
-    -webkit-appearance: none; /* Remove default styling */
+    font-size: 1rem;
+    /* Use rem for consistency */
+    font-family: inherit;
+    /* Ensure font matches */
+    line-height: 1.5;
+    /* Explicit line height */
+    -webkit-appearance: none;
+    /* Remove default styling */
     appearance: none;
 }
 
 a.button {
     /* Anchors display inline by default, inline-block matches button */
-    display: inline-block; 
+    display: inline-block;
 }
 
 .button:hover {
@@ -73,6 +79,25 @@ a.button {
 
 .delete-button:hover {
     background-color: #c82333;
+}
+
+/* Secondary Button */
+.button.secondary {
+    background-color: #6c757d;
+}
+
+.button.secondary:hover {
+    background-color: #5a6268;
+}
+
+.button.secondary.offset {
+    margin-left: 10px;
+}
+
+/* Error Messages */
+.error-text {
+    color: #ff4d4d;
+    margin-top: 10px;
 }
 
 /* Form elements */
@@ -235,8 +260,13 @@ input[type="text"] {
 }
 
 @keyframes spin {
-    0% { transform: translate(-50%, -50%) rotate(0deg); }
-    100% { transform: translate(-50%, -50%) rotate(360deg); }
+    0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
 }
 
 /* Audio Controls */
@@ -256,65 +286,65 @@ input[type="text"] {
 
 /* The switch - the box around the slider */
 .switch {
-  position: relative;
-  display: inline-block;
-  width: 60px;
-  height: 34px;
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
 }
 
 /* Hide default HTML checkbox */
 .switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
+    opacity: 0;
+    width: 0;
+    height: 0;
 }
 
 /* The slider */
 .slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  -webkit-transition: .4s;
-  transition: .4s;
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
 }
 
 .slider:before {
-  position: absolute;
-  content: "";
-  height: 26px;
-  width: 26px;
-  left: 4px;
-  bottom: 4px;
-  background-color: white;
-  -webkit-transition: .4s;
-  transition: .4s;
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
 }
 
-input:checked + .slider {
-  background-color: #007bff;
+input:checked+.slider {
+    background-color: #007bff;
 }
 
-input:focus + .slider {
-  box-shadow: 0 0 1px #007bff;
+input:focus+.slider {
+    box-shadow: 0 0 1px #007bff;
 }
 
-input:checked + .slider:before {
-  -webkit-transform: translateX(26px);
-  -ms-transform: translateX(26px);
-  transform: translateX(26px);
+input:checked+.slider:before {
+    -webkit-transform: translateX(26px);
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
 }
 
 /* Rounded sliders */
 .slider.round {
-  border-radius: 34px;
+    border-radius: 34px;
 }
 
 .slider.round:before {
-  border-radius: 50%;
+    border-radius: 50%;
 }
 
 /* Assessment options */
@@ -368,7 +398,7 @@ body.dark-mode {
 
 body.dark-mode .container {
     background: #2c2c2c;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 body.dark-mode h1,
@@ -454,7 +484,7 @@ body.dark-mode .slider {
     background-color: #555;
 }
 
-body.dark-mode input:checked + .slider {
+body.dark-mode input:checked+.slider {
     background-color: #697565;
 }
 
