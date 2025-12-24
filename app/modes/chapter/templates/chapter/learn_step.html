@@ -63,6 +63,7 @@
             {% if show_assessment %}
             <form action="{{ url_for('chapter.assess_step', topic_name=topic.name, step_index=step_index) }}"
                 method="post" onsubmit="showLoader()">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 {% for question in question_data.questions %}
                 <div class="question">
                     <p>{{ loop.index }}. {{ question.question }}</p>
@@ -133,7 +134,8 @@
             const response = await fetch("{{ url_for('chapter.generate_audio_route', step_index=step_index) }}", {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 },
                 body: JSON.stringify({ text: markdownContent })
             });
@@ -179,7 +181,8 @@
             const response = await fetch("{{ url_for('chat.chat', topic_name=topic.name, step_index=step_index) }}", {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 },
                 body: JSON.stringify({ question: question })
             });

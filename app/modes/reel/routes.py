@@ -7,7 +7,11 @@ from .services.logger import SessionLogger
 # Store active session loggers (keyed by session ID) for Reel mode
 active_sessions = {}
 
-@reel_bp.route('/api/reels/search', methods=['POST'])
+@reel_bp.route('/<topic_name>')
+def mode(topic_name):
+    return render_template('reel/mode.html', topic_name=topic_name)
+
+@reel_bp.route('/api/search', methods=['POST'])
 def search_reels():
     try:
         data = request.get_json()
@@ -44,7 +48,7 @@ def search_reels():
         traceback.print_exc()
         return {"error": str(e)}, 500
 
-@reel_bp.route('/api/reels/video-event', methods=['POST'])
+@reel_bp.route('/api/video-event', methods=['POST'])
 def video_event():
     """Track video play/skip events."""
     try:

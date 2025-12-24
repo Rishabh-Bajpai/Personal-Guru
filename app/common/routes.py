@@ -36,21 +36,16 @@ def index():
                 return redirect(url_for('chapter.mode', topic_name=topic_name))
             
             elif mode == 'quiz':
-                return render_template('quiz/select.html', topic_name=topic_name)
+                return redirect(url_for('quiz.mode', topic_name=topic_name))
             
-            # Load topic data only when needed for modes that use it to avoid unnecessary reads
-            # Note: Previously it was loaded for all except quiz/chapter, let's keep it safe.
-            topic_data = load_topic(topic_name) or {}
-            flashcards = topic_data.get('flashcards', [])
-
-            if mode == 'flashcard':
-                 return render_template('flashcard/mode.html', topic_name=topic_name, flashcards=flashcards)
+            elif mode == 'flashcard':
+                 return redirect(url_for('flashcard.mode', topic_name=topic_name))
             
             elif mode == 'reel':
-                 return render_template('reel/mode.html', topic_name=topic_name)
+                 return redirect(url_for('reel.mode', topic_name=topic_name))
                  
             elif mode == 'chat':
-                 return render_template('chat/mode.html', topic_name=topic_name)
+                 return redirect(url_for('chat.mode', topic_name=topic_name)) # Chat doesn't have a 'mode' route yet, but we will add/fix it.
 
             else:
                  return render_template('index.html', topics=get_all_topics(), error=f"Mode {mode} not available")

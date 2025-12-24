@@ -17,7 +17,7 @@ assessor = AssessorAgent()
 feedback_agent = FeedbackAgent()
 md = MarkdownIt()
 
-@chapter_bp.route('/chapter/<topic_name>')
+@chapter_bp.route('/<topic_name>')
 def mode(topic_name):
     topic_data = load_topic(topic_name)
     

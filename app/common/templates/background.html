@@ -4,9 +4,12 @@
 
 {% block content %}
 <h1>Set Your Learning Background</h1>
-<form method="post">
-    <textarea name="user_background" rows="5" cols="50"
-        placeholder="Describe your background... (e.g., beginner, intermediate in Python)">{{ user_background }}</textarea>
+<form method="post" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <div>
+        <textarea name="user_background" rows="5" cols="50"
+            placeholder="Describe your background... (e.g., beginner, intermediate in Python)">{{ user_background }}</textarea>
+    </div>
     <br>
     <input type="submit" value="Save Background" class="button">
     <a href="{{ url_for('main.index') }}" class="button" style="background-color: #6c757d; margin-left: 10px;">Back</a>

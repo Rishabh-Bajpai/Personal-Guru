@@ -124,7 +124,12 @@
             generateBtn.textContent = 'Generating...';
             try {
                 const res = await fetch('/flashcards/generate', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify(payload)
                 });
                 const data = await res.json();
                 if (res.ok) {

@@ -2,7 +2,7 @@ import requests
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict
-from .embed_test import test_embed_direct
+from .embed_checker import test_embed_direct
 
 
 logger = logging.getLogger(__name__)

@@ -26,9 +26,13 @@ function onYouTubeIframeAPIReady() {
 function logVideoEvent(videoId, eventType) {
     if (!currentSessionId || !videoId) return;
 
-    fetch('/api/reels/video-event', {
+    // Updated path to match /reels/api/video-event
+    fetch('/reels/api/video-event', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
         body: JSON.stringify({
             session_id: currentSessionId,
             video_id: videoId,
@@ -61,10 +65,11 @@ async function performSearch(topic) {
     loadingSpinner.style.display = 'flex';
 
     try {
-        const response = await fetch('/api/reels/search', {
+        const response = await fetch('/reels/api/search', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             },
             body: JSON.stringify({ topic })
         });

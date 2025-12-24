@@ -6,6 +6,10 @@ import os
 
 chat_agent = ChatAgent()
 
+@chat_bp.route('/<topic_name>')
+def mode(topic_name):
+    return render_template('chat/mode.html', topic_name=topic_name)
+
 @chat_bp.route('/<topic_name>/<int:step_index>', methods=['POST'])
 def chat(topic_name, step_index):
     user_question = request.json.get('question')
