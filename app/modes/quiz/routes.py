@@ -42,7 +42,7 @@ def mode(topic_name):
     topic_data = load_topic(topic_name)
     
     # If quiz exists in saved data, use it
-    if topic_data and 'quiz' in topic_data:
+    if topic_data and topic_data.get('quiz'):
         quiz_data = topic_data['quiz']
         session['quiz_questions'] = quiz_data.get('questions', [])
         return render_template('quiz/mode.html', topic_name=topic_name, quiz_data=quiz_data)
