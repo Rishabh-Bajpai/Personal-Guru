@@ -50,13 +50,16 @@ h3 {
     border: none;
     cursor: pointer;
     transition: background-color 0.3s ease, transform 0.2s ease;
-    font-size: 1em;
+    font-size: 1rem; /* Use rem for consistency */
+    font-family: inherit; /* Ensure font matches */
+    line-height: 1.5; /* Explicit line height */
+    -webkit-appearance: none; /* Remove default styling */
+    appearance: none;
 }
 
 a.button {
-    padding: 12px 24px;
-    font-size: 1em;
-    margin-top: 0;
+    /* Anchors display inline by default, inline-block matches button */
+    display: inline-block; 
 }
 
 .button:hover {
