@@ -1,0 +1,504 @@
+/* General Body Styles */
+body {
+    font-family: 'Lato', sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    background-color: #f4f7f6;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* Container for the main content */
+.container {
+    width: 90%;
+    margin: 20px auto;
+    padding: 40px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+/* Headings */
+h1,
+h2,
+h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+h1 {
+    font-size: 2.5em;
+}
+
+h2 {
+    font-size: 2em;
+}
+
+h3 {
+    font-size: 1.5em;
+}
+
+/* Buttons */
+.button {
+    display: inline-block;
+    background: #007bff;
+    color: #ffffff;
+    padding: 12px 24px;
+    text-decoration: none;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    font-size: 1rem;
+    /* Use rem for consistency */
+    font-family: inherit;
+    /* Ensure font matches */
+    line-height: 1.5;
+    /* Explicit line height */
+    -webkit-appearance: none;
+    /* Remove default styling */
+    appearance: none;
+}
+
+a.button {
+    /* Anchors display inline by default, inline-block matches button */
+    display: inline-block;
+}
+
+.button:hover {
+    background: #0056b3;
+    transform: translateY(-2px);
+}
+
+.delete-button {
+    background-color: #dc3545;
+}
+
+.delete-button:hover {
+    background-color: #c82333;
+}
+
+/* Secondary Button */
+.button.secondary {
+    background-color: #6c757d;
+}
+
+.button.secondary:hover {
+    background-color: #5a6268;
+}
+
+.button.secondary.offset {
+    margin-left: 10px;
+}
+
+/* Error Messages */
+.error-text {
+    color: #ff4d4d;
+    margin-top: 10px;
+}
+
+/* Form elements */
+input[type="text"] {
+    width: calc(100% - 24px);
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1em;
+}
+
+/* Main Layout */
+.main-layout {
+    display: flex;
+    gap: 40px;
+}
+
+.plan-panel {
+    flex: 0 0 250px;
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.plan-panel h2 {
+    font-size: 1.5em;
+    margin-top: 0;
+}
+
+.plan-panel ul {
+    list-style: none;
+    padding: 0;
+}
+
+.plan-panel li {
+    padding: 12px 15px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    transition: background-color 0.3s ease;
+}
+
+.plan-panel li.active {
+    background-color: #007bff;
+}
+
+.plan-panel li.active a {
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.plan-panel a {
+    text-decoration: none;
+    color: #333;
+    display: block;
+}
+
+.plan-panel li:not(.active):hover {
+    background-color: #e9ecef;
+}
+
+/* Study Plan Content */
+.study-plan {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    margin-bottom: 20px;
+}
+
+/* Chat Container */
+.chat-container {
+    margin-top: 25px;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+}
+
+#chat-history {
+    height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: #fff;
+    border-radius: 5px;
+}
+
+#chat-input {
+    width: calc(100% - 90px);
+}
+
+/* Assessment */
+.assessment {
+    margin-top: 25px;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+}
+
+/* Feedback Items */
+.feedback-item {
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    color: #fff;
+}
+
+.feedback-item.correct {
+    background-color: #28a745;
+    border-left: 5px solid #218838;
+}
+
+.feedback-item.incorrect {
+    background-color: #dc3545;
+    border-left: 5px solid #c82333;
+}
+
+/* Topics List */
+.topics-list ul {
+    list-style: none;
+    padding: 0;
+}
+
+.topics-list li {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #e9ecef;
+}
+
+/* Loader */
+#loader {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8);
+}
+
+.spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+/* Audio Controls */
+.audio-controls {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.audio-controls .button {
+    margin-left: 15px;
+}
+
+.switch-label {
+    margin-right: 10px;
+}
+
+/* The switch - the box around the slider */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* The slider */
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+input:checked+.slider {
+    background-color: #007bff;
+}
+
+input:focus+.slider {
+    box-shadow: 0 0 1px #007bff;
+}
+
+input:checked+.slider:before {
+    -webkit-transform: translateX(26px);
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
+}
+
+/* Rounded sliders */
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+/* Assessment options */
+.assessment .option {
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.assessment .option:hover {
+    background-color: #e9ecef;
+}
+
+.assessment label {
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+/* Code blocks */
+pre {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+code {
+    background-color: #e9ecef;
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+/* Navigation */
+.navigation {
+    margin-top: 30px;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+}
+
+/* Dark Mode Styles */
+body.dark-mode {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+}
+
+body.dark-mode .container {
+    background: #2c2c2c;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3 {
+    color: #ECDFCC;
+}
+
+body.dark-mode .button {
+    background: #697565;
+    color: #ECDFCC;
+}
+
+body.dark-mode .button:hover {
+    background: #697565;
+}
+
+body.dark-mode .delete-button {
+    background-color: #c82333;
+}
+
+body.dark-mode .delete-button:hover {
+    background-color: #dc3545;
+}
+
+body.dark-mode input[type="text"] {
+    background-color: #3a3a3a;
+    color: #ECDFCC;
+    border: 1px solid #555;
+}
+
+body.dark-mode .plan-panel {
+    background-color: #3a3a3a;
+    border-color: #555;
+}
+
+body.dark-mode .plan-panel a {
+    color: #ECDFCC;
+}
+
+body.dark-mode .plan-panel li.active {
+    background-color: #0056b3;
+}
+
+body.dark-mode .plan-panel li:not(.active):hover {
+    background-color: #555;
+}
+
+body.dark-mode .study-plan,
+body.dark-mode .chat-container,
+body.dark-mode .assessment {
+    background-color: #3a3a3a;
+    border-color: #555;
+}
+
+body.dark-mode #chat-history {
+    background-color: #2c2c2c;
+    border-color: #555;
+}
+
+body.dark-mode .feedback-item.correct {
+    background-color: #218838;
+}
+
+body.dark-mode .feedback-item.incorrect {
+    background-color: #c82333;
+}
+
+body.dark-mode .topics-list li {
+    background-color: #3a3a3a;
+    border-color: #555;
+}
+
+body.dark-mode #loader {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+body.dark-mode .spinner {
+    border-top-color: #697565;
+}
+
+body.dark-mode .slider {
+    background-color: #555;
+}
+
+body.dark-mode input:checked+.slider {
+    background-color: #697565;
+}
+
+body.dark-mode .assessment .option:hover {
+    background-color: #555;
+}
+
+body.dark-mode pre {
+    background-color: #2c2c2c;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+body.dark-mode code {
+    background-color: #555;
+    color: #e0e0e0;
+}

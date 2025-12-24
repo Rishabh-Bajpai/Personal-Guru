@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Quiz Mode - {{ topic_name }}{% endblock %}
+
+{% block content %}
+<h1>Quiz Mode - {{ topic_name }}</h1>
+<p>Select the number of quiz questions you'd like:</p>
+
+<div class="flashcard-controls">
+    <button class="button" onclick="generateQuiz('auto')">Auto</button>
+    <button class="button" onclick="generateQuiz(25)">25 Questions</button>
+    <button class="button" onclick="generateQuiz(50)">50 Questions</button>
+</div>
+
+<script>
+    function generateQuiz(count) {
+        const topicName = "{{ topic_name }}";
+        let url;
+        if (count === 'auto') {
+            url = `/quiz/generate/${topicName}/auto`;
+        } else {
+            url = `/quiz/generate/${topicName}/${count}`;
+        }
+        window.location.href = url;
+    }
+</script>
+
+</script>
+
+<link rel="stylesheet" href="{{ url_for('quiz.static', filename='quiz.css') }}">
+{% endblock %}

@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Flash Card Mode{% endblock %}
+
+{% block content %}
+<h1>Flash Card Mode</h1>
+
+<div class="flashcard-controls">
+    <p>Choose generation mode:</p>
+    <label><input type="radio" name="flashcount" value="auto" checked> Auto</label>
+    <label><input type="radio" name="flashcount" value="25"> 25</label>
+    <label><input type="radio" name="flashcount" value="50"> 50</label>
+    <div>
+        <button id="generate-flashcards" class="button">Generate Flashcards</button>
+    </div>
+</div>
+
+<link rel="stylesheet" href="{{ url_for('flashcard.static', filename='flashcards.css') }}">
+<div id="flashcard-container" class="flashcard-container" style="display:none;">
+    <div id="flashcard" class="flashcard">
+        <div class="flashcard-front">
+            <h2 id="flash-term"></h2>
+        </div>
+        <div class="flashcard-back">
+            <p id="flash-definition"></p>
+        </div>
+    </div>
+    <div class="flashcard-nav">
+        <button id="prev-card" class="button small">Previous</button>
+        <button id="next-card" class="button small">Next</button>
+    </div>
+    <p id="flash-index"></p>
+    <div id="export-controls" class="export-controls">
+        <p><strong>You've reached the end of the flashcards!</strong></p>
+        <a id="export-pdf-btn" href="#" class="button">Save as PDF</a>
+    </div>
+</div>
+
+<div id="flash-error" class="flash-error"></div>
+{% endblock %}
+
+{% block scripts %}
+
+<div id="flashcard-data" data-flashcards='{{ flashcards|tojson|safe }}' data-topic="{{ topic_name }}">
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const generateBtn = document.getElementById('generate-flashcards');
+        const container = document.getElementById('flashcard-container');
+        const err = document.getElementById('flash-error');
+        const termEl = document.getElementById('flash-term');
+        const defEl = document.getElementById('flash-definition');
+        const indexEl = document.getElementById('flash-index');
+        const prevBtn = document.getElementById('prev-card');
+        const nextBtn = document.getElementById('next-card');
+        const flashcard = document.getElementById('flashcard');
+
+        // Read data from DOM
+        const dataEl = document.getElementById('flashcard-data');
+        const topicName = dataEl.dataset.topic;
+        let existingFlashcards = [];
+        try {
+            existingFlashcards = JSON.parse(dataEl.dataset.flashcards);
+        } catch (e) {
+            console.error("Error parsing flashcards JSON", e);
+        }
+
+        let cards = [];
+        let idx = 0;
+
+        if (existingFlashcards && existingFlashcards.length > 0) {
+            cards = existingFlashcards;
+            renderCard(idx);
+            document.querySelector('.flashcard-controls').style.display = 'none';
+        }
+
+        function renderCard(i) {
+            if (!cards || cards.length === 0) return;
+            const c = cards[i];
+            termEl.textContent = c.term;
+            defEl.textContent = c.definition;
+            indexEl.textContent = `${i + 1} / ${cards.length}`;
+            container.style.display = 'block';
+            flashcard.classList.remove('flipped');
+
+            // Show export button if on last card
+            const exportControls = document.getElementById('export-controls');
+            if (i === cards.length - 1) {
+                exportControls.style.display = 'block';
+            } else {
+                exportControls.style.display = 'none';
+            }
+        }
+
+        flashcard.addEventListener('click', () => {
+            flashcard.classList.toggle('flipped');
+        });
+
+        prevBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (idx > 0) { idx--; renderCard(idx); }
+        });
+        nextBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (idx < cards.length - 1) { idx++; renderCard(idx); }
+        });
+
+        // Export PDF button handler
+        const exportPdfBtn = document.getElementById('export-pdf-btn');
+        if (exportPdfBtn) {
+            exportPdfBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const url = `/export/${topicName}/pdf`;
+                window.open(url, '_blank');
+            });
+        }
+
+        generateBtn.addEventListener('click', async () => {
+            err.textContent = '';
+            const sel = document.querySelector('input[name="flashcount"]:checked').value;
+            const payload = { topic: topicName, count: sel };
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Generating...';
+            try {
+                const res = await fetch('/flashcards/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    cards = data.flashcards || [];
+                    if (cards.length === 0) { err.textContent = 'No flashcards generated.'; }
+                    idx = 0;
+                    renderCard(idx);
+                    document.querySelector('.flashcard-controls').style.display = 'none';
+                } else {
+                    err.textContent = data.error || 'Error generating flashcards';
+                }
+            } catch (e) {
+                err.textContent = e.toString();
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate Flashcards';
+            }
+        });
+    });
+</script>
+
+{% endblock %}

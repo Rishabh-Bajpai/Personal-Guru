@@ -1,0 +1,15 @@
+.plan-list-container {
+    margin-top: 20px;
+    text-align: left;
+    display: inline-block;
+}
+
+.generation-status {
+    margin-top: 15px;
+    display: none;
+}
+
+.generation-error {
+    color: red;
+    margin-top: 10px;
+}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Chapter Mode{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('chapter.static', filename='chapter.css') }}">
+{% endblock %}
+
+{% block content %}
+<h1>Chapter Mode: {{ topic_name }}</h1>
+
+{% if has_plan %}
+<div class="chapter-overview">
+    <p>Your learning plan is ready.</p>
+    <a href="{{ url_for('chapter.learn_topic', topic_name=topic_name, step_index=0) }}" class="button">Start / Resume
+        Learning</a>
+
+    <div class="plan-list-container">
+        <h2>Curriculum</h2>
+        <ul>
+            {% for step in plan %}
+            <li>{{ step }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% else %}
+<div class="chapter-controls">
+    <p>No plan found for this topic. Generate a custom study plan to get started.</p>
+    <div>
+        <button id="generate-plan" class="button">Generate Plan</button>
+    </div>
+    <div id="generation-status" class="generation-status">
+        <p>Generating your personalized plan... <span class="spinner">⏳</span></p>
+    </div>
+    <div id="generation-error" class="generation-error"></div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const generateBtn = document.getElementById('generate-plan');
+        const statusDiv = document.getElementById('generation-status');
+        const errorDiv = document.getElementById('generation-error');
+        const topicName = "{{ topic_name }}";
+
+        generateBtn.addEventListener('click', async () => {
+            generateBtn.disabled = true;
+            statusDiv.style.display = 'block';
+            errorDiv.textContent = '';
+
+            try {
+                const res = await fetch("{{ url_for('chapter.generate_plan') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topic: topicName })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    // Reload to show the plan
+                    window.location.reload();
+                } else {
+                    errorDiv.textContent = data.error || 'Error generating plan.';
+                    generateBtn.disabled = false;
+                    statusDiv.style.display = 'none';
+                }
+            } catch (e) {
+                errorDiv.textContent = "Network error: " + e.toString();
+                generateBtn.disabled = false;
+                statusDiv.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endif %}
+
+{% endblock %}
