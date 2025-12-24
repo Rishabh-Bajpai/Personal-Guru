@@ -13,6 +13,7 @@ class Topic(db.Model):
     # Relationships
     study_plan = db.Column(JSON) # Storing list of strings as JSON
     last_quiz_result = db.Column(JSON) # Store latest quiz result
+    chat_history = db.Column(JSON) # Store chat history
     steps = db.relationship('StudyStep', backref='topic', cascade='all, delete-orphan')
     quizzes = db.relationship('Quiz', backref='topic', cascade='all, delete-orphan')
     flashcards = db.relationship('Flashcard', backref='topic', cascade='all, delete-orphan')

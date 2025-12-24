@@ -81,6 +81,23 @@ def save_topic(topic_name, data):
         logging.error(f"Error saving topic {topic_name}: {e}")
         raise e
 
+def save_chat_history(topic_name, history):
+    """
+    Save chat history for a topic.
+    """
+    try:
+        topic = Topic.query.filter_by(name=topic_name).first()
+        if not topic:
+            topic = Topic(name=topic_name)
+            db.session.add(topic)
+        
+        topic.chat_history = history
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error saving chat history for {topic_name}: {e}")
+        raise e
+
 def load_topic(topic_name):
     """
     Load topic data from PostgreSQL and reconstruct dictionary structure.
@@ -93,6 +110,7 @@ def load_topic(topic_name):
         "name": topic.name,
         "plan": topic.study_plan or [], # Map model 'study_plan' back to app 'plan'
         "last_quiz_result": topic.last_quiz_result,
+        "chat_history": topic.chat_history or [],
         "steps": [],
         "quiz": None,
         "flashcards": []

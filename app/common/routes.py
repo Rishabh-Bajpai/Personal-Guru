@@ -55,17 +55,28 @@ def index():
             plan = data.get('plan')
             flashcards = data.get('flashcards')
             quiz = data.get('quiz')
+            chat_history = data.get('chat_history')
+            
             has_plan = plan is not None and len(plan) > 0
             has_flashcards = flashcards is not None and len(flashcards) > 0
             has_quiz = quiz is not None and bool(quiz)
+            has_chat = chat_history is not None and len(chat_history) > 0
+            
             topics_data.append({
                 'name': topic,
                 'has_plan': has_plan,
                 'has_flashcards': has_flashcards,
-                'has_quiz': has_quiz
+                'has_quiz': has_quiz,
+                'has_chat': has_chat
             })
         else:
-            topics_data.append({'name': topic, 'has_plan': False, 'has_flashcards': False, 'has_quiz': False})
+            topics_data.append({
+                'name': topic, 
+                'has_plan': False, 
+                'has_flashcards': False, 
+                'has_quiz': False,
+                'has_chat': False
+            })
     
     return render_template('index.html', topics=topics_data)
 

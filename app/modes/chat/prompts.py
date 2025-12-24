@@ -13,7 +13,7 @@ Generate a welcoming message that is professional, encouraging, and sets a high 
     - Use ## style headings for major sections.
     - Use bold text for important concepts.
     - Use a horizontal rule (---) before your final question.
-- End by asking a thought-provoking open-ended question to start the journey.
+- End by asking a question about user's preference and intent to start the journey.
 """
 
 def get_chat_answer_prompt(question, conversation_history, context, user_background, is_guided_mode):

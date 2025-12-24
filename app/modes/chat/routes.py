@@ -1,6 +1,6 @@
 from flask import render_template, request, session, redirect, url_for
 from . import chat_bp
-from app.core.storage import load_topic
+from app.core.storage import load_topic, save_chat_history
 from .agent import ChatAgent
 import os
 
@@ -15,7 +15,13 @@ def mode(topic_name):
         session['chat_topic'] = topic_name
         session.modified = True  # Required for Flask to detect mutable object changes
 
-    chat_history = session.get('chat_history', [])
+    # Try to load from DB first
+    topic_data = load_topic(topic_name)
+    if topic_data and topic_data.get('chat_history'):
+        chat_history = topic_data['chat_history']
+        session['chat_history'] = chat_history
+    else:
+        chat_history = session.get('chat_history', [])
 
     if not chat_history:
         # Generate welcome message if chat is new
@@ -28,6 +34,9 @@ def mode(topic_name):
         chat_history.append({"role": "assistant", "content": welcome_message})
         session['chat_history'] = chat_history
         session.modified = True
+        
+        # Save to DB immediately so the topic is created and persisted
+        save_chat_history(topic_name, chat_history)
 
     return render_template('chat/mode.html', topic_name=topic_name, chat_history=chat_history)
 
@@ -61,6 +70,9 @@ def send_message(topic_name):
 
     session['chat_history'] = chat_history
     session.modified = True  # Ensure Flask saves the updated list
+    
+    # Save to DB
+    save_chat_history(topic_name, chat_history)
 
     return redirect(url_for('chat.mode', topic_name=topic_name))
 
