@@ -84,7 +84,7 @@ def learn_topic(topic_name, step_index):
 
     current_step_data = topic_data['steps'][step_index]
 
-    if 'teaching_material' not in current_step_data:
+    if not current_step_data.get('teaching_material'):
         incorrect_questions = session.get('incorrect_questions')
         current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
         teaching_material, error = teacher.generate_teaching_material(plan_steps[step_index], plan_steps, current_background, incorrect_questions)

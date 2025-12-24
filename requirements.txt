@@ -11,3 +11,4 @@ flask-sqlalchemy
 pgvector
 flask-migrate
 flask-wtf
+psycopg2-binary
