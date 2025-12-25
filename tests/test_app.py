@@ -151,17 +151,25 @@ def test_delete_topic(client, mocker):
     assert bytes(topic_name, 'utf-8') not in response.data
 
 def test_chat_route(client, mocker):
-    """Test the /chat route."""
+    """Test the chat functionality."""
     topic_name = "chat_test"
-    step_index = 0
     topic_data = {
         "name": topic_name,
-        "plan": ["Step 1"],
-        "steps": [{"teaching_material": "## Test Content"}]
+        "description": "A topic for testing chat."
     }
     mocker.patch('app.modes.chat.routes.load_topic', return_value=topic_data)
-    mocker.patch('app.modes.chat.routes.ChatAgent.get_answer', return_value=("This is the answer.", None))
+    mocker.patch('app.modes.chat.agent.call_llm', side_effect=[
+        ("Welcome to the chat!", None),
+        ("This is the answer.", None)
+    ])
 
-    response = client.post(f'/chat/{topic_name}/{step_index}', json={'question': 'hello world'})
+    # Test initial GET request to establish the session and get welcome message
+    response = client.get(f'/chat/{topic_name}')
     assert response.status_code == 200
-    assert response.json == {'answer': 'This is the answer.'}
+    assert b"Welcome to the chat!" in response.data
+
+    # Test POST request to send a message
+    response = client.post(f'/chat/{topic_name}/send', data={'message': 'hello world'}, follow_redirects=True)
+    assert response.status_code == 200
+    assert b"hello world" in response.data
+    assert b"This is the answer." in response.data

@@ -24,7 +24,7 @@
             {% endfor %}
         </ul>
     </div>
-    <div class="container">
+    <div class="learning-content">
         <h1>Learning: {{ topic.name }}</h1>
         <h2>Step {{ step_index + 1 }} of {{ total_steps }}</h2>
 
@@ -72,7 +72,7 @@
                     <div class="option">
                         <label for="option_{{ outer_loop_index }}_{{ loop.index0 }}">
                             <input type="radio" id="option_{{ outer_loop_index }}_{{ loop.index0 }}"
-                                name="option_{{ outer_loop_index }}" value="{{ ['A', 'B', 'C', 'D'][loop.index0] }}">
+                                name="option_{{ outer_loop_index }}" value="{{ ['A', 'B', 'C', 'D'][loop.index0] }}" required>
                             {{ ['A', 'B', 'C', 'D'][loop.index0] }}) {{ option }}
                         </label>
                     </div>
@@ -82,24 +82,44 @@
                 <button type="submit" class="button">Submit Answers</button>
             </form>
             {% else %}
-            {% for question in question_data.questions %}
-            <div class="question">
-                <p>{{ loop.index }}. {{ question.question }}</p>
-                {% set outer_loop_index = loop.index0 %}
-                {% for option in question.options %}
-                <div class="option">
-                    <label for="option_{{ outer_loop_index }}_{{ loop.index0 }}">
-                        <input type="radio" id="option_{{ outer_loop_index }}_{{ loop.index0 }}"
-                            name="option_{{ outer_loop_index }}" value="{{ ['A', 'B', 'C', 'D'][loop.index0] }}"
-                            disabled {% if topic.steps[step_index].user_answers and
-                            topic.steps[step_index].user_answers[outer_loop_index]==['A', 'B' , 'C' , 'D' ][loop.index0]
-                            %}checked{% endif %}>
-                        {{ ['A', 'B', 'C', 'D'][loop.index0] }}) {{ option }}
-                    </label>
+            
+            <div class="quiz-results">
+                {% if topic.steps[step_index].score is defined %}
+                <h4>Your Results (Score: {{ topic.steps[step_index].score|round|int }}%)</h4>
+                {% endif %}
+
+                {% for question in question_data.questions %}
+                <div class="question">
+                    <p>{{ loop.index }}. {{ question.question }}</p>
+                    
+                    {% if topic.steps[step_index].feedback and topic.steps[step_index].feedback[loop.index0] %}
+                    <div class="feedback-item {{ 'correct' if topic.steps[step_index].feedback[loop.index0].is_correct else 'incorrect' }}">
+                        <strong>{{ 'Correct!' if topic.steps[step_index].feedback[loop.index0].is_correct else 'Incorrect.' }}</strong>
+                        {{ topic.steps[step_index].feedback[loop.index0].explanation }}
+                    </div>
+                    {% endif %}
+
+                    {% set outer_loop_index = loop.index0 %}
+                    {% for option in question.options %}
+                    <div class="option">
+                        <label for="option_{{ outer_loop_index }}_{{ loop.index0 }}">
+                            <input type="radio" id="option_{{ outer_loop_index }}_{{ loop.index0 }}"
+                                name="option_{{ outer_loop_index }}" value="{{ ['A', 'B', 'C', 'D'][loop.index0] }}"
+                                disabled {% if topic.steps[step_index].user_answers and
+                                topic.steps[step_index].user_answers[outer_loop_index]==['A', 'B' , 'C' , 'D' ][loop.index0]
+                                %}checked{% endif %}>
+                            {{ ['A', 'B', 'C', 'D'][loop.index0] }}) {{ option }}
+                        </label>
+                    </div>
+                    {% endfor %}
                 </div>
                 {% endfor %}
+
+                <form action="{{ url_for('chapter.reset_quiz', topic_name=topic.name, step_index=step_index) }}" method="post" style="margin-top: 20px;">
+                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                     <button type="submit" class="button secondary">Retry Quiz</button>
+                </form>
             </div>
-            {% endfor %}
             {% endif %}
         </div>
         {% endif %}
@@ -172,8 +192,9 @@
         input.value = '';
 
         const chatHistory = document.getElementById('chat-history');
-        const userMessage = document.createElement('p');
-        userMessage.textContent = `You: ${question}`;
+        const userMessage = document.createElement('div');
+        userMessage.className = 'chat-message user-message';
+        userMessage.innerHTML = `<strong>You:</strong> ${question}`;
         chatHistory.appendChild(userMessage);
 
         showLoader();
@@ -189,8 +210,10 @@
 
 
             const data = await response.json();
-            const botMessage = document.createElement('p');
-            botMessage.textContent = `Bot: ${data.answer}`;
+            const botMessage = document.createElement('div');
+            botMessage.className = 'chat-message bot-message';
+            // Use markdown-it to render the bot's response
+            botMessage.innerHTML = `<strong>Bot:</strong> ${md.render(data.answer)}`;
             chatHistory.appendChild(botMessage);
         } finally {
             hideLoader();
