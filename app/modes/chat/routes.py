@@ -115,7 +115,13 @@ def chat(topic_name, step_index):
     teaching_material = current_step_data.get('teaching_material', '')
     current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
     # Pass an empty conversation history for the chapter mode chat
-    answer, error = chat_agent.get_answer(user_question, [], teaching_material, current_background)
+    answer, error = chat_agent.get_answer(
+        user_question,
+        conversation_history=[],
+        context=teaching_material,
+        user_background=current_background,
+        plan=[],
+    )
 
     if error:
         return {"error": answer}, 500
