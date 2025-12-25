@@ -57,17 +57,13 @@ def index():
             quiz = data.get('quiz')
             chat_history = data.get('chat_history')
             
-            has_plan = plan is not None and len(plan) > 0
-            has_flashcards = flashcards is not None and len(flashcards) > 0
-            has_quiz = quiz is not None and bool(quiz)
-            has_chat = chat_history is not None and len(chat_history) > 0
-            
             topics_data.append({
                 'name': topic,
-                'has_plan': has_plan,
-                'has_flashcards': has_flashcards,
-                'has_quiz': has_quiz,
-                'has_chat': has_chat
+                'has_plan': bool(plan),
+                'has_flashcards': bool(flashcards),
+                'has_quiz': bool(quiz),
+                'has_chat': bool(chat_history),
+                'has_reels': False  # Placeholder as reels aren't stored in topic currently
             })
         else:
             topics_data.append({
@@ -75,7 +71,8 @@ def index():
                 'has_plan': False, 
                 'has_flashcards': False, 
                 'has_quiz': False,
-                'has_chat': False
+                'has_chat': False,
+                'has_reels': False
             })
     
     return render_template('index.html', topics=topics_data)
