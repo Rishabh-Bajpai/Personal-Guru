@@ -47,21 +47,25 @@ Below is the conversation history. Use it to maintain continuity.
 </conversation_history>
 
 The user's latest question is: "{question}"
+"""
 
+    if is_guided_mode:
+        base_prompt += """
 FORMAL REQUIREMENTS:
 1. **Structural Excellence**: Use Markdown headings (##) to separate logical parts of your answer.
 2. **Visual Clarity**: Use bullet points and numbered lists for details. Use **bold** for key terms.
 3. **Step-by-Step Reasoning**: Use <think> tags to plan your response internally.
 4. **Answer the Question**: Directly address the user's query with high-quality educational content.
 5. **Stay on Track**: If the user's question is relevant to the study plan, explicitly mention which part of the plan it relates to. If it deviates significantly, answer it but gently suggest returning to the plan.
-"""
-
-    if is_guided_mode:
-        base_prompt += """
 6. **Guided Learning Path**: After your main answer, add a horizontal rule (---) then use a ## heading like "What's Next?" or "Probing Deeper". Provide 2-3 specific, high-value suggestions for follow-up learning, ideally linking to the next steps in the study plan.
 7. **Guru Persona**: Maintain an encouraging, authoritative, yet accessible tone.
 """
     else:
-        base_prompt += "6. **Be Precise**: Focus exclusively on the direct answer without conversational filler."
+        base_prompt += """
+FORMAL REQUIREMENTS:
+1. **Visual Clarity**: Use bullet points and numbered lists for details. Use **bold** for key terms.
+2. **Answer the Question**: Directly address the user's query with high-quality educational content.
+3. **Be Precise**: Focus exclusively on the direct answer without conversational filler. Do not use unnecessary headings or thinking tags.
+"""
 
     return base_prompt

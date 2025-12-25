@@ -157,6 +157,24 @@ def assess_step(topic_name, step_index):
                            next_step_index=step_index + 1,
                            total_steps=len(topic_data['plan']))
 
+@chapter_bp.route('/reset_quiz/<topic_name>/<int:step_index>', methods=['POST'])
+def reset_quiz(topic_name, step_index):
+    topic_data = load_topic(topic_name)
+    if not topic_data:
+        return "Topic not found", 404
+    
+    if 0 <= step_index < len(topic_data['steps']):
+        current_step_data = topic_data['steps'][step_index]
+        if 'user_answers' in current_step_data:
+            del current_step_data['user_answers']
+        if 'feedback' in current_step_data:
+            del current_step_data['feedback']
+        if 'score' in current_step_data:
+            del current_step_data['score']
+        save_topic(topic_name, topic_data)
+        
+    return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=step_index))
+
 @chapter_bp.route('/generate-audio/<int:step_index>', methods=['POST'])
 def generate_audio_route(step_index):
     teaching_material = request.json.get('text')

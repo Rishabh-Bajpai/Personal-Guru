@@ -350,7 +350,7 @@ input:checked+.slider:before {
 /* Assessment options */
 .assessment .option {
     margin-bottom: 10px;
-    padding: 10px;
+    padding: 0;
     border-radius: 5px;
     transition: background-color 0.3s ease;
 }
@@ -360,8 +360,14 @@ input:checked+.slider:before {
 }
 
 .assessment label {
-    margin-left: 10px;
+    display: block;
+    padding: 10px;
     cursor: pointer;
+    margin-left: 0;
+}
+
+.assessment input[type="radio"] {
+    margin-right: 10px;
 }
 
 /* Code blocks */
@@ -501,4 +507,18 @@ body.dark-mode pre {
 body.dark-mode code {
     background-color: #555;
     color: #e0e0e0;
+}
+/* Learning Content (inside flex layout) */
+.learning-content {
+    flex: 1;
+    padding: 40px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    min-width: 0;
+}
+
+body.dark-mode .learning-content {
+    background: #2c2c2c;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
