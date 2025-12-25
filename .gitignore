@@ -10,7 +10,7 @@ example_api_output/
 cookies.txt
 local_settings.py
 certs/
-
+flask_session
 # ==============================================================================
 # PYTHON CORE (Byte-compiled, C extensions)
 # ==============================================================================

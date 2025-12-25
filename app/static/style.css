@@ -419,7 +419,19 @@ body.dark-mode .button {
 }
 
 body.dark-mode .button:hover {
-    background: #697565;
+    background: #5c6658; /* Slightly darker shade for hover */
+}
+
+body.dark-mode .button.secondary {
+    background-color: #3a3a3a;
+    border: 1px solid #555;
+    color: #a0a0a0;
+}
+
+body.dark-mode .button.secondary:hover {
+    background-color: #4a4a4a;
+    color: #e0e0e0;
+    border-color: #666;
 }
 
 body.dark-mode .delete-button {
