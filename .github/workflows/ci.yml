@@ -1,22 +1,72 @@
-name: Python application
+name: Python application with Integration Tests
 
 on: [push, pull_request]
 
 jobs:
-  build:
-
+  test:
     runs-on: ubuntu-latest
+    services:
+      ollama:
+        image: ollama/ollama
+        # We need to mount a volume so the cache action can access the model files
+        volumes:
+          - ollama_models:/root/.ollama
+        ports:
+          - 11434:11434
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.9
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    - name: Run Unit Tests
-      run: |
-        python -m pytest -m unit
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Cache Ollama models
+        uses: actions/cache@v4
+        with:
+          # The path inside the runner that we want to cache
+          path: /var/lib/docker/volumes/ollama_models/_data
+          # A unique key for the cache. If the key matches, the cache is restored.
+          key: ${{ runner.os }}-ollama-gemma-2b
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          sudo apt-get update && sudo apt-get install -y curl
+
+      - name: Wait for Ollama to be ready
+        run: |
+          echo "Waiting for Ollama service to start..."
+          timeout 60s bash -c 'until curl -s -f http://localhost:11434/api/tags > /dev/null; do echo "Still waiting..."; sleep 2; done'
+          echo "Ollama service is up and running!"
+
+      - name: Pull LLM model if not cached
+        run: |
+          # Check if the model already exists from the cache restore using the Ollama HTTP API
+          if ! curl -s -f -X POST http://localhost:11434/api/show -d '{"name":"gemma:2b"}' > /dev/null 2>&1; then
+            echo "Model not found in cache, pulling from registry via Ollama API..."
+            curl -s -f -X POST http://localhost:11434/api/pull -d '{"name":"gemma:2b"}'
+            docker ps
+            exit 1
+          fi
+
+          # Check if the model already exists from the cache restore
+          if ! docker exec "$CONTAINER_ID" ollama show gemma:2b > /dev/null 2>&1; then
+            echo "Model not found in cache, pulling from registry..."
+            docker exec "$CONTAINER_ID" ollama pull gemma:2b
+          else
+            echo "Model 'gemma:2b' restored from cache."
+          fi
+
+      - name: Run Unit Tests
+        run: python -m pytest -m unit
+
+      - name: Run Integration Tests
+        env:
+          RUN_INTEGRATION_TESTS: "1"
+          OLLAMA_ENDPOINT: "http://localhost:11434/v1"
+          OLLAMA_MODEL_NAME: "gemma:2b"
+        run: python -m pytest -m integration
