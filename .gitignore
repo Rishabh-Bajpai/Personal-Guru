@@ -147,3 +147,4 @@ Thumbs.db
 *.tmp
 *.mo
 *.potflask_session/
+ollama-data/

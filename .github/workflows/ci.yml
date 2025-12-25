@@ -5,14 +5,6 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
-    services:
-      ollama:
-        image: ollama/ollama
-        # We need to mount a volume so the cache action can access the model files
-        volumes:
-          - ollama_models:/root/.ollama
-        ports:
-          - 11434:11434
 
     steps:
       - name: Checkout repository
@@ -26,10 +18,13 @@ jobs:
       - name: Cache Ollama models
         uses: actions/cache@v4
         with:
-          # The path inside the runner that we want to cache
-          path: /var/lib/docker/volumes/ollama_models/_data
-          # A unique key for the cache. If the key matches, the cache is restored.
+          path: ollama-data
           key: ${{ runner.os }}-ollama-gemma-2b
+
+      - name: Start Ollama
+        run: |
+          mkdir -p ollama-data
+          docker run -d -v ${{ github.workspace }}/ollama-data:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
 
       - name: Install dependencies
         run: |
@@ -67,4 +62,4 @@ jobs:
 
       - name: Fix cache permissions
         if: always()
-        run: sudo chown -R $USER /var/lib/docker/volumes/ollama_models/_data
+        run: sudo chown -R $USER ollama-data
