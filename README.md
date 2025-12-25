@@ -221,8 +221,16 @@ This will start the TTS server on port 5001 of your host machine, connected to p
 
 This project includes a comprehensive test suite that mocks the external AI services. This allows you to verify the application's internal logic without needing a live connection to the AI services.
 
-To run the tests, execute the following command in your terminal:
+To run the unit tests, execute the following command in your terminal:
 
 ```bash
-pytest
+python -m pytest
+```
+
+### Integration Tests
+
+The project also includes integration tests that a live connection to the LLM service. To run these tests, you must have a running LLM service and set the `RUN_INTEGration_TESTS` environment variable to `1`.
+
+```bash
+RUN_INTEGRATION_TESTS=1 python -m pytest -m integration
 ```

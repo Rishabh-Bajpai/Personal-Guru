@@ -1,25 +1,3 @@
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import pytest
-from app import create_app
-import json
-
-@pytest.fixture
-def app():
-    """Create and configure a new app instance for each test."""
-    flask_app = create_app()
-    flask_app.config.update({
-        "TESTING": True,
-        "WTF_CSRF_ENABLED": False  # Ensure CSRF is disabled for tests
-    })
-    yield flask_app
-
-@pytest.fixture
-def client(app):
-    """A test client for the app."""
-    return app.test_client()
-
 def test_home_page(client, mocker):
     """Test that the home page loads correctly."""
     mocker.patch('app.common.routes.get_all_topics', return_value=[])
