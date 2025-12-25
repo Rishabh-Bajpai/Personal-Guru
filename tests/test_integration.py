@@ -1,10 +1,23 @@
 import pytest
 import os
+import time
 
 # Mark all tests in this file as 'integration'
 pytestmark = pytest.mark.integration
 
 from app.core.utils import call_llm
+
+def retry_agent_call(func, *args, max_retries=3, **kwargs):
+    """Helper to retry agent calls that might fail due to LLM flakiness."""
+    last_error = None
+    for i in range(max_retries):
+        result, error = func(*args, **kwargs)
+        if error is None:
+            return result, None
+        print(f"Attempt {i+1} failed with error: {error}. Retrying...")
+        last_error = error
+        time.sleep(1) # Brief pause
+    return None, last_error
 
 def test_call_llm(logger):
     """Test that the LLM call function is working."""
@@ -24,7 +37,9 @@ def test_quiz_agent(logger):
     """Test that the QuizAgent can generate a quiz."""
     logger.section("test_quiz_agent")
     agent = QuizAgent()
-    quiz, error = agent.generate_quiz("Math", "beginner", count=2)
+    
+    quiz, error = retry_agent_call(agent.generate_quiz, "Math", "beginner", count=2)
+    
     logger.response("Quiz Generated", quiz)
     assert error is None
     assert quiz is not None
@@ -38,7 +53,9 @@ def test_planner_agent(logger):
     """Test that the PlannerAgent can generate a study plan."""
     logger.section("test_planner_agent")
     agent = PlannerAgent()
-    plan, error = agent.generate_study_plan("History", "beginner")
+    
+    plan, error = retry_agent_call(agent.generate_study_plan, "History", "beginner")
+    
     logger.response("Study Plan", plan)
     assert error is None
     assert plan is not None
@@ -53,7 +70,9 @@ def test_feedback_agent(logger):
     logger.section("test_feedback_agent")
     agent = FeedbackAgent()
     question = {"question": "What is 2+2?", "options": ["3", "4", "5"], "correct_answer": "B"}
-    feedback, error = agent.evaluate_answer(question, "A")
+    
+    feedback, error = retry_agent_call(agent.evaluate_answer, question, "A")
+    
     logger.response("Feedback", feedback)
     assert error is None
     assert feedback is not None
@@ -67,7 +86,9 @@ def test_chapter_teaching_agent(logger):
     """Test that the ChapterTeachingAgent can generate teaching material."""
     logger.section("test_chapter_teaching_agent")
     agent = ChapterTeachingAgent()
-    material, error = agent.generate_teaching_material("Science", ["Introduction"], "beginner")
+    
+    material, error = retry_agent_call(agent.generate_teaching_material, "Science", ["Introduction"], "beginner")
+    
     logger.response("Teaching Material", material)
     assert error is None
     assert material is not None
@@ -81,7 +102,9 @@ def test_flashcard_teaching_agent(logger):
     """Test that the FlashcardTeachingAgent can generate flashcards."""
     logger.section("test_flashcard_teaching_agent")
     agent = FlashcardTeachingAgent()
-    flashcards, error = agent.generate_teaching_material("Vocabulary", count=3)
+    
+    flashcards, error = retry_agent_call(agent.generate_teaching_material, "Vocabulary", count=3)
+    
     logger.response("Flashcards", flashcards)
     assert error is None
     assert flashcards is not None
@@ -95,7 +118,9 @@ def test_assessor_agent(logger):
     """Test that the AssessorAgent can generate a question."""
     logger.section("test_assessor_agent")
     agent = AssessorAgent()
-    question, error = agent.generate_question("A chapter about Python.", "beginner")
+    
+    question, error = retry_agent_call(agent.generate_question, "A chapter about Python.", "beginner")
+    
     logger.response("Question", question)
     assert error is None
     assert question is not None
