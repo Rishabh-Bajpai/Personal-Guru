@@ -129,7 +129,7 @@ def test_assessor_agent(logger):
     agent = AssessorAgent()
     
     # Patch validation to be lenient for integration tests (on CI/CD) with smaller models.
-    # The AssessorAgent using 'functiongemma' often returns 
+    # The AssessorAgent using 'qwen3-vl:8b-instruct' often returns 
     # valid JSON but with content that violates strict schema rules (e.g. full text 
     # answers instead of option letters). We patch validation to ensure we test 
     # the integration flow (LLM connectivity and JSON parsing) without being 

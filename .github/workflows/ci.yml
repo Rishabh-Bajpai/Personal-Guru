@@ -19,7 +19,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ollama-data
-          key: ${{ runner.os }}-ollama-functiongemma
+          key: ${{ runner.os }}-ollama-qwen3-vl-8b-instruct
 
       - name: Start Ollama
         run: |
@@ -41,11 +41,11 @@ jobs:
       - name: Pull LLM model if not cached
         run: |
           # Check if the model already exists via API (since ollama CLI is not on host)
-          if [ $(curl -s -o /dev/null -w "%{http_code}" -d '{"name": "functiongemma"}' http://localhost:11434/api/show) -ne 200 ]; then
+          if [ $(curl -s -o /dev/null -w "%{http_code}" -d '{"name": "qwen3-vl:8b-instruct"}' http://localhost:11434/api/show) -ne 200 ]; then
             echo "Model not found in cache, pulling from registry..."
-            curl -N -X POST http://localhost:11434/api/pull -d '{"name": "functiongemma"}'
+            curl -N -X POST http://localhost:11434/api/pull -d '{"name": "qwen3-vl:8b-instruct"}'
           else
-            echo "Model 'functiongemma' restored from cache."
+            echo "Model 'qwen3-vl:8b-instruct' restored from cache."
           fi
 
       - name: Run Unit Tests
@@ -55,7 +55,7 @@ jobs:
         env:
           RUN_INTEGRATION_TESTS: "1"
           LLM_ENDPOINT: "http://localhost:11434/v1"
-          LLM_MODEL_NAME: "functiongemma"
+          LLM_MODEL_NAME: "qwen3-vl:8b-instruct"
         run: |
           mkdir -p data
           python -m pytest -m integration
