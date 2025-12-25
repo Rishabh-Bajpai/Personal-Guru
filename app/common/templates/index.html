@@ -37,7 +37,9 @@
     <ul>
         {% for topic in topics %}
         <li>
-            {% if topic.has_plan %}
+            {% if topic.has_chat %}
+            <a href="{{ url_for('chat.mode', topic_name=topic.name) }}">{{ topic.name }}</a>
+            {% elif topic.has_plan %}
             <a href="{{ url_for('chapter.learn_topic', topic_name=topic.name, step_index=0) }}">{{ topic.name }}</a>
             {% elif topic.has_flashcards %}
             <a href="{{ url_for('flashcard.mode', topic_name=topic.name) }}">{{ topic.name }}</a>
