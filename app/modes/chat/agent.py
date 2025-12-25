@@ -15,7 +15,7 @@ class ChatAgent:
 
         history_str = "\n".join([f"{msg['role']}: {msg['content']}" for msg in conversation_history]) if conversation_history else "No history yet."
 
-        prompt = get_chat_answer_prompt(question, history_str, context, user_background, bool(conversation_history), plan)
+        prompt = get_chat_answer_prompt(question, history_str, context, user_background, len(conversation_history) > 0, plan)
         answer, error = call_llm(prompt)
         if error:
             return f"Error getting answer from LLM: {error}", error
