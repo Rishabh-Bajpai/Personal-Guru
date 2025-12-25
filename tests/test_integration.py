@@ -40,7 +40,7 @@ def test_quiz_agent(logger):
     agent = QuizAgent()
     
     # Patch validation to be lenient for integration tests with smaller models.
-    # The 'gemma:2b' model used in CI often returns the full text of the answer 
+    # The 'functiongemma' model used in CI often returns the full text of the answer 
     # (e.g., "3.14") instead of the option letter ("A"), or makes other minor 
     # formatting deviations that strictly valid JSON but fail our specific schema rules.
     # Since we want to test the *integration* (that we can talk to the LLM and get 
@@ -129,7 +129,7 @@ def test_assessor_agent(logger):
     agent = AssessorAgent()
     
     # Patch validation to be lenient for integration tests (on CI/CD) with smaller models.
-    # The AssessorAgent using 'gemma:2b' often returns 
+    # The AssessorAgent using 'functiongemma' often returns 
     # valid JSON but with content that violates strict schema rules (e.g. full text 
     # answers instead of option letters). We patch validation to ensure we test 
     # the integration flow (LLM connectivity and JSON parsing) without being 
