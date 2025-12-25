@@ -45,8 +45,8 @@ def mode(topic_name):
         plan = topic_data.get('plan', []) if topic_data else []
         welcome_message, error = chat_agent.get_welcome_message(topic_name, user_background, plan)
         if error:
-            # Handle error appropriately
-            return f"<h1>Error</h1><p>Could not generate a welcome message: {welcome_message}</p>"
+            # Handle error appropriately using a proper error template
+            return render_template('error.html', error=welcome_message)
 
         chat_history.append({"role": "assistant", "content": welcome_message})
         session['chat_history'] = chat_history
