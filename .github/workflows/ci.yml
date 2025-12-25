@@ -19,7 +19,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ollama-data
-          key: ${{ runner.os }}-ollama-gemma-2b
+          key: ${{ runner.os }}-ollama-functiongemma
 
       - name: Start Ollama
         run: |
@@ -45,7 +45,7 @@ jobs:
             echo "Model not found in cache, pulling from registry..."
             curl -N -X POST http://localhost:11434/api/pull -d '{"name": "gemma:2b"}'
           else
-            echo "Model 'gemma:2b' restored from cache."
+            echo "Model 'functiongemma' restored from cache."
           fi
 
       - name: Run Unit Tests
@@ -55,7 +55,7 @@ jobs:
         env:
           RUN_INTEGRATION_TESTS: "1"
           LLM_ENDPOINT: "http://localhost:11434/v1"
-          LLM_MODEL_NAME: "gemma:2b"
+          LLM_MODEL_NAME: "functiongemma"
         run: |
           mkdir -p data
           python -m pytest -m integration
