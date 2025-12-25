@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     {% block head %}{% endblock %}
+    <!-- Allow child templates to inject custom styles (e.g., Chat mode) -->
+    {% block styles %}{% endblock %}
 </head>
 
 <body class="dark-mode">
