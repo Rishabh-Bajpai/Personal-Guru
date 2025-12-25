@@ -100,9 +100,17 @@ def chat(topic_name, step_index):
     user_question = request.json.get('question')
     topic_data = load_topic(topic_name)
 
-    if not user_question or not topic_data or 'steps' not in topic_data or step_index >= len(topic_data['steps']):
-        return {"error": "Invalid request or topic data missing"}, 400
+    if not user_question:
+        return {"error": "Missing or empty question"}, 400
 
+    if not topic_data:
+        return {"error": "Topic not found"}, 400
+
+    if 'steps' not in topic_data:
+        return {"error": "Topic has no steps defined"}, 400
+
+    if step_index < 0 or step_index >= len(topic_data['steps']):
+        return {"error": "Step index out of range"}, 400
     current_step_data = topic_data['steps'][step_index]
     teaching_material = current_step_data.get('teaching_material', '')
     current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
