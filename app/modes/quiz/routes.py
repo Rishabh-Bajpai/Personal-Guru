@@ -104,6 +104,11 @@ def submit_quiz(topic_name):
             'feedback_results': feedback_results,
             'date': datetime.date.today().isoformat()
         }
+        
+        # Ensure the score is also saved to the Quiz table
+        if topic_data.get('quiz'):
+            topic_data['quiz']['score'] = score
+
         save_topic(topic_name, topic_data)
     
     session.pop('quiz_questions', None)

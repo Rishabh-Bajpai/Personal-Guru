@@ -31,11 +31,16 @@ def save_topic(topic_name, data):
         Flashcard.query.filter_by(topic_id=topic.id).delete()
         
         # Steps
+        plan = data.get('plan', [])
         for i, step_data in enumerate(data.get('steps', [])):
+            step_title = step_data.get('title')
+            if not step_title and plan and i < len(plan):
+                step_title = plan[i]
+
             step = StudyStep(
                 topic=topic,
                 step_index=step_data.get('step_index', i), # Ensure this is in JSON or default to index
-                title=step_data.get('title'),
+                title=step_title,
                 # Fix: App uses 'teaching_material', Model uses 'content'
                 content=step_data.get('teaching_material') or step_data.get('content'),
                 questions=step_data.get('questions'),
