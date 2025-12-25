@@ -2,6 +2,39 @@ import pytest
 from app import create_app
 from app.common.models import db
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--show-llm-responses", action="store_true", default=False, help="Show LLM responses in output"
+    )
+
+@pytest.fixture
+def show_llm_responses(request):
+    return request.config.getoption("--show-llm-responses")
+
+class TestLogger:
+    def __init__(self, enabled):
+        self.enabled = enabled
+
+    def section(self, title):
+        if self.enabled:
+            print(f"\n\n{'='*80}\n🚀 TEST: {title}\n{'='*80}")
+
+    def step(self, message):
+        if self.enabled:
+            print(f"\n👉 {message}")
+
+    def response(self, label, content):
+        if self.enabled:
+            print(f"\n📝 {label}:\n{'-'*40}\n{content}\n{'-'*40}")
+    
+    def info(self, message):
+        if self.enabled:
+            print(f"   ℹ️  {message}")
+
+@pytest.fixture
+def logger(show_llm_responses):
+    return TestLogger(show_llm_responses)
+
 @pytest.fixture
 def app():
     """Create and configure a new app instance for each test."""

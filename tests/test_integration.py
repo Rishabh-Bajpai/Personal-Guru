@@ -4,18 +4,14 @@ import os
 # Mark all tests in this file as 'integration'
 pytestmark = pytest.mark.integration
 
-# Skip all tests in this file if the RUN_INTEGRATION_TESTS environment variable is not set
-# This allows us to run unit tests (`pytest`) without running integration tests.
-# To run integration tests, run `pytest -m integration`.
-if os.getenv("RUN_INTEGRATION_TESTS") != "1":
-    pytest.skip("Skipping integration tests", allow_module_level=True)
-
 from app.core.utils import call_llm
 
-def test_call_llm():
+def test_call_llm(logger):
     """Test that the LLM call function is working."""
+    logger.section("test_call_llm")
     prompt = "Hello, LLM! Please respond with a short message."
     response, error = call_llm(prompt)
+    logger.response("LLM Response", response)
     assert error is None
     assert response is not None
     assert isinstance(response, str)
@@ -24,10 +20,12 @@ def test_call_llm():
 
 from app.modes.quiz.agent import QuizAgent
 
-def test_quiz_agent():
+def test_quiz_agent(logger):
     """Test that the QuizAgent can generate a quiz."""
+    logger.section("test_quiz_agent")
     agent = QuizAgent()
     quiz, error = agent.generate_quiz("Math", "beginner", count=2)
+    logger.response("Quiz Generated", quiz)
     assert error is None
     assert quiz is not None
     assert "questions" in quiz
@@ -36,10 +34,12 @@ def test_quiz_agent():
 
 from app.modes.chapter.agent import PlannerAgent
 
-def test_planner_agent():
+def test_planner_agent(logger):
     """Test that the PlannerAgent can generate a study plan."""
+    logger.section("test_planner_agent")
     agent = PlannerAgent()
     plan, error = agent.generate_study_plan("History", "beginner")
+    logger.response("Study Plan", plan)
     assert error is None
     assert plan is not None
     assert isinstance(plan, list)
@@ -48,11 +48,13 @@ def test_planner_agent():
 
 from app.core.agents import FeedbackAgent
 
-def test_feedback_agent():
+def test_feedback_agent(logger):
     """Test that the FeedbackAgent can generate feedback."""
+    logger.section("test_feedback_agent")
     agent = FeedbackAgent()
     question = {"question": "What is 2+2?", "options": ["3", "4", "5"], "correct_answer": "B"}
     feedback, error = agent.evaluate_answer(question, "A")
+    logger.response("Feedback", feedback)
     assert error is None
     assert feedback is not None
     assert "feedback" in feedback
@@ -61,10 +63,12 @@ def test_feedback_agent():
 
 from app.modes.chapter.agent import ChapterTeachingAgent
 
-def test_chapter_teaching_agent():
+def test_chapter_teaching_agent(logger):
     """Test that the ChapterTeachingAgent can generate teaching material."""
+    logger.section("test_chapter_teaching_agent")
     agent = ChapterTeachingAgent()
     material, error = agent.generate_teaching_material("Science", ["Introduction"], "beginner")
+    logger.response("Teaching Material", material)
     assert error is None
     assert material is not None
     assert isinstance(material, str)
@@ -73,10 +77,12 @@ def test_chapter_teaching_agent():
 
 from app.modes.flashcard.agent import FlashcardTeachingAgent
 
-def test_flashcard_teaching_agent():
+def test_flashcard_teaching_agent(logger):
     """Test that the FlashcardTeachingAgent can generate flashcards."""
+    logger.section("test_flashcard_teaching_agent")
     agent = FlashcardTeachingAgent()
     flashcards, error = agent.generate_teaching_material("Vocabulary", count=3)
+    logger.response("Flashcards", flashcards)
     assert error is None
     assert flashcards is not None
     assert isinstance(flashcards, list)
@@ -85,10 +91,12 @@ def test_flashcard_teaching_agent():
 
 from app.modes.chapter.agent import AssessorAgent
 
-def test_assessor_agent():
+def test_assessor_agent(logger):
     """Test that the AssessorAgent can generate a question."""
+    logger.section("test_assessor_agent")
     agent = AssessorAgent()
     question, error = agent.generate_question("A chapter about Python.", "beginner")
+    logger.response("Question", question)
     assert error is None
     assert question is not None
     assert "questions" in question
