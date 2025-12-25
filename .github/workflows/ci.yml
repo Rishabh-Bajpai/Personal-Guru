@@ -45,18 +45,10 @@ jobs:
 
       - name: Pull LLM model if not cached
         run: |
-          # Check if the model already exists from the cache restore using the Ollama HTTP API
-          if ! curl -s -f -X POST http://localhost:11434/api/show -d '{"name":"gemma:2b"}' > /dev/null 2>&1; then
-            echo "Model not found in cache, pulling from registry via Ollama API..."
-            curl -s -f -X POST http://localhost:11434/api/pull -d '{"name":"gemma:2b"}'
-            docker ps
-            exit 1
-          fi
-
           # Check if the model already exists from the cache restore
-          if ! docker exec "$CONTAINER_ID" ollama show gemma:2b > /dev/null 2>&1; then
+          if ! ollama show gemma:2b > /dev/null 2>&1; then
             echo "Model not found in cache, pulling from registry..."
-            docker exec "$CONTAINER_ID" ollama pull gemma:2b
+            ollama pull gemma:2b
           else
             echo "Model 'gemma:2b' restored from cache."
           fi
