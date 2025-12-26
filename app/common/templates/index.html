@@ -38,36 +38,36 @@
         {% for topic in topics %}
         <li>
             <span class="topic-name"><strong>{{ topic.name }}</strong></span>
-            
+
             <div class="mode-buttons">
                 <!-- Chapter Mode -->
-                <a href="{{ url_for('chapter.learn_topic', topic_name=topic.name, step_index=0) }}" 
-                   class="button {% if not topic.has_plan %}secondary{% endif %}">
-                   Chapter
+                <a href="{{ url_for('chapter.mode', topic_name=topic.name) }}"
+                    class="button {% if not topic.has_plan %}secondary{% endif %}">
+                    Chapter
                 </a>
-        
+
                 <!-- Chat Mode -->
-                <a href="{{ url_for('chat.mode', topic_name=topic.name) }}" 
-                   class="button {% if not topic.has_chat %}secondary{% endif %}">
-                   Chat
+                <a href="{{ url_for('chat.mode', topic_name=topic.name) }}"
+                    class="button {% if not topic.has_chat %}secondary{% endif %}">
+                    Chat
                 </a>
-                
+
                 <!-- Quiz Mode -->
-                <a href="{{ url_for('quiz.mode', topic_name=topic.name) }}" 
-                   class="button {% if not topic.has_quiz %}secondary{% endif %}">
-                   Quiz
+                <a href="{{ url_for('quiz.mode', topic_name=topic.name) }}"
+                    class="button {% if not topic.has_quiz %}secondary{% endif %}">
+                    Quiz
                 </a>
 
                 <!-- Flashcard Mode -->
-                <a href="{{ url_for('flashcard.mode', topic_name=topic.name) }}" 
-                   class="button {% if not topic.has_flashcards %}secondary{% endif %}">
-                   Flashcard
+                <a href="{{ url_for('flashcard.mode', topic_name=topic.name) }}"
+                    class="button {% if not topic.has_flashcards %}secondary{% endif %}">
+                    Flashcard
                 </a>
 
                 <!-- Reel Mode -->
-                <a href="{{ url_for('reel.mode', topic_name=topic.name) }}" 
-                   class="button {% if not topic.has_reels %}secondary{% endif %}">
-                   Reel
+                <a href="{{ url_for('reel.mode', topic_name=topic.name) }}"
+                    class="button {% if not topic.has_reels %}secondary{% endif %}">
+                    Reel
                 </a>
             </div>
 
@@ -76,25 +76,31 @@
         </li>
         {% endfor %}
     </ul>
-    
+
     <style>
         .mode-buttons {
             display: flex;
             gap: 10px;
-            flex-wrap: wrap; /* Prevent overflow on small screens */
+            flex-wrap: wrap;
+            /* Prevent overflow on small screens */
             margin: 0 20px;
         }
+
         .topic-name {
-            flex-shrink: 0; /* Ensure name doesn't collapse */
+            flex-shrink: 0;
+            /* Ensure name doesn't collapse */
             font-size: 1.1em;
-            width: 150px; /* Fixed width for alignment, or remove for fluid */
+            width: 150px;
+            /* Fixed width for alignment, or remove for fluid */
         }
+
         @media (max-width: 768px) {
             .topics-list li {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 15px;
             }
+
             .mode-buttons {
                 margin: 0;
             }

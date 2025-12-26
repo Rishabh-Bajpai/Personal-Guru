@@ -14,12 +14,8 @@
             {% for step in topic.plan %}
             <li
                 class="{{ 'active' if loop.index0 == step_index else '' }} {{ 'future-step' if loop.index0 > step_index else '' }}">
-                {% if loop.index0 <= step_index %} <a
-                    href="{{ url_for('chapter.learn_topic', topic_name=topic.name, step_index=loop.index0) }}"
+                <a href="{{ url_for('chapter.learn_topic', topic_name=topic.name, step_index=loop.index0) }}"
                     onclick="showLoader()">{{ step }}</a>
-                    {% else %}
-                    {{ step }}
-                    {% endif %}
             </li>
             {% endfor %}
         </ul>
@@ -72,7 +68,8 @@
                     <div class="option">
                         <label for="option_{{ outer_loop_index }}_{{ loop.index0 }}">
                             <input type="radio" id="option_{{ outer_loop_index }}_{{ loop.index0 }}"
-                                name="option_{{ outer_loop_index }}" value="{{ ['A', 'B', 'C', 'D'][loop.index0] }}" required>
+                                name="option_{{ outer_loop_index }}" value="{{ ['A', 'B', 'C', 'D'][loop.index0] }}"
+                                required>
                             {{ ['A', 'B', 'C', 'D'][loop.index0] }}) {{ option }}
                         </label>
                     </div>
@@ -82,7 +79,7 @@
                 <button type="submit" class="button">Submit Answers</button>
             </form>
             {% else %}
-            
+
             <div class="quiz-results">
                 {% if topic.steps[step_index].score is defined %}
                 <h4>Your Results (Score: {{ topic.steps[step_index].score|round|int }}%)</h4>
@@ -91,10 +88,12 @@
                 {% for question in question_data.questions %}
                 <div class="question">
                     <p>{{ loop.index }}. {{ question.question }}</p>
-                    
+
                     {% if topic.steps[step_index].feedback and topic.steps[step_index].feedback[loop.index0] %}
-                    <div class="feedback-item {{ 'correct' if topic.steps[step_index].feedback[loop.index0].is_correct else 'incorrect' }}">
-                        <strong>{{ 'Correct!' if topic.steps[step_index].feedback[loop.index0].is_correct else 'Incorrect.' }}</strong>
+                    <div
+                        class="feedback-item {{ 'correct' if topic.steps[step_index].feedback[loop.index0].is_correct else 'incorrect' }}">
+                        <strong>{{ 'Correct!' if topic.steps[step_index].feedback[loop.index0].is_correct else
+                            'Incorrect.' }}</strong>
                         {{ topic.steps[step_index].feedback[loop.index0].explanation }}
                     </div>
                     {% endif %}
@@ -106,8 +105,8 @@
                             <input type="radio" id="option_{{ outer_loop_index }}_{{ loop.index0 }}"
                                 name="option_{{ outer_loop_index }}" value="{{ ['A', 'B', 'C', 'D'][loop.index0] }}"
                                 disabled {% if topic.steps[step_index].user_answers and
-                                topic.steps[step_index].user_answers[outer_loop_index]==['A', 'B' , 'C' , 'D' ][loop.index0]
-                                %}checked{% endif %}>
+                                topic.steps[step_index].user_answers[outer_loop_index]==['A', 'B' , 'C' , 'D'
+                                ][loop.index0] %}checked{% endif %}>
                             {{ ['A', 'B', 'C', 'D'][loop.index0] }}) {{ option }}
                         </label>
                     </div>
@@ -115,9 +114,10 @@
                 </div>
                 {% endfor %}
 
-                <form action="{{ url_for('chapter.reset_quiz', topic_name=topic.name, step_index=step_index) }}" method="post" style="margin-top: 20px;">
-                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                     <button type="submit" class="button secondary">Retry Quiz</button>
+                <form action="{{ url_for('chapter.reset_quiz', topic_name=topic.name, step_index=step_index) }}"
+                    method="post" style="margin-top: 20px;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button type="submit" class="button secondary">Retry Quiz</button>
                 </form>
             </div>
             {% endif %}
@@ -125,6 +125,11 @@
         {% endif %}
 
         <div class="navigation">
+            {% if step_index > 0 %}
+            <a href="{{ url_for('chapter.learn_topic', topic_name=topic.name, step_index=step_index - 1) }}"
+                class="button secondary" onclick="showLoader()">Previous Step</a>
+            {% endif %}
+
             {% if step_index < total_steps - 1 %} <a
                 href="{{ url_for('chapter.learn_topic', topic_name=topic.name, step_index=step_index + 1) }}"
                 class="button" onclick="showLoader()">Next Step</a>
