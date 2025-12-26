@@ -22,8 +22,18 @@ def mode(topic_name):
     topic_data = load_topic(topic_name)
     
     # If topic exists and has a plan, go directly to learning
+    # If topic exists and has a plan, go directly to learning
     if topic_data and topic_data.get('plan'):
-        return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=0))
+        # Resume logic: find the last step with content
+        steps = topic_data.get('steps', [])
+        resume_step_index = 0
+        for i, step in enumerate(steps):
+             # Check if step has content (teaching_material or questions)
+             has_content = bool(step.get('teaching_material') or step.get('questions'))
+             if has_content:
+                 resume_step_index = i
+        
+        return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=resume_step_index))
     
     # No plan exists - generate one automatically
     user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
@@ -72,12 +82,13 @@ def learn_topic(topic_name, step_index):
     plan_steps = topic_data.get('plan', [])
     
     # If topic has no plan (quiz/flashcard only), redirect
-    if not plan_steps:
-        # Checking logic from app.py
-        if 'flashcards' in topic_data and topic_data['flashcards']:
-            return redirect(url_for('flashcard.mode', topic_name=topic_name)) # Adjusted endpoint name
-        elif 'quiz' in topic_data:
-            return redirect(url_for('quiz.mode', topic_name=topic_name)) # Adjusted endpoint name
+    # Not needed after issue #28 is fixed, but keeping the commented logic for now
+    # if not plan_steps:
+    #     # Checking logic from app.py
+    #     if 'flashcards' in topic_data and topic_data['flashcards']:
+    #         return redirect(url_for('flashcard.mode', topic_name=topic_name)) # Adjusted endpoint name
+    #     elif 'quiz' in topic_data:
+    #         return redirect(url_for('quiz.mode', topic_name=topic_name)) # Adjusted endpoint name
     
     if not 0 <= step_index < len(plan_steps):
         return "Invalid step index", 404
