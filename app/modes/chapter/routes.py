@@ -262,6 +262,42 @@ def export_topic_pdf(topic_name):
     response.headers["Content-Type"] = "application/pdf"
     return response
 
+from .code_agent import CodeExecutionAgent
+from app.core.sandbox import Sandbox
+
+code_agent = CodeExecutionAgent()
+
+@chapter_bp.route('/execute_code', methods=['POST'])
+def execute_code():
+    data = request.json
+    code = data.get('code')
+    
+    if not code:
+        return {"error": "No code provided"}, 400
+
+    # 1. Enhance code
+    enhanced_data = code_agent.enhance_code(code)
+    enhanced_code = enhanced_data.get('code')
+    dependencies = enhanced_data.get('dependencies', [])
+    
+    # 2. Run in Sandbox
+    sandbox = Sandbox()
+    try:
+        # Install deps (basic caching could be used here in future)
+        if dependencies:
+            sandbox.install_deps(dependencies)
+            
+        result = sandbox.run_code(enhanced_code)
+        
+        return {
+            "output": result.get('output'),
+            "error": result.get('error'),
+            "images": result.get('images', []), # List of base64 strings
+            "enhanced_code": enhanced_code
+        }
+    finally:
+        sandbox.cleanup()
+
 def _get_topic_data_and_score(topic_name):
     topic_data = load_topic(topic_name)
     if not topic_data:

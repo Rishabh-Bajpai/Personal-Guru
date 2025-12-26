@@ -13,3 +13,117 @@
     color: red;
     margin-top: 10px;
 }
+
+/* Code Execution Styles */
+.code-execution-wrapper {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.execute-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.execute-button:hover {
+    opacity: 1;
+}
+
+/* Side Panel */
+.side-panel {
+    position: fixed;
+    top: 0;
+    right: -600px;
+    /* Hidden by default */
+    width: 600px;
+    /* Default width */
+    height: 100vh;
+    background-color: #f8f9fa;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+    z-index: 2000;
+    transition: right 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+}
+
+.side-panel.open {
+    right: 0;
+}
+
+.side-panel-header {
+    padding: 15px;
+    background-color: #e9ecef;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.side-panel-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.resize-handle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: col-resize;
+    background-color: transparent;
+}
+
+.resize-handle:hover {
+    background-color: #007bff;
+}
+
+/* Code Output */
+.output-block {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    padding: 10px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    white-space: pre-wrap;
+    margin-bottom: 15px;
+}
+
+.output-image {
+    max-width: 100%;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+/* Dark Mode Overrides */
+body.dark-mode .side-panel {
+    background-color: #2c2c2c;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-mode .side-panel-header {
+    background-color: #3a3a3a;
+    border-bottom: 1px solid #555;
+    color: #e0e0e0;
+}
+
+body.dark-mode .side-panel-content {
+    color: #e0e0e0;
+}
+
+body.dark-mode .output-image {
+    border-color: #555;
+}
