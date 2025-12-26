@@ -17,6 +17,10 @@ def mode(topic_name):
 
     # Try to load from DB first
     topic_data = load_topic(topic_name)
+    if not topic_data:
+        topic_data = {"name": topic_name}
+        save_topic(topic_name, topic_data)
+        topic_data = load_topic(topic_name)
     if topic_data and topic_data.get('chat_history'):
         chat_history = topic_data['chat_history']
         session['chat_history'] = chat_history
@@ -55,7 +59,43 @@ def mode(topic_name):
         # Save to DB immediately so the topic is created and persisted
         save_chat_history(topic_name, chat_history)
 
-    return render_template('chat/mode.html', topic_name=topic_name, chat_history=chat_history)
+    # Always load plan to pass to the template
+    topic_data = load_topic(topic_name)
+    plan = topic_data.get('plan', []) if topic_data else []
+
+    return render_template('chat/mode.html', topic_name=topic_name, chat_history=chat_history, plan=plan)
+
+@chat_bp.route('/<topic_name>/update_plan', methods=['POST'])
+def update_plan(topic_name):
+    comment = request.form.get('comment')
+    if not comment or not comment.strip():
+        return redirect(url_for('chat.mode', topic_name=topic_name))
+
+    topic_data = load_topic(topic_name)
+    if not topic_data:
+        # Handle case where topic doesn't exist
+        return redirect(url_for('chat.mode', topic_name=topic_name))
+
+    current_plan = topic_data.get('plan', [])
+    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+
+    # Call agent to get a new plan
+    new_plan, error = chat_agent.update_study_plan(topic_name, user_background, current_plan, comment)
+
+    if not error:
+        # Save the new plan
+        topic_data['plan'] = new_plan
+        save_topic(topic_name, topic_data)
+
+        # Add a system message to the chat
+        chat_history = session.get('chat_history', [])
+        system_message = f"Based on your feedback, I've updated the study plan. The new focus will be on: {', '.join(new_plan)}. Let's proceed with the new direction."
+        chat_history.append({"role": "assistant", "content": system_message})
+        session['chat_history'] = chat_history
+        save_chat_history(topic_name, chat_history)
+
+    # Redirect back to the chat interface
+    return redirect(url_for('chat.mode', topic_name=topic_name))
 
 @chat_bp.route('/<topic_name>/send', methods=['POST'])
 def send_message(topic_name):

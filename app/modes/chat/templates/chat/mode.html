@@ -25,11 +25,76 @@
         --input-bg: #2d2d2d;
     }
 
-    #chat-container {
-        max-width: 1000px;
+    #main-container {
+        display: flex;
+        height: 90vh;
+        max-width: 1400px;
         margin: 20px auto;
+        gap: 20px;
+    }
+
+    #plan-sidebar {
+        flex: 0 0 320px;
+        background: var(--assistant-bubble-bg);
+        border-radius: 16px;
+        padding: 25px;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    #plan-sidebar h2 {
+        margin-top: 0;
+        margin-bottom: 20px;
+        font-weight: 700;
+        font-size: 1.4rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        padding-bottom: 15px;
+    }
+
+    #plan-sidebar ul {
+        list-style-type: none;
         padding: 0;
-        height: 85vh;
+        margin: 0 0 20px 0;
+        font-size: 1rem;
+    }
+
+    #plan-sidebar li {
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        font-weight: 500;
+        opacity: 0.8;
+    }
+
+    #plan-sidebar li:last-child {
+        border-bottom: none;
+    }
+
+    #plan-modification-form {
+        margin-top: auto; /* Pushes form to the bottom */
+    }
+
+    #plan-modification-form h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+
+    #plan-modification-input {
+        width: 100%;
+        min-height: 80px;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(0,0,0,0.1);
+        font-size: 0.95rem;
+        margin-bottom: 10px;
+        resize: vertical;
+    }
+
+    #chat-container {
+        flex-grow: 1;
         display: flex;
         flex-direction: column;
         background: var(--chat-bg);
@@ -44,6 +109,7 @@
         background: var(--assistant-bubble-bg);
         border-bottom: 1px solid rgba(0, 0, 0, 0.1);
         z-index: 10;
+        flex-shrink: 0;
     }
 
     #chat-header h1 {
@@ -286,35 +352,55 @@
 {% endblock %}
 
 {% block content %}
-<div id="chat-container">
-    <div id="chat-header">
-        <h1>Chat with your AI Tutor about {{ topic_name }}</h1>
-    </div>
-
-    <div id="chat-window">
-        {% for message in chat_history %}
-        <!-- Message wrapper with role-specific alignment -->
-        <div class="message-wrapper {{ 'user-wrapper' if message.role == 'user' else 'assistant-wrapper' }}">
-            <div class="message-label {{ 'user-label' if message.role == 'user' else 'assistant-label' }}">
-                {{ 'You' if message.role == 'user' else 'AI Tutor' }}
-            </div>
-            <div class="message {{ 'user-message' if message.role == 'user' else 'assistant-message' }}">
-                <div class="message-content"></div>
-                <!-- Hidden div stores raw content; | safe prevents HTML escaping -->
-                <div class="raw-markdown" style="display: none;">{{ message.content | safe }}</div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-
-    <div id="input-area">
-        <form id="chat-form" method="POST" action="{{ url_for('chat.send_message', topic_name=topic_name) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="text" id="chat-input" name="message" placeholder="Ask your AI tutor a question..."
-                autocomplete="off" autofocus required>
-            <button id="send-button" class="button" type="submit">Send</button>
-            <span id="loading-indicator" class="loading-indicator" style="display: none;">Thinking...</span>
+<div id="main-container">
+    <!-- Left Column: Study Plan -->
+    <div id="plan-sidebar">
+        <h2>Study Plan</h2>
+        <ul id="plan-steps">
+            <!-- Javascript will populate this -->
+            {% for step in plan %}
+                 <li>{{ step }}</li>
+            {% endfor %}
+        </ul>
+        <form id="plan-modification-form" method="POST" action="{{ url_for('chat.update_plan', topic_name=topic_name) }}">
+             <h3>Modify the Plan</h3>
+             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+             <textarea id="plan-modification-input" name="comment" placeholder="Suggest changes to the plan. For example, 'Instead of talking about X, let's focus on Y.'"></textarea>
+             <button type="submit" class="button is-small">Update Plan</button>
         </form>
+    </div>
+
+    <!-- Right Column: Chat Interface -->
+    <div id="chat-container">
+        <div id="chat-header">
+            <h1>Chat with your AI Tutor about {{ topic_name }}</h1>
+        </div>
+
+        <div id="chat-window">
+            {% for message in chat_history %}
+            <!-- Message wrapper with role-specific alignment -->
+            <div class="message-wrapper {{ 'user-wrapper' if message.role == 'user' else 'assistant-wrapper' }}">
+                <div class="message-label {{ 'user-label' if message.role == 'user' else 'assistant-label' }}">
+                    {{ 'You' if message.role == 'user' else 'AI Tutor' }}
+                </div>
+                <div class="message {{ 'user-message' if message.role == 'user' else 'assistant-message' }}">
+                    <div class="message-content"></div>
+                    <!-- Hidden div stores raw content; | safe prevents HTML escaping -->
+                    <div class="raw-markdown" style="display: none;">{{ message.content | safe }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div id="input-area">
+            <form id="chat-form" method="POST" action="{{ url_for('chat.send_message', topic_name=topic_name) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="text" id="chat-input" name="message" placeholder="Ask your AI tutor a question..."
+                    autocomplete="off" autofocus required>
+                <button id="send-button" class="button" type="submit">Send</button>
+                <span id="loading-indicator" class="loading-indicator" style="display: none;">Thinking...</span>
+            </form>
+        </div>
     </div>
 </div>
 
