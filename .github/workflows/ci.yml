@@ -1,9 +1,9 @@
-name: Python application with Integration Tests
+name: Setup and Test
 
 on: [push, pull_request]
 
 jobs:
-  test:
+  Ubuntu:
     runs-on: ubuntu-latest
 
     steps:
