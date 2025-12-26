@@ -91,6 +91,22 @@
         font-size: 0.95rem;
         margin-bottom: 10px;
         resize: vertical;
+        transition: opacity 0.3s ease, background-color 0.3s ease;
+    }
+
+    #plan-modification-input:read-only {
+        opacity: 0.6;
+        background-color: rgba(0, 0, 0, 0.05);
+        cursor: not-allowed;
+    }
+
+    #plan-modification-button {
+        transition: opacity 0.3s ease, cursor 0.3s ease;
+    }
+
+    #plan-modification-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
 
     #chat-container {
@@ -366,7 +382,7 @@
              <h3>Modify the Plan</h3>
              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
              <textarea id="plan-modification-input" name="comment" placeholder="Suggest changes to the plan. For example, 'Instead of talking about X, let's focus on Y.'"></textarea>
-             <button type="submit" class="button is-small">Update Plan</button>
+             <button id="plan-modification-button" type="submit" class="button is-small">Update Plan</button>
         </form>
     </div>
 
@@ -446,6 +462,22 @@
 
         // Focus input after rendering
         document.getElementById('chat-input').focus();
+
+        // Disable plan modification form while submitting
+        document.getElementById('plan-modification-form').addEventListener('submit', function(e) {
+            const textarea = document.getElementById('plan-modification-input');
+            const button = document.getElementById('plan-modification-button');
+            
+            // Prevent submission if textarea is empty
+            if (!textarea.value.trim()) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // Disable interactions during submission
+            button.disabled = true;
+            textarea.readOnly = true;
+        });
 
         // Prevent empty submissions and disable input while loading
         document.getElementById('chat-form').addEventListener('submit', function(e) {
