@@ -52,13 +52,15 @@
     background-color: #f8f9fa;
     box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
     z-index: 2000;
-    transition: right 0.3s ease-in-out;
+    transition: transform 0.3s ease-in-out;
     display: flex;
     flex-direction: column;
+    right: 0;
+    transform: translateX(100%);
 }
 
 .side-panel.open {
-    right: 0;
+    transform: translateX(0);
 }
 
 .side-panel-header {

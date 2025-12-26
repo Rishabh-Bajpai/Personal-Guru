@@ -314,7 +314,7 @@
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', () => {
             isResizing = false;
-            sidePanel.style.transition = "right 0.3s ease-in-out";
+            sidePanel.style.transition = "transform 0.3s ease-in-out";
             document.body.style.transition = "padding-right 0.3s ease-in-out";
             document.removeEventListener('mousemove', handleMouseMove);
         });
