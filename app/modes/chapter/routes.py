@@ -21,6 +21,12 @@ md = MarkdownIt()
 def mode(topic_name):
     topic_data = load_topic(topic_name)
     
+    # Initialize Persistent Sandbox
+    sandbox_id = session.get('sandbox_id')
+    # If exists, reuse. If None, create new.
+    sandbox = Sandbox(sandbox_id=sandbox_id)
+    session['sandbox_id'] = sandbox.id
+    
     # If topic exists and has a plan, go directly to learning
     # If topic exists and has a plan, go directly to learning
     if topic_data and topic_data.get('plan'):
@@ -281,7 +287,13 @@ def execute_code():
     dependencies = enhanced_data.get('dependencies', [])
     
     # 2. Run in Sandbox
-    sandbox = Sandbox()
+    sandbox_id = session.get('sandbox_id')
+    sandbox = Sandbox(sandbox_id=sandbox_id)
+    
+    # Ensure ID is in session (if it was lost or new)
+    if not sandbox_id:
+         session['sandbox_id'] = sandbox.id
+         
     try:
         # Install deps (basic caching could be used here in future)
         if dependencies:
@@ -296,7 +308,8 @@ def execute_code():
             "enhanced_code": enhanced_code
         }
     finally:
-        sandbox.cleanup()
+        # Do persistent cleanup later
+        pass
 
 def _get_topic_data_and_score(topic_name):
     topic_data = load_topic(topic_name)

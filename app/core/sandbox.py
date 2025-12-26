@@ -18,15 +18,22 @@ if not logger.handlers:
     logger.addHandler(handler)
 
 class Sandbox:
-    def __init__(self, base_path="/tmp/personal_guru_sandbox"):
-        self.id = str(uuid.uuid4())
+    def __init__(self, base_path="/tmp/personal_guru_sandbox", sandbox_id=None):
+        self.id = sandbox_id if sandbox_id else str(uuid.uuid4())
         self.path = os.path.join(base_path, self.id)
         self.venv_path = os.path.join(self.path, "venv")
-        logger.info(f"Sandbox initialized: {self.id} at {self.path}")
-        self._setup()
+        
+        if sandbox_id and os.path.exists(self.venv_path):
+             logger.info(f"Resuming existing sandbox: {self.id}")
+        else:
+             logger.info(f"Initializing sandbox: {self.id} at {self.path}")
+             self._setup()
 
     def _setup(self):
         """Creates the sandbox directory and virtual environment."""
+        if os.path.exists(self.venv_path):
+            return
+
         os.makedirs(self.path, exist_ok=True)
         # Create venv
         logger.info(f"Creating virtual environment in {self.venv_path}...")
