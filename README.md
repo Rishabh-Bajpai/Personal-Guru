@@ -219,10 +219,36 @@ This will start the TTS server on port 5001 of your host machine, connected to p
 
 ## For Developers: Running Tests
 
-This project includes a comprehensive test suite that mocks the external AI services. This allows you to verify the application's internal logic without needing a live connection to the AI services.
+This project includes a comprehensive test suite.
 
-To run the tests, execute the following command in your terminal:
+### Unit Tests
+
+Unit tests mock external AI services and verify the application's internal logic.
 
 ```bash
-pytest
+python -m pytest -m unit
+```
+
+### Integration Tests
+
+Integration tests require a live connection to the LLM service. Ensure your LLM provider is running before executing these.
+
+```bash
+python -m pytest -m integration
+```
+
+### Running All Tests
+
+To run both unit and integration tests:
+
+```bash
+python -m pytest
+```
+
+### Debugging LLM Responses
+
+You can see the actual responses from the LLM (or mocks) in the terminal by using the `--show-llm-responses` flag. This works for both unit and integration tests.
+
+```bash
+python -m pytest -m integration --show-llm-responses -s
 ```
