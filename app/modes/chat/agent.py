@@ -21,6 +21,14 @@ class ChatAgent:
             return None, f"Error getting new plan from LLM: {error}"
 
         try:
+            # Remove analysis block if present
+            response = re.sub(r'<analysis>.*?</analysis>', '', response, flags=re.DOTALL)
+
+            # Extract list from response if it contains other text
+            match = re.search(r'\[.*\]', response, re.DOTALL)
+            if match:
+                response = match.group(0)
+
             # The response is expected to be a string representation of a list
             new_plan = ast.literal_eval(response)
             if isinstance(new_plan, list):
