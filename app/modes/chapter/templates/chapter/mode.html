@@ -36,41 +36,13 @@
     <div id="generation-error" class="generation-error"></div>
 </div>
 
+<script src="{{ url_for('chapter.static', filename='mode.js') }}"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const generateBtn = document.getElementById('generate-plan');
-        const statusDiv = document.getElementById('generation-status');
-        const errorDiv = document.getElementById('generation-error');
-        const topicName = "{{ topic_name }}";
-
-        generateBtn.addEventListener('click', async () => {
-            generateBtn.disabled = true;
-            statusDiv.style.display = 'block';
-            errorDiv.textContent = '';
-
-            try {
-                const res = await fetch("{{ url_for('chapter.generate_plan') }}", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ topic: topicName })
-                });
-
-                const data = await res.json();
-
-                if (res.ok) {
-                    // Reload to show the plan
-                    window.location.reload();
-                } else {
-                    errorDiv.textContent = data.error || 'Error generating plan.';
-                    generateBtn.disabled = false;
-                    statusDiv.style.display = 'none';
-                }
-            } catch (e) {
-                errorDiv.textContent = "Network error: " + e.toString();
-                generateBtn.disabled = false;
-                statusDiv.style.display = 'none';
-            }
-        });
+    setupChapterMode({
+        topicName: "{{ topic_name }}",
+        urls: {
+            generate_plan: "{{ url_for('chapter.generate_plan') }}"
+        }
     });
 </script>
 {% endif %}

@@ -35,7 +35,7 @@ Now, generate a similar plan for the topic: '{topic}'.
 
 def get_plan_update_prompt(topic_name, user_background, current_plan, comment):
     return f"""
-You are an expert curriculum designer. Your task is to revise a study plan based on user feedback.
+You are an expert curriculum designer. Your task is to revise a study plan based on user feedback. Only change the parts of the plan that the user has requested to change.
 
 Topic: {topic_name}
 User's Background: {user_background}
