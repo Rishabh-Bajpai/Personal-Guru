@@ -73,18 +73,19 @@ def update_database():
                      db.create_all()
                      continue # Skip column inspection for this pass
 
-            # Special check for 'chat_history' column removal in Topics
+            # Special check for 'chat_history' and 'last_quiz_result' column removal in Topics
             if table_name == 'topics':
-                if 'chat_history' in existing_col_map:
-                    logger.info("  [-] Dropping deprecated column: chat_history")
-                    try:
-                        sql = text('ALTER TABLE "topics" DROP COLUMN "chat_history"')
-                        db.session.execute(sql)
-                        db.session.commit()
-                        logger.info("      -> Dropped successfully.")
-                    except Exception as e:
-                        logger.error(f"      -> FAILED to drop column: {e}")
-                        db.session.rollback()
+                for deprecated_col in ['chat_history', 'last_quiz_result']:
+                    if deprecated_col in existing_col_map:
+                        logger.info(f"  [-] Dropping deprecated column: {deprecated_col}")
+                        try:
+                            sql = text(f'ALTER TABLE "topics" DROP COLUMN "{deprecated_col}"')
+                            db.session.execute(sql)
+                            db.session.commit()
+                            logger.info("      -> Dropped successfully.")
+                        except Exception as e:
+                            logger.error(f"      -> FAILED to drop column: {e}")
+                            db.session.rollback()
             
             # Get model columns
             model_columns = model.__table__.columns

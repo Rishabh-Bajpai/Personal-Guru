@@ -182,3 +182,52 @@ def test_chat_session_persistence(logger, app):
             assert t.chat_session.history[0]['content'] == "Hi"
             
             logger.info("ChatSession persistence verified.")
+
+def test_quiz_result_persistence(logger, app):
+    """Test that quiz result is saved to Quiz table."""
+    logger.section("test_quiz_result_persistence")
+    from app.common.models import Topic, Quiz, User, db
+    from app.core.storage import save_topic, load_topic
+    
+    with app.app_context():
+        # Ensure user exists
+        if not User.query.get('testuser'):
+            u = User(username='testuser')
+            u.set_password('password')
+            db.session.add(u)
+            db.session.commit()
+            
+        with patch('app.core.storage.current_user') as mock_user:
+            mock_user.is_authenticated = True
+            mock_user.username = 'testuser'
+            
+            topic_name = "Quiz Persistence Test"
+            quiz_result = {"score": 90, "details": "Great job"}
+            data = {
+                "plan": [],
+                "steps": [],
+                "quiz": {
+                    "questions": [{"q": "1"}],
+                    "score": 90
+                },
+                "last_quiz_result": quiz_result
+            }
+            
+            save_topic(topic_name, data)
+            
+            # Verify DB
+            t = Topic.query.filter_by(name=topic_name).first()
+            assert t is not None
+            assert len(t.quizzes) == 1
+            idx = -1
+            q = t.quizzes[idx]
+            assert q.result is not None
+            assert q.result['score'] == 90
+            assert q.result['details'] == "Great job"
+            
+            # Verify Load
+            loaded_data = load_topic(topic_name)
+            assert loaded_data is not None
+            assert loaded_data['last_quiz_result'] == quiz_result
+            
+            logger.info("Quiz result persistence verified.")

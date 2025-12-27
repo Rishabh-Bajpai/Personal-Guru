@@ -25,7 +25,7 @@ def save_topic(topic_name, data):
         # Note: We rely on the JSON structure provided by the app
         # Fix: App uses 'plan', Model uses 'study_plan'
         topic.study_plan = data.get('plan', []) 
-        topic.last_quiz_result = data.get('last_quiz_result')
+        # topic.last_quiz_result = data.get('last_quiz_result') # MOVED to Quiz table
         
         # Clear existing children to rebuild (simple strategy for full replace)
         # For efficiency, could compare, but this ensures consistency with "overwrite" behavior of JSON
@@ -67,7 +67,8 @@ def save_topic(topic_name, data):
                  quiz = Quiz(
                      topic=topic,
                      questions=q_data.get('questions'),
-                     score=q_data.get('score')
+                     score=q_data.get('score'),
+                     result=data.get('last_quiz_result') # Storing the result here
                  )
                  db.session.add(quiz)
 
@@ -135,7 +136,7 @@ def load_topic(topic_name):
     data = {
         "name": topic.name,
         "plan": topic.study_plan or [], # Map model 'study_plan' back to app 'plan'
-        "last_quiz_result": topic.last_quiz_result,
+        "last_quiz_result": None, # Will populate from Quiz
         "chat_history": topic.chat_session.history if topic.chat_session else [],
         "steps": [],
         "quiz": None,
@@ -186,6 +187,8 @@ def load_topic(topic_name):
             "score": latest_quiz.score,
             "date": latest_quiz.created_at.isoformat() if latest_quiz.created_at else None
         }
+        # Populate last_quiz_result from the quiz
+        data["last_quiz_result"] = latest_quiz.result
         
     # Flashcards
     for card in topic.flashcards:

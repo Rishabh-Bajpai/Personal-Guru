@@ -16,8 +16,8 @@ class Topic(db.Model):
     )
     
     # Relationships
+    # Relationships
     study_plan = db.Column(JSON) # Storing list of strings as JSON
-    last_quiz_result = db.Column(JSON) # Store latest quiz result
     steps = db.relationship('StudyStep', backref='topic', cascade='all, delete-orphan')
     quizzes = db.relationship('Quiz', backref='topic', cascade='all, delete-orphan')
     flashcards = db.relationship('Flashcard', backref='topic', cascade='all, delete-orphan')
@@ -54,7 +54,9 @@ class Quiz(db.Model):
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
     questions = db.Column(JSON) # List of question objects
     score = db.Column(db.Float)
+    result = db.Column(JSON) # Detailed result (last_quiz_result)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
 
 class Flashcard(db.Model):
     __tablename__ = 'flashcards'
