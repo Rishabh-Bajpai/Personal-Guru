@@ -177,3 +177,28 @@ def generate_audio(text, step_index, tts_engine="coqui"):
         return f"step_{step_index}.wav", None # Return relative filename for url_for
     except requests.exceptions.RequestException as e:
         return None, f"Error calling Coqui TTS: {e}"
+
+def reconcile_plan_steps(current_steps, current_plan, new_plan):
+    """
+    Reconciles the list of dict-based steps with a new list of plan strings.
+    Preserves content for steps that still exist (matching title/text),
+    initializes new steps, and updates step_index.
+    """
+    step_content_map = {}
+    for i, plan_text in enumerate(current_plan):
+        if i < len(current_steps):
+             step_content_map[plan_text] = current_steps[i]
+
+    new_steps = []
+    for i, step_text in enumerate(new_plan):
+        if step_text in step_content_map:
+            # Preserve existing content
+            step_data = step_content_map[step_text]
+            # Update step_index to match new position
+            step_data['step_index'] = i
+            new_steps.append(step_data)
+        else:
+            # New step, empty content with correct index
+            new_steps.append({'step_index': i})
+    
+    return new_steps

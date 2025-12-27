@@ -3,7 +3,8 @@
 {% block title %}Chat Mode - {{ topic_name }}{% endblock %}
 
 {% block head %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/12.2.0/markdown-it.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/12.2.0/markdown-it.min.js"
+    crossorigin="anonymous"></script>
 {% endblock %}
 
 {% block styles %}
@@ -43,6 +44,40 @@
         overflow-y: auto;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
         border: 1px solid rgba(0, 0, 0, 0.05);
+        transition: width 0.3s ease, padding 0.3s ease, flex-basis 0.3s ease;
+        position: relative;
+    }
+
+    #plan-sidebar.collapsed {
+        flex: 0 0 60px !important;
+        padding: 25px 10px;
+        overflow: hidden;
+    }
+
+    #plan-sidebar.collapsed h2,
+    #plan-sidebar.collapsed ul,
+    #plan-sidebar.collapsed form,
+    #plan-sidebar.collapsed .sidebar-content {
+        display: none;
+    }
+
+    .sidebar-toggle {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        cursor: pointer;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--assistant-text);
+        opacity: 0.7;
+        z-index: 100;
+        transition: right 0.3s ease;
+    }
+
+    #plan-sidebar.collapsed .sidebar-toggle {
+        right: 50%;
+        transform: translateX(50%);
     }
 
     #plan-sidebar h2 {
@@ -52,6 +87,8 @@
         font-size: 1.4rem;
         border-bottom: 1px solid rgba(0, 0, 0, 0.1);
         padding-bottom: 15px;
+        padding-right: 30px;
+        /* Space for toggle button */
     }
 
     #plan-sidebar ul {
@@ -73,7 +110,8 @@
     }
 
     #plan-modification-form {
-        margin-top: auto; /* Pushes form to the bottom */
+        margin-top: auto;
+        /* Pushes form to the bottom */
     }
 
     #plan-modification-form h3 {
@@ -87,7 +125,7 @@
         min-height: 80px;
         padding: 10px;
         border-radius: 8px;
-        border: 1px solid rgba(0,0,0,0.1);
+        border: 1px solid rgba(0, 0, 0, 0.1);
         font-size: 0.95rem;
         margin-bottom: 10px;
         resize: vertical;
@@ -371,19 +409,26 @@
 <div id="main-container">
     <!-- Left Column: Study Plan -->
     <div id="plan-sidebar">
-        <h2>Study Plan</h2>
-        <ul id="plan-steps">
-            <!-- Javascript will populate this -->
-            {% for step in plan %}
-                 <li>{{ step }}</li>
-            {% endfor %}
-        </ul>
-        <form id="plan-modification-form" method="POST" action="{{ url_for('chat.update_plan', topic_name=topic_name) }}">
-             <h3>Modify the Plan</h3>
-             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-             <textarea id="plan-modification-input" name="comment" placeholder="Suggest changes to the plan. For example, 'Instead of talking about X, let's focus on Y.'"></textarea>
-             <button id="plan-modification-button" type="submit" class="button is-small">Update Plan</button>
-        </form>
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">
+            ☰
+        </button>
+        <div class="sidebar-content">
+            <h2>Study Plan</h2>
+            <ul id="plan-steps">
+                <!-- Javascript will populate this -->
+                {% for step in plan %}
+                <li>{{ step }}</li>
+                {% endfor %}
+            </ul>
+            <form id="plan-modification-form" method="POST"
+                action="{{ url_for('chat.update_plan', topic_name=topic_name) }}">
+                <h3>Modify the Plan</h3>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <textarea id="plan-modification-input" name="comment"
+                    placeholder="Suggest changes to the plan. For example, 'Instead of talking about X, let's focus on Y.'"></textarea>
+                <button id="plan-modification-button" type="submit" class="button is-small">Update Plan</button>
+            </form>
+        </div>
     </div>
 
     <!-- Right Column: Chat Interface -->
@@ -396,9 +441,8 @@
             {% for message in chat_history %}
             <!-- Message wrapper with role-specific alignment -->
             <div class="message-wrapper {{ 'user-wrapper' if message.role == 'user' else 'assistant-wrapper' }}">
-                <div class="message-label {{ 'user-label' if message.role == 'user' else 'assistant-label' }}">
-                    {{ 'You' if message.role == 'user' else 'AI Tutor' }}
-                </div>
+                <div class="message-label {{ 'user-label' if message.role == 'user' else 'assistant-label' }}">{{ 'You'
+                    if message.role == 'user' else 'AI Tutor' }}</div>
                 <div class="message {{ 'user-message' if message.role == 'user' else 'assistant-message' }}">
                     <div class="message-content"></div>
                     <!-- Hidden div stores raw content; | safe prevents HTML escaping -->
@@ -429,16 +473,22 @@
         breaks: true
     });
 
+    function toggleSidebar() {
+        const sidebar = document.getElementById('plan-sidebar');
+        sidebar.classList.toggle('collapsed');
+    }
+
     // Extract raw content and render markdown for AI messages
     function renderMarkdown() {
         const messages = document.querySelectorAll('.message');
+
         messages.forEach(function (messageEl) {
             const contentEl = messageEl.querySelector('.message-content');
             const rawEl = messageEl.querySelector('.raw-markdown');
-            
+
             if (contentEl && rawEl && !contentEl.dataset.rendered) {
                 const rawContent = rawEl.textContent;
-                
+
                 if (messageEl.classList.contains('assistant-message')) {
                     // Render markdown for assistant messages
                     contentEl.innerHTML = md.render(rawContent);
@@ -446,6 +496,7 @@
                     // Plain text for user messages
                     contentEl.textContent = rawContent;
                 }
+
                 contentEl.dataset.rendered = "true";
             }
         });
@@ -464,40 +515,40 @@
         document.getElementById('chat-input').focus();
 
         // Disable plan modification form while submitting
-        document.getElementById('plan-modification-form').addEventListener('submit', function(e) {
+        document.getElementById('plan-modification-form').addEventListener('submit', function (e) {
             const textarea = document.getElementById('plan-modification-input');
             const button = document.getElementById('plan-modification-button');
-            
+
             // Prevent submission if textarea is empty
             if (!textarea.value.trim()) {
                 e.preventDefault();
                 return false;
             }
-            
+
             // Disable interactions during submission
             button.disabled = true;
             textarea.readOnly = true;
         });
 
         // Prevent empty submissions and disable input while loading
-        document.getElementById('chat-form').addEventListener('submit', function(e) {
+        document.getElementById('chat-form').addEventListener('submit', function (e) {
             const input = document.getElementById('chat-input');
             const button = document.getElementById('send-button');
             const loading = document.getElementById('loading-indicator');
-            
+
             // Prevent submission if input is empty
             if (!input.value.trim()) {
                 e.preventDefault();
                 return false;
             }
-            
+
             // Store the value before disabling (disabled fields aren't submitted)
             const messageValue = input.value;
-            
+
             // Show loading state
             button.disabled = true;
             loading.style.display = 'inline';
-            input.readOnly = true;  // Use readOnly instead of disabled to preserve form value
+            input.readOnly = true; // Use readOnly instead of disabled to preserve form value
         });
     });
 </script>

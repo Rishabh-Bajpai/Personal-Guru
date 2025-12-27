@@ -79,12 +79,23 @@ def update_plan(topic_name):
     current_plan = topic_data.get('plan', [])
     user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
 
+    planner = PlannerAgent()
     # Call agent to get a new plan
-    new_plan, error = chat_agent.update_study_plan(topic_name, user_background, current_plan, comment)
+    new_plan, error = planner.update_study_plan(topic_name, user_background, current_plan, comment)
+
+    from app.core.utils import reconcile_plan_steps
 
     if not error:
         # Save the new plan
         topic_data['plan'] = new_plan
+        
+        # Sync steps with new plan
+        current_steps = topic_data.get('steps', [])
+        # Note: Chat mode might not have loaded 'steps' if it wasn't accessed via load_topic deeply?
+        # load_topic DOES load steps.
+        
+        topic_data['steps'] = reconcile_plan_steps(current_steps, current_plan, new_plan)
+        
         save_topic(topic_name, topic_data)
 
         # Add a system message to the chat

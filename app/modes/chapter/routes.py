@@ -79,6 +79,42 @@ def generate_plan():
     
     return {"status": "success", "plan": plan_steps}
 
+@chapter_bp.route('/<topic_name>/update_plan', methods=['POST'])
+def update_plan(topic_name):
+    comment = request.form.get('comment')
+    current_step_index = request.form.get('current_step_index', 0)
+    
+    if not comment or not comment.strip():
+         return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=current_step_index))
+
+    topic_data = load_topic(topic_name)
+    if not topic_data:
+        return "Topic not found", 404
+
+    current_plan = topic_data.get('plan', [])
+    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+
+    # Use the unified PlannerAgent
+    new_plan, error = planner.update_study_plan(topic_name, user_background, current_plan, comment)
+
+    if not error:
+        # Smart Update: Preserve content for unchanged steps
+        from app.core.utils import reconcile_plan_steps
+
+        # Smart Update using helper
+        topic_data['plan'] = new_plan
+        topic_data['steps'] = reconcile_plan_steps(
+            topic_data.get('steps', []),
+            current_plan, # Original plan strings! We need them.
+            new_plan
+        )
+        # Wait, reconcile_plan_steps signature: (current_steps, current_plan, new_plan)
+        # I have current_plan already (line 94).
+        
+        save_topic(topic_name, topic_data)
+
+    return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=0))
+
 @chapter_bp.route('/learn/<topic_name>/<int:step_index>')
 def learn_topic(topic_name, step_index):
     topic_data = load_topic(topic_name)

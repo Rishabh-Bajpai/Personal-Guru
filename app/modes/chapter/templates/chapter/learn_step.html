@@ -11,20 +11,38 @@
 {% endblock %}
 
 {% block content %}
-<div class="main-layout">
-    <div class="plan-panel">
-        <h2>Study Plan</h2>
-        <ul>
-            {% for step in topic.plan %}
-            <li
-                class="{{ 'active' if loop.index0 == step_index else '' }} {{ 'future-step' if loop.index0 > step_index else '' }}">
-                <a href="{{ url_for('chapter.learn_topic', topic_name=topic.name, step_index=loop.index0) }}"
-                    onclick="showLoader()">{{ step }}</a>
-            </li>
-            {% endfor %}
-        </ul>
+<div class="main-layout" style="display: flex; gap: 20px; height: 90vh;">
+    <!-- Unified Plan Sidebar -->
+    <div id="plan-sidebar">
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">
+            ☰
+        </button>
+        <div class="sidebar-content">
+            <h2>Study Plan</h2>
+            <ul id="plan-steps">
+                {% for step in topic.plan %}
+                <li
+                    class="{{ 'active' if loop.index0 == step_index else '' }} {{ 'future-step' if loop.index0 > step_index else '' }}">
+                    <a href="{{ url_for('chapter.learn_topic', topic_name=topic.name, step_index=loop.index0) }}"
+                        onclick="showLoader()" style="color: inherit; text-decoration: none; display: block;">{{ step
+                        }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+            <form id="plan-modification-form" method="POST"
+                action="{{ url_for('chapter.update_plan', topic_name=topic.name) }}">
+                <h3>Modify the Plan</h3>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <!-- Pass current step index to return to it -->
+                <input type="hidden" name="current_step_index" value="{{ step_index }}">
+                <textarea id="plan-modification-input" name="comment"
+                    placeholder="Suggest changes to the plan..."></textarea>
+                <button id="plan-modification-button" type="submit" class="button is-small">Update Plan</button>
+            </form>
+        </div>
     </div>
-    <div class="learning-content">
+
+    <div class="learning-content" style="flex-grow: 1; overflow-y: auto; padding-right: 20px;">
         <h1>Learning: {{ topic.name }}</h1>
         <h2>Step {{ step_index + 1 }} of {{ total_steps }}</h2>
 
@@ -170,25 +188,21 @@
     const renderedContent = document.getElementById('step-content-rendered');
     renderedContent.innerHTML = md.render(markdownContent);
 
+    function toggleSidebar() {
+        const sidebar = document.getElementById('plan-sidebar');
+        sidebar.classList.toggle('collapsed');
+    }
+
     // Code Execution Logic
     function setupCodeExecution() {
         const codeBlocks = renderedContent.querySelectorAll('pre code');
         codeBlocks.forEach((block, index) => {
             const pre = block.parentElement;
-
-            // Only python blocks or if language is not specified but looks like python (heuristic)
-            // For now, let's allow all blocks, or maybe check data-lang if available
-            // Markdown-it highlight function above adds data-lang to pre
-            // But if the existing markdown content doesn't specify 'python', it might be empty.
-            // Let's check class or just add to all pre > code for now.
-
-            // Wrapper
             const wrapper = document.createElement('div');
             wrapper.className = 'code-execution-wrapper';
             pre.parentNode.insertBefore(wrapper, pre);
             wrapper.appendChild(pre);
 
-            // Button
             const btn = document.createElement('button');
             btn.className = 'execute-button';
             btn.innerText = 'Execute Code';
@@ -228,7 +242,6 @@
         const contentDiv = document.getElementById('side-panel-content');
         contentDiv.innerHTML = '';
 
-        // Images (Visualizations First)
         if (data.images && data.images.length > 0) {
             const imgHeader = document.createElement('h4');
             imgHeader.innerText = "Visualizations";
@@ -242,7 +255,6 @@
             });
         }
 
-        // Output (Text Second)
         if (data.output) {
             const outHeader = document.createElement('h4');
             outHeader.innerText = "Output";
@@ -254,7 +266,6 @@
             contentDiv.appendChild(outBlock);
         }
 
-        // Enhanced Code (Last)
         const codeHeader = document.createElement('h4');
         codeHeader.innerText = "Enhanced Code";
         contentDiv.appendChild(codeHeader);
@@ -280,12 +291,10 @@
 
     // Side Panel UI
     const sidePanel = document.getElementById('execution-side-panel');
-    // Move to body to ensure fixed positioning works correctly relative to viewport
     if (sidePanel.parentElement !== document.body) {
         document.body.appendChild(sidePanel);
     }
 
-    // Explicitly bind close button
     const closeBtn = sidePanel.querySelector('.button.secondary');
     if (closeBtn) {
         closeBtn.onclick = closeSidePanel;
@@ -330,9 +339,7 @@
         }
     }
 
-    // Initialize
     setupCodeExecution();
-
 
     const readAloudSwitch = document.getElementById('read-aloud-switch');
     const readButton = document.getElementById('read-button');
@@ -398,11 +405,9 @@
                 body: JSON.stringify({ question: question })
             });
 
-
             const data = await response.json();
             const botMessage = document.createElement('div');
             botMessage.className = 'chat-message bot-message';
-            // Use markdown-it to render the bot's response
             botMessage.innerHTML = `<strong>Bot:</strong> ${md.render(data.answer)}`;
             chatHistory.appendChild(botMessage);
         } finally {

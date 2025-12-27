@@ -22,26 +22,6 @@ Generate a welcoming message that is professional, encouraging, and sets a high 
 - End by asking a question about user's preference and intent to start the journey.
 """
 
-def get_plan_update_prompt(topic_name, user_background, current_plan, comment):
-    return f"""
-You are an expert curriculum designer. Your task is to revise a study plan based on user feedback.
-
-Topic: {topic_name}
-User's Background: {user_background}
-
-Current Study Plan:
-- {chr(10).join(f"- {step}" for step in current_plan)}
-
-User's Feedback for Modification:
-"{comment}"
-
-Based on the user's feedback, generate a revised, concise study plan as a Python list of strings.
-- Analyze the user's request in the <analysis> block.
-- The output MUST be ONLY a Python list of strings. For example: ["Introduction to Core Concepts", "Advanced Topic A", "Practical Application B"]
-- Do NOT add any introductory text or explanation outside the list.
-- The number of steps in the plan should be between 3 and 7.
-"""
-
 def get_chat_answer_prompt(question, conversation_history, context, user_background, is_guided_mode, plan=None):
     plan_text = ""
     if plan:
