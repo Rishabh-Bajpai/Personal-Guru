@@ -109,3 +109,49 @@ class PlannerAgent:
                 return None, "LLM did not return a valid list for the new plan."
         except (ValueError, SyntaxError):
             return None, f"Could not parse the new plan from LLM response: {response}"
+
+class ChatAgent:
+    def __init__(self, system_message_generator):
+        self.system_message_generator = system_message_generator
+
+    def get_welcome_message(self, topic_name, user_background, plan=None):
+        # This might be mode specific, but for now we can keep it generic 
+        # or require a welcome_prompt_generator. 
+        # Let's assume the subclass might override or we use a standard one.
+        # For now, let's keep the existing logic found in chat/agent.py 
+        # but we might need to import the prompt.
+        # To avoid circular imports, maybe we pass the welcome prompt function too?
+        # For this refactor, let's just use the one from chat prompts as default or 
+        # expect the subclass to handle it if it differs.
+        
+        # Actually, the user requirement is about 'get_answer' using distinct prompts.
+        # We will implement get_answer here using the generator.
+        pass
+
+    def get_answer(self, question, conversation_history, context, user_background, plan=None):
+        # Determine if this is guided mode
+        is_guided_mode = len(conversation_history) > 0
+
+        system_message = self.system_message_generator(context, user_background, is_guided_mode, plan)
+        
+        messages = [{"role": "system", "content": system_message}]
+        
+        # Add history
+        if conversation_history:
+            messages.extend(conversation_history)
+        
+        # Ensure the user's question is included.
+        if not conversation_history or conversation_history[-1].get('content') != question:
+            messages.append({"role": "user", "content": question})
+
+        answer, error = call_llm(messages)
+        if error:
+            return f"Error getting answer from LLM: {error}", error
+
+        # Filter out content within <think> tags
+        answer = re.sub(r'<think>.*?</think>', '', answer, flags=re.DOTALL).strip()
+        
+        # Filter out <tool_call> tags if present (cleanup artifact)
+        answer = re.sub(r'<tool_call>.*?</tool_call>', '', answer, flags=re.DOTALL).strip()
+
+        return answer, None

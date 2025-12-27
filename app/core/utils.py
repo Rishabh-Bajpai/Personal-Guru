@@ -12,10 +12,11 @@ LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME")
 LLM_NUM_CTX = int(os.getenv("LLM_NUM_CTX", 18000))
 LLM_API_KEY = os.getenv("LLM_API_KEY", "dummy")
 
-def call_llm(prompt, is_json=False):
+def call_llm(prompt_or_messages, is_json=False):
     """
     A helper function to call the LLM API using OpenAI-compatible protocol.
     Works with OpenAI, Ollama, LMStudio, VLLM, etc.
+    Accepts specific 'messages' list for chat history or a simple string 'prompt'.
     """
     if not LLM_ENDPOINT or not LLM_MODEL_NAME:
         return "Error: LLM environment variables not set.", "Config Error"
@@ -48,7 +49,10 @@ def call_llm(prompt, is_json=False):
     try:
         print(f"Calling LLM: {api_url}")
         
-        messages = [{"role": "user", "content": prompt}]
+        if isinstance(prompt_or_messages, list):
+            messages = prompt_or_messages
+        else:
+            messages = [{"role": "user", "content": prompt_or_messages}]
         
         data = {
             "model": LLM_MODEL_NAME,

@@ -65,7 +65,17 @@ VIEWER_HTML = """
       
       .bulk-actions { margin-bottom: 15px; display: none; }
       .bulk-actions.visible { display: block; }
+      
+      .chat-message { margin-bottom: 5px; padding: 5px; border-radius: 4px; }
+      .chat-role { font-weight: bold; font-size: 0.8em; margin-bottom: 2px; }
+      .chat-role.user { color: #5cb85c; }
+      .chat-role.assistant { color: #5bc0de; }
+      .chat-role.system { color: #f0ad4e; }
+      .chat-content { white-space: pre-wrap; }
     </style>
+    <script>
+    // helper for jinja to parsed json if needed, but jinja does it better server side
+    </script>
   </head>
   <body>
     <h1>Database Viewer</h1>
@@ -107,8 +117,19 @@ VIEWER_HTML = """
                             </td>
                             {% for col in columns %}
                                 <td>
-                                    {% if col in json_cols %}
-                                        <pre>{{ row[col] | tojson(indent=2) }}</pre>
+                                    {% if col == 'chat_history' and row[col] %}
+                                        <div style="max-height: 300px; overflow-y: auto;">
+                                            {% for msg in row[col] %}
+                                                <div class="chat-message">
+                                                    <div class="chat-role {{ msg.get('role', 'unknown') }}">{{ msg.get('role', 'unknown') }}</div>
+                                                    <div class="chat-content">{{ msg.get('content', '') }}</div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% elif col in json_cols %}
+                                        <div style="max-height: 200px; overflow-y: auto;">
+                                            <pre>{{ row[col] | tojson(indent=2) }}</pre>
+                                        </div>
                                     {% else %}
                                         {{ row[col] }}
                                     {% endif %}

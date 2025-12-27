@@ -37,6 +37,7 @@ class StudyStep(db.Model):
     user_answers = db.Column(JSON)
     feedback = db.Column(JSON)
     score = db.Column(db.Float)
+    chat_history = db.Column(JSON) # Store chat history for this step
     
 class Quiz(db.Model):
     __tablename__ = 'quizzes'

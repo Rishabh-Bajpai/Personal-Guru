@@ -54,7 +54,8 @@ def save_topic(topic_name, data):
                 questions=step_data.get('questions'),
                 user_answers=step_data.get('user_answers'),
                 feedback=step_data.get('feedback'),
-                score=step_data.get('score')
+                score=step_data.get('score'),
+                chat_history=step_data.get('chat_history')
             )
             db.session.add(step)
             
@@ -99,7 +100,11 @@ def save_chat_history(topic_name, history):
             topic = Topic(name=topic_name, user_id=current_user.username)
             db.session.add(topic)
         
-        topic.chat_history = history
+        # Create a new list object to ensure SQLAlchemy detects the change
+        from sqlalchemy.orm.attributes import flag_modified
+        topic.chat_history = list(history)
+        flag_modified(topic, 'chat_history')
+        db.session.add(topic)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
@@ -146,6 +151,7 @@ def load_topic(topic_name):
                 "user_answers": step_model.user_answers,
                 "feedback": step_model.feedback,
                 "score": step_model.score,
+                "chat_history": step_model.chat_history or [],
                 # Include derived fields if needed, e.g. teaching_material is actually 'content' in model?
                 # In model: content = db.Column(db.Text) # Markdown content
                 # In app: key is 'teaching_material'

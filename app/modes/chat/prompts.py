@@ -22,7 +22,7 @@ Generate a welcoming message that is professional, encouraging, and sets a high 
 - End by asking a question about user's preference and intent to start the journey.
 """
 
-def get_chat_answer_prompt(question, conversation_history, context, user_background, is_guided_mode, plan=None):
+def get_chat_system_message(context, user_background, is_guided_mode, plan=None):
     plan_text = ""
     if plan:
         plan_text = f"""
@@ -40,13 +40,6 @@ The user's background is: '{user_background}'.
 The current learning material is about: "{context}".
 
 {plan_text}
-
-Below is the conversation history. Use it to maintain continuity.
-<conversation_history>
-{conversation_history}
-</conversation_history>
-
-The user's latest question is: "{question}"
 """
 
     if is_guided_mode:
