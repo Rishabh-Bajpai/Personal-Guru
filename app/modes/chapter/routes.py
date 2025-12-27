@@ -42,7 +42,8 @@ def mode(topic_name):
         return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=resume_step_index))
     
     # No plan exists - generate one automatically
-    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    from app.core.utils import get_user_context
+    user_background = get_user_context()
     plan_steps, error = planner.generate_study_plan(topic_name, user_background)
     
     if error:
@@ -64,7 +65,8 @@ def generate_plan():
     if not topic_name:
         return {"error": "Topic name required"}, 400
         
-    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    from app.core.utils import get_user_context
+    user_background = get_user_context()
     plan_steps, error = planner.generate_study_plan(topic_name, user_background)
     
     if error:
@@ -92,7 +94,8 @@ def update_plan(topic_name):
         return "Topic not found", 404
 
     current_plan = topic_data.get('plan', [])
-    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    from app.core.utils import get_user_context
+    user_background = get_user_context()
 
     # Use the unified PlannerAgent
     new_plan, error = planner.update_study_plan(topic_name, user_background, current_plan, comment)
@@ -139,12 +142,14 @@ def learn_topic(topic_name, step_index):
 
     if not current_step_data.get('teaching_material'):
         incorrect_questions = session.get('incorrect_questions')
-        current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+        from app.core.utils import get_user_context
+        current_background = get_user_context()
         teaching_material, error = teacher.generate_teaching_material(plan_steps[step_index], plan_steps, current_background, incorrect_questions)
         if error:
             return f"<h1>Error Generating Teaching Material</h1><p>{teaching_material}</p>"
         current_step_data['teaching_material'] = teaching_material
-        current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+        from app.core.utils import get_user_context
+        current_background = get_user_context()
         question_data, error = assessor.generate_question(teaching_material, current_background)
         if not error:
             current_step_data['questions'] = question_data

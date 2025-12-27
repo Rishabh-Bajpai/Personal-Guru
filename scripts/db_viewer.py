@@ -30,7 +30,8 @@ MODELS = {
     'Topic': models.Topic,
     'StudyStep': models.StudyStep,
     'Quiz': models.Quiz,
-    'Flashcard': models.Flashcard
+    'Flashcard': models.Flashcard,
+    'User': models.User
 }
 
 VIEWER_HTML = """

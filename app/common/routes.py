@@ -88,15 +88,35 @@ def index():
     
     return render_template('index.html', topics=topics_data)
 
-@main_bp.route('/background', methods=['GET', 'POST'])
-def set_background():
+@main_bp.route('/user_profile', methods=['GET', 'POST'])
+def user_profile():
+    from app.common.models import User
+    from app.common.extensions import db
+    
+    user = User.query.first()
+    if not user:
+        user = User()
+        db.session.add(user)
+        db.session.commit()
+        
     if request.method == 'POST':
-        session['user_background'] = request.form['user_background']
-        set_key(find_dotenv(), "USER_BACKGROUND", session['user_background'])
+        user.name = request.form.get('name')
+        user.age = request.form.get('age')
+        user.country = request.form.get('country')
+        user.primary_language = request.form.get('primary_language')
+        user.education_level = request.form.get('education_level')
+        user.field_of_study = request.form.get('field_of_study')
+        user.occupation = request.form.get('occupation')
+        user.learning_goals = request.form.get('learning_goals')
+        user.prior_knowledge = request.form.get('prior_knowledge')
+        user.learning_style = request.form.get('learning_style')
+        user.time_commitment = request.form.get('time_commitment')
+        user.preferred_format = request.form.get('preferred_format')
+        
+        db.session.commit()
         return redirect(url_for('main.index'))
 
-    current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
-    return render_template('background.html', user_background=current_background)
+    return render_template('user_profile.html', user=user)
 
 @main_bp.route('/delete/<topic_name>')
 def delete_topic_route(topic_name):

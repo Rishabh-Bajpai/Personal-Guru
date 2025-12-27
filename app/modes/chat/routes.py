@@ -30,7 +30,8 @@ def mode(topic_name):
 
     if not chat_history:
         # Generate welcome message if chat is new
-        user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+        from app.core.utils import get_user_context
+        user_background = get_user_context()
         
         # 1. Generate Plan if missing
         if not topic_data or not topic_data.get('plan'):
@@ -77,7 +78,8 @@ def update_plan(topic_name):
         return redirect(url_for('chat.mode', topic_name=topic_name))
 
     current_plan = topic_data.get('plan', [])
-    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    from app.core.utils import get_user_context
+    user_background = get_user_context()
 
     planner = PlannerAgent()
     # Call agent to get a new plan
@@ -124,7 +126,8 @@ def send_message(topic_name):
         context = f'The topic is {topic_name}. No additional details are available yet.'
         plan = []
     
-    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    from app.core.utils import get_user_context
+    user_background = get_user_context()
 
     chat_history = session.get('chat_history', [])
     chat_history.append({"role": "user", "content": user_message})
@@ -164,7 +167,8 @@ def chat(topic_name, step_index):
         return {"error": "Step index out of range"}, 400
     current_step_data = topic_data['steps'][step_index]
     teaching_material = current_step_data.get('teaching_material', '')
-    current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    from app.core.utils import get_user_context
+    current_background = get_user_context()
     # Pass an empty conversation history for the chapter mode chat
     answer, error = chat_agent.get_answer(
         user_question,

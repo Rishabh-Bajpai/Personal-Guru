@@ -28,7 +28,8 @@ def generate_flashcards_route():
     if not topic_name:
         return {"error": "No topic provided"}, 400
 
-    user_background = os.getenv('USER_BACKGROUND', 'a beginner')
+    from app.core.utils import get_user_context
+    user_background = get_user_context()
 
     # Determine flashcard count
     if isinstance(count, str) and count.lower() == 'auto':
@@ -43,7 +44,8 @@ def generate_flashcards_route():
             num = 25
 
     # Refetch background just in case
-    user_background = os.getenv('USER_BACKGROUND', 'a beginner')
+    from app.core.utils import get_user_context
+    user_background = get_user_context()
 
     cards, error = teacher.generate_teaching_material(topic_name, count=num, user_background=user_background)
     if error:

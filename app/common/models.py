@@ -49,7 +49,46 @@ class Flashcard(db.Model):
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
     term = db.Column(db.String(255), nullable=False)
     definition = db.Column(db.Text, nullable=False)
+
+class User(db.Model):
+    __tablename__ = 'users'
     
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100))
+    age = db.Column(db.Integer)
+    country = db.Column(db.String(100))
+    primary_language = db.Column(db.String(100))
+    education_level = db.Column(db.String(100))
+    field_of_study = db.Column(db.String(100))
+    occupation = db.Column(db.String(100))
+    learning_goals = db.Column(db.Text)
+    prior_knowledge = db.Column(db.Text)
+    learning_style = db.Column(db.String(100))
+    time_commitment = db.Column(db.String(100))
+    preferred_format = db.Column(db.String(100))
+
+    def to_context_string(self):
+        """Generates a text description of the user profile for LLM context."""
+        parts = []
+        if self.name: parts.append(f"Name: {self.name}")
+        if self.age: parts.append(f"Age: {self.age}")
+        if self.country: parts.append(f"Country: {self.country}")
+        if self.primary_language: parts.append(f"Primary Language: {self.primary_language}")
+        if self.education_level: parts.append(f"Education Level: {self.education_level}")
+        if self.field_of_study: parts.append(f"Field of Study: {self.field_of_study}")
+        if self.occupation: parts.append(f"Occupation: {self.occupation}")
+        
+        if self.learning_goals: 
+            parts.append(f"Learning Goals: {self.learning_goals}")
+        if self.prior_knowledge:
+            parts.append(f"Prior Knowledge: {self.prior_knowledge}")
+            
+        if self.learning_style: parts.append(f"Learning Style: {self.learning_style}")
+        if self.time_commitment: parts.append(f"Time Commitment: {self.time_commitment}")
+        if self.preferred_format: parts.append(f"Preferred Format: {self.preferred_format}")
+        
+        return "\n".join(parts)
+
 # class VectorEmbedding(db.Model):
 #     __tablename__ = 'vector_embeddings'
 #     

@@ -26,7 +26,8 @@ TARGET_MODELS = [
     models.Topic,
     models.StudyStep,
     models.Quiz,
-    models.Flashcard
+    models.Flashcard,
+    models.User
 ]
 
 def get_column_type(column):

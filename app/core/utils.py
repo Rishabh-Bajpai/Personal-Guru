@@ -202,3 +202,23 @@ def reconcile_plan_steps(current_steps, current_plan, new_plan):
             new_steps.append({'step_index': i})
     
     return new_steps
+
+def get_user_context():
+    """
+    Retrieves the user context string from the database for LLM usage.
+    Falls back to environment variable if no user or empty profile.
+    """
+    from app.common.models import User
+    
+    # Needs application context usually
+    try:
+        user = User.query.first()
+        if user:
+            context = user.to_context_string()
+            if context.strip():
+                return context
+    except Exception as e:
+        print(f"Error fetching user context from DB: {e}")
+        pass
+        
+    return os.getenv("USER_BACKGROUND", "a beginner")
