@@ -1,8 +1,8 @@
 from flask import render_template, request, session, redirect, url_for, make_response
 from . import chapter_bp
 from app.core.storage import load_topic, save_topic
-from app.core.agents import FeedbackAgent
-from .agent import ChapterTeachingAgent, AssessorAgent, PlannerAgent
+from app.core.agents import FeedbackAgent, PlannerAgent
+from .agent import ChapterTeachingAgent, AssessorAgent
 from app.core.utils import generate_audio
 from markdown_it import MarkdownIt
 from weasyprint import HTML

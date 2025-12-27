@@ -40,21 +40,4 @@ class AssessorAgent:
 
         return question_data, None
 
-class PlannerAgent:
-    def generate_study_plan(self, topic, user_background):
-        print(f"DEBUG: Generating study plan for user with background: {user_background}")
-        from app.modes.chapter.prompts import get_study_plan_prompt
-        prompt = get_study_plan_prompt(topic, user_background)
-        plan_data, error = call_llm(prompt, is_json=True)
-        if error:
-            return plan_data, error
-
-        plan_steps = plan_data.get("plan", [])
-        if not plan_steps or not isinstance(plan_steps, list):
-            return "Error: Could not parse study plan from LLM response (missing or invalid 'plan' key).", "Invalid format"
-
-        if not all(isinstance(step, str) and step.strip() for step in plan_steps):
-            return "Error: Could not parse study plan from LLM response (plan contains invalid steps).", "Invalid format"
-
-        return plan_steps, None
 

@@ -45,27 +45,6 @@ Example JSON response:
 }}
 """
 
-def get_study_plan_prompt(topic, user_background):
-    return f"""
-You are an expert in creating personalized study plans. For the topic '{topic}', create a high-level learning plan with 4-7 manageable steps, depending on the complexity of the topic.
-The user's background is: '{user_background}'
-The output should be a JSON object with a single key "plan", which is an array of strings. Each string is a step in the learning plan.
-Do not generate the content for each step, only the plan itself.
-
-Example of a good plan for the topic 'Flask':
-"Our Flask Learning Plan:
-
-Introduction to Flask & Setup: What is Flask? Why use it? Setting up a Conda environment and installing Flask. (Today)
-Your First Flask App: A basic "Hello, World!" application. Understanding routes and the app object.
-Templates & Rendering: Using Jinja2 templates to separate logic from presentation. Passing data to templates.
-Static Files: Serving CSS, JavaScript, and images.
-Request Handling: Accessing data sent by the user (form data, URL parameters).
-Forms & User Input: Working with HTML forms and validating user data.
-Databases (SQLite): Connecting to a database and performing basic operations.
-More Advanced Topics (Optional): User authentication, sessions, and scaling."
-
-Now, generate a similar plan for the topic: '{topic}'.
-"""
 
 CODE_EXECUTION_PROMPT = """
 You are a Python expert. Your task is to take a user-provided code snippet and transform it into a complete, runnable, and visually appealing script.

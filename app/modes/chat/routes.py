@@ -1,6 +1,7 @@
 from flask import render_template, request, session, redirect, url_for
 from . import chat_bp
 from app.core.storage import load_topic, save_chat_history, save_topic
+from app.core.agents import PlannerAgent
 from .agent import ChatAgent
 import os
 
@@ -33,7 +34,6 @@ def mode(topic_name):
         
         # 1. Generate Plan if missing
         if not topic_data or not topic_data.get('plan'):
-             from app.modes.chapter.agent import PlannerAgent
              planner = PlannerAgent()
              plan_steps, error = planner.generate_study_plan(topic_name, user_background)
              if not error:
