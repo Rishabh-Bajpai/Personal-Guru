@@ -22,6 +22,26 @@ Generate a welcoming message that is professional, encouraging, and sets a high 
 - End by asking a question about user's preference and intent to start the journey.
 """
 
+def get_plan_update_prompt(topic_name, user_background, current_plan, comment):
+    return f"""
+You are an expert curriculum designer. Your task is to revise a study plan based on user feedback.
+
+Topic: {topic_name}
+User's Background: {user_background}
+
+Current Study Plan:
+- {chr(10).join(f"- {step}" for step in current_plan)}
+
+User's Feedback for Modification:
+"{comment}"
+
+Based on the user's feedback, generate a revised, concise study plan as a Python list of strings.
+- Analyze the user's request in the <analysis> block.
+- The output MUST be ONLY a Python list of strings. For example: ["Introduction to Core Concepts", "Advanced Topic A", "Practical Application B"]
+- Do NOT add any introductory text or explanation outside the list.
+- The number of steps in the plan should be between 3 and 7.
+"""
+
 def get_chat_answer_prompt(question, conversation_history, context, user_background, is_guided_mode, plan=None):
     plan_text = ""
     if plan:
@@ -52,13 +72,14 @@ The user's latest question is: "{question}"
     if is_guided_mode:
         base_prompt += """
 FORMAL REQUIREMENTS:
-1. **Structural Excellence**: Use Markdown headings (##) to separate logical parts of your answer.
-2. **Visual Clarity**: Use bullet points and numbered lists for details. Use **bold** for key terms.
-3. **Step-by-Step Reasoning**: Use <think> tags to plan your response internally.
-4. **Answer the Question**: Directly address the user's query with high-quality educational content.
-5. **Stay on Track**: If the user's question is relevant to the study plan, explicitly mention which part of the plan it relates to. If it deviates significantly, answer it but gently suggest returning to the plan.
-6. **Guided Learning Path**: After your main answer, add a horizontal rule (---) then use a ## heading like "What's Next?" or "Probing Deeper". Provide 2-3 specific, high-value suggestions for follow-up learning, ideally linking to the next steps in the study plan.
-7. **Guru Persona**: Maintain an encouraging, authoritative, yet accessible tone.
+1. **Adherence to the Plan**: Your primary directive is to follow the study plan.
+2. **Structural Excellence**: Use Markdown headings (##) to separate logical parts of your answer.
+3. **Visual Clarity**: Use bullet points and numbered lists for details. Use **bold** for key terms.
+4. **Step-by-Step Reasoning**: Use <think> tags to plan your response internally.
+5. **Answer the Question**: Directly address the user's query with high-quality educational content.
+6. **Stay on Track**: If the user's question is relevant to the study plan, explicitly mention which part of the plan it relates to. If the user asks a question that deviates from the plan, answer it concisely, and then gently but firmly guide the user back to the current topic in the study plan. For example: "That's an interesting question. To keep us on track with our plan, shall we return to [current topic]?"
+7. **Guided Learning Path**: After your main answer, add a horizontal rule (---) then use a ## heading like "What's Next?" or "Probing Deeper". Provide 2-3 specific, high-value suggestions for follow-up learning, ideally linking to the next steps in the study plan.
+8. **Guru Persona**: Maintain an encouraging, authoritative, yet accessible tone.
 """
     else:
         base_prompt += """
