@@ -7,8 +7,13 @@ class Topic(db.Model):
     __tablename__ = 'topics'
     
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(255), unique=True, nullable=False)
+    user_id = db.Column(db.String(100), db.ForeignKey('users.username'), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'name', name='_user_topic_uc'),
+    )
     
     # Relationships
     study_plan = db.Column(JSON) # Storing list of strings as JSON
@@ -50,10 +55,14 @@ class Flashcard(db.Model):
     term = db.Column(db.String(255), nullable=False)
     definition = db.Column(db.Text, nullable=False)
 
-class User(db.Model):
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+
+class User(UserMixin, db.Model):
     __tablename__ = 'users'
     
-    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), primary_key=True)
+    password_hash = db.Column(db.String(255))
     name = db.Column(db.String(100))
     age = db.Column(db.Integer)
     country = db.Column(db.String(100))
@@ -66,6 +75,15 @@ class User(db.Model):
     learning_style = db.Column(db.String(100))
     time_commitment = db.Column(db.String(100))
     preferred_format = db.Column(db.String(100))
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def get_id(self):
+        return self.username
 
     def to_context_string(self):
         """Generates a text description of the user profile for LLM context."""

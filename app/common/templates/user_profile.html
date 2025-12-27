@@ -5,7 +5,7 @@
 {% block styles %}
 <style>
     .profile-container {
-        max_width: 800px;
+        max-width: 800px;
         margin: 0 auto;
         padding: 40px;
         background: rgba(255, 255, 255, 0.05);
@@ -13,6 +13,14 @@
         border-radius: 20px;
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text-main);
+    }
+
+    /* Light Mode Adjustment */
+    body:not(.dark-mode) .profile-container {
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
     }
 
     .profile-header {
@@ -25,12 +33,14 @@
         margin-bottom: 10px;
         background: linear-gradient(45deg, #00C9FF, #92FE9D);
         -webkit-background-clip: text;
+        background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: 800;
     }
 
     .profile-header p {
-        color: #ddd;
+        color: inherit;
+        opacity: 0.8;
         font-size: 1.1rem;
     }
 
@@ -51,7 +61,7 @@
     .form-group label {
         display: block;
         margin-bottom: 8px;
-        color: #fff;
+        color: inherit;
         font-weight: 500;
         font-size: 0.95rem;
     }
@@ -67,11 +77,21 @@
         transition: all 0.3s ease;
     }
 
+    body:not(.dark-mode) .form-control {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #ccc;
+        color: #333;
+    }
+
     .form-control:focus {
         outline: none;
         border-color: #00C9FF;
         background: rgba(0, 0, 0, 0.3);
         box-shadow: 0 0 0 4px rgba(0, 201, 255, 0.1);
+    }
+
+    body:not(.dark-mode) .form-control:focus {
+        background: #fff;
     }
 
     textarea.form-control {
@@ -107,6 +127,11 @@
         color: #00C9FF;
         font-size: 1.2rem;
         font-weight: 600;
+    }
+
+    body:not(.dark-mode) .section-title {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        color: #007bff;
     }
 
     @media (max-width: 768px) {

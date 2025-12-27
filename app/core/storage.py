@@ -2,15 +2,23 @@ from app.common.extensions import db
 from app.common.models import Topic, StudyStep, Quiz, Flashcard
 import logging
 
+from flask_login import current_user
+
 def save_topic(topic_name, data):
     """
     Save topic data to PostgreSQL database.
     """
     try:
-        # Check if topic exists
-        topic = Topic.query.filter_by(name=topic_name).first()
+        # Check if topic exists for current user
+        # Handle case where current_user might not be authenticated (e.g. CLI usage?)
+        # For now, assume web context.
+        if not current_user.is_authenticated:
+             logging.warning(f"Attempt to save topic {topic_name} without auth user.")
+             raise Exception("User must be logged in to save topic.")
+
+        topic = Topic.query.filter_by(name=topic_name, user_id=current_user.username).first()
         if not topic:
-            topic = Topic(name=topic_name)
+            topic = Topic(name=topic_name, user_id=current_user.username)
             db.session.add(topic)
         
         # Update fields
@@ -51,17 +59,8 @@ def save_topic(topic_name, data):
             db.session.add(step)
             
         # Quiz
-        quiz_data = data.get('quiz') # 'quiz' key in JSON based on inspection? 
-        # Wait, let's check one of the JSON files again. 
-        # In black hole.json, I see "quizzes" (plural) in models? 
-        # Actually I didn't verify the exact key for quiz in JSON.
-        # Let's assume the JSON structure matches the 'data' arg.
-        
+        # "quiz" key in JSON
         if 'quiz' in data:
-            # Handle single quiz object or list? 
-            # Usually it's "quiz": { ... } or "quizzes": [ ... ]
-            # I need to verify this assumption.
-            # I will assume "quiz" key for now based on usual single-topic quizzes.
              q_data = data.get('quiz')
              if q_data:
                  quiz = Quiz(
@@ -91,9 +90,13 @@ def save_chat_history(topic_name, history):
     Save chat history for a topic.
     """
     try:
-        topic = Topic.query.filter_by(name=topic_name).first()
+        if not current_user.is_authenticated:
+             logging.warning(f"Attempt to save chat history {topic_name} without auth.")
+             raise Exception("User must be logged in.")
+
+        topic = Topic.query.filter_by(name=topic_name, user_id=current_user.username).first()
         if not topic:
-            topic = Topic(name=topic_name)
+            topic = Topic(name=topic_name, user_id=current_user.username)
             db.session.add(topic)
         
         topic.chat_history = history
@@ -107,7 +110,10 @@ def load_topic(topic_name):
     """
     Load topic data from PostgreSQL and reconstruct dictionary structure.
     """
-    topic = Topic.query.filter_by(name=topic_name).first()
+    if not current_user.is_authenticated:
+        return None
+
+    topic = Topic.query.filter_by(name=topic_name, user_id=current_user.username).first()
     if not topic:
         return None
         
@@ -175,11 +181,17 @@ def load_topic(topic_name):
     return data
 
 def get_all_topics():
-    topics = Topic.query.with_entities(Topic.name).all()
+    if not current_user.is_authenticated:
+        return []
+
+    topics = Topic.query.with_entities(Topic.name).filter_by(user_id=current_user.username).all()
     return [t.name for t in topics]
 
 def delete_topic(topic_name):
-    topic = Topic.query.filter_by(name=topic_name).first()
+    if not current_user.is_authenticated:
+        return 
+
+    topic = Topic.query.filter_by(name=topic_name, user_id=current_user.username).first()
     if topic:
         db.session.delete(topic)
         db.session.commit()

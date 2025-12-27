@@ -208,17 +208,15 @@ def get_user_context():
     Retrieves the user context string from the database for LLM usage.
     Falls back to environment variable if no user or empty profile.
     """
-    from app.common.models import User
+    from flask_login import current_user
     
-    # Needs application context usually
     try:
-        user = User.query.first()
-        if user:
-            context = user.to_context_string()
+        if current_user.is_authenticated:
+            context = current_user.to_context_string()
             if context.strip():
                 return context
     except Exception as e:
-        print(f"Error fetching user context from DB: {e}")
+        print(f"Error fetching user context from current_user: {e}")
         pass
         
     return os.getenv("USER_BACKGROUND", "a beginner")

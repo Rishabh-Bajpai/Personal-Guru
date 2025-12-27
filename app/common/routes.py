@@ -88,16 +88,65 @@ def index():
     
     return render_template('index.html', topics=topics_data)
 
+from flask_login import login_user, logout_user, login_required, current_user
+
+@main_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+        
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        from app.common.models import User
+        user = User.query.filter_by(username=username).first()
+        
+        if user is None or not user.check_password(password):
+            return render_template('login.html', error='Invalid username or password')
+            
+        login_user(user)
+        return redirect(url_for('main.index'))
+        
+    return render_template('login.html')
+
+@main_bp.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+        
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        from app.common.models import User
+        from app.common.extensions import db
+        
+        user = User.query.filter_by(username=username).first()
+        if user:
+            return render_template('signup.html', error='Username already exists')
+            
+        new_user = User(username=username)
+        new_user.set_password(password)
+        db.session.add(new_user)
+        db.session.commit()
+        
+        login_user(new_user)
+        return redirect(url_for('main.user_profile'))
+        
+    return render_template('signup.html')
+
+@main_bp.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('main.index'))
+
 @main_bp.route('/user_profile', methods=['GET', 'POST'])
+@login_required
 def user_profile():
-    from app.common.models import User
     from app.common.extensions import db
     
-    user = User.query.first()
-    if not user:
-        user = User()
-        db.session.add(user)
-        db.session.commit()
+    user = current_user
         
     if request.method == 'POST':
         user.name = request.form.get('name')

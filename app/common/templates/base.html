@@ -20,8 +20,13 @@
     </div>
     <div class="container">
         <div style="text-align: right; margin-bottom: 1rem;">
-            {% if request.path == '/' %}
-            <a href="{{ url_for('main.user_profile') }}" class="button">User Profile</a>
+            {% if current_user.is_authenticated %}
+            <span style="margin-right: 15px; color: var(--text-color);">Hello, {{ current_user.username }}</span>
+            <a href="{{ url_for('main.user_profile') }}" class="button">Profile</a>
+            <a href="{{ url_for('main.logout') }}" class="button">Logout</a>
+            {% else %}
+            <a href="{{ url_for('main.login') }}" class="button">Log In</a>
+            <a href="{{ url_for('main.signup') }}" class="button">Sign Up</a>
             {% endif %}
             <a href="/" class="button">Home</a>
             <button id="theme-switcher" class="button">Toggle Theme</button>
