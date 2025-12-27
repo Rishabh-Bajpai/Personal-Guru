@@ -154,13 +154,14 @@ def test_chat_route(auth_client, mocker, logger):
     topic_name = "chat_test"
     topic_data = {
         "name": topic_name,
-        "description": "A topic for testing chat."
+        "description": "A topic for testing chat.",
+        "chat_history": [],
+        "plan": ["Introduction"]
     }
     mocker.patch('app.modes.chat.routes.load_topic', return_value=topic_data)
-    mocker.patch('app.modes.chat.agent.call_llm', side_effect=[
-        ("Welcome to the chat!", None),
-        ("This is the answer.", None)
-    ])
+    mocker.patch('app.modes.chat.agent.ChatModeMainChatAgent.get_welcome_message', return_value=("Welcome to the chat!", None))
+    mocker.patch('app.core.agents.ChatAgent.get_answer', return_value=("This is the answer.", None))
+    mocker.patch('app.modes.chat.routes.save_chat_history')
 
     # Test initial GET request to establish the session and get welcome message
     logger.step("Initial GET request")
@@ -171,6 +172,8 @@ def test_chat_route(auth_client, mocker, logger):
     # Test POST request to send a message
     logger.step("POST request to send a message")
     response = auth_client.post(f'/chat/{topic_name}/send', data={'message': 'hello world'}, follow_redirects=True)
+    if b"This is the answer." not in response.data:
+        print("\nDEBUG RESPONSE DATA:\n", response.data, "\n")
     assert response.status_code == 200
     assert b"hello world" in response.data
     assert b"This is the answer." in response.data

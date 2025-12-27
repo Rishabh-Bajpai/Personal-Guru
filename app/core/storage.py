@@ -99,12 +99,22 @@ def save_chat_history(topic_name, history):
         if not topic:
             topic = Topic(name=topic_name, user_id=current_user.username)
             db.session.add(topic)
-        
-        # Create a new list object to ensure SQLAlchemy detects the change
+            db.session.flush() # Ensure ID exists
+
+        from app.common.models import ChatSession
+
+        if not topic.chat_session:
+            chat_session = ChatSession(topic=topic, history=[])
+            db.session.add(chat_session)
+        else:
+            chat_session = topic.chat_session
+
+        # Update history
         from sqlalchemy.orm.attributes import flag_modified
-        topic.chat_history = list(history)
-        flag_modified(topic, 'chat_history')
-        db.session.add(topic)
+        chat_session.history = list(history)
+        flag_modified(chat_session, 'history')
+        db.session.add(chat_session)
+
         db.session.commit()
     except Exception as e:
         db.session.rollback()
@@ -126,7 +136,7 @@ def load_topic(topic_name):
         "name": topic.name,
         "plan": topic.study_plan or [], # Map model 'study_plan' back to app 'plan'
         "last_quiz_result": topic.last_quiz_result,
-        "chat_history": topic.chat_history or [],
+        "chat_history": topic.chat_session.history if topic.chat_session else [],
         "steps": [],
         "quiz": None,
         "flashcards": []

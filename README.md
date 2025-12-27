@@ -143,6 +143,19 @@ Now, open the `.env` file and customize the settings.
 - `LLM_API_KEY`: API Key (optional for local providers like Ollama).
 - `LLM_NUM_CTX`: Context window size (recommended: `18000` or higher if your hardware supports it).
 
+- `LLM_NUM_CTX`: Context window size (recommended: `18000` or higher if your hardware supports it).
+
+## Database Schema
+
+The application uses the following PostgreSQL tables:
+
+- **users**: Stores user accounts and profiles.
+- **topics**: Main table for each subject the user is learning.
+- **study_steps**: Steps within a study plan (one-to-many from topics).
+- **quizzes**: Quizzes generated for a topic.
+- **flashcards**: Flashcards for vocabulary terms.
+- **chat_sessions**: Stores the conversational history for "Chat Mode" (one-to-one with topics). Note: "Chapter Mode" side-chats are stored directly in `study_steps.chat_history`.
+
 ## Database Setup (Docker)
 
 This application uses a PostgreSQL database running in a Docker container.

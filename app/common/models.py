@@ -18,10 +18,18 @@ class Topic(db.Model):
     # Relationships
     study_plan = db.Column(JSON) # Storing list of strings as JSON
     last_quiz_result = db.Column(JSON) # Store latest quiz result
-    chat_history = db.Column(JSON) # Store chat history
     steps = db.relationship('StudyStep', backref='topic', cascade='all, delete-orphan')
     quizzes = db.relationship('Quiz', backref='topic', cascade='all, delete-orphan')
     flashcards = db.relationship('Flashcard', backref='topic', cascade='all, delete-orphan')
+    chat_session = db.relationship('ChatSession', backref='topic', uselist=False, cascade='all, delete-orphan')
+
+class ChatSession(db.Model):
+    __tablename__ = 'chat_sessions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False, unique=True)
+    history = db.Column(JSON)
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
 class StudyStep(db.Model):
     __tablename__ = 'study_steps'

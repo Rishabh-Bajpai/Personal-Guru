@@ -31,6 +31,7 @@ MODELS = {
     'StudyStep': models.StudyStep,
     'Quiz': models.Quiz,
     'Flashcard': models.Flashcard,
+    'ChatSession': models.ChatSession,
     'User': models.User
 }
 

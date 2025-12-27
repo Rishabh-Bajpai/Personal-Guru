@@ -27,6 +27,7 @@ TARGET_MODELS = [
     models.StudyStep,
     models.Quiz,
     models.Flashcard,
+    models.ChatSession,
     models.User
 ]
 
@@ -69,7 +70,21 @@ def update_database():
                      db.session.commit()
                      logger.info("    -> Table dropped. Re-running create_all...")
                      db.create_all()
+                     db.create_all()
                      continue # Skip column inspection for this pass
+
+            # Special check for 'chat_history' column removal in Topics
+            if table_name == 'topics':
+                if 'chat_history' in existing_col_map:
+                    logger.info("  [-] Dropping deprecated column: chat_history")
+                    try:
+                        sql = text('ALTER TABLE "topics" DROP COLUMN "chat_history"')
+                        db.session.execute(sql)
+                        db.session.commit()
+                        logger.info("      -> Dropped successfully.")
+                    except Exception as e:
+                        logger.error(f"      -> FAILED to drop column: {e}")
+                        db.session.rollback()
             
             # Get model columns
             model_columns = model.__table__.columns
