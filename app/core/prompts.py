@@ -46,8 +46,8 @@ Current Study Plan:
 User's Feedback for Modification:
 "{comment}"
 
-    Based on the user's feedback, generate a revised, concise study plan as a Python list of strings.
-    - Analyze the user's request in the <analysis> block.
+Based on the user's feedback, generate a revised, concise study plan as a Python list of strings.
+- Analyze the user's request in the <analysis> block.
 - The output MUST be ONLY a Python list of strings. For example: ["Introduction to Core Concepts", "Advanced Topic A", "Practical Application B"]
 - Do NOT add any introductory text or explanation outside the list.
 - The number of steps in the plan should be between 3 and 7.
