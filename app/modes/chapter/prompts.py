@@ -21,7 +21,8 @@ INSTRUCTIONS:
 """
     return base_prompt
 
-CODE_EXECUTION_PROMPT = """
+def get_code_execution_prompt(code):
+    return f"""
 You are an expert Python coding assistant.
 Your goal is to enhance the provided code snippet to make it runnable, robust, and visually appealing if it involves plots.
 
