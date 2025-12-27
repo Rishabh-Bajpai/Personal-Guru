@@ -11,7 +11,7 @@ The user has previously answered the following questions incorrectly:
 
 Based on the topic, the full study plan, and the user's incorrect answers, generate detailed teaching material for the current topic.
 Avoid generating content that is covered in other steps of the plan.
-The material should be comprehensive and include code examples where appropriate.
+The material should be comprehensive and include python code examples with minimal dependencies/libraries where appropriate.
 The output should be a single string of markdown-formatted text.
 """
 
@@ -65,4 +65,29 @@ Databases (SQLite): Connecting to a database and performing basic operations.
 More Advanced Topics (Optional): User authentication, sessions, and scaling."
 
 Now, generate a similar plan for the topic: '{topic}'.
+"""
+
+CODE_EXECUTION_PROMPT = """
+You are a Python expert. Your task is to take a user-provided code snippet and transform it into a complete, runnable, and visually appealing script.
+
+Original Code:
+```python
+{code}
+```
+
+Instructions:
+1.  **Completeness**: Add any missing imports. Ensure the code is self-contained, and error free. and use minimal dependencies/libraries.
+2.  **Visualization**:
+    *   If the code involves data or math, use `matplotlib` or `seaborn` to create a plot.
+    *   **Crucial**: Save the plot to a file named 'plot.png' using `plt.savefig('plot.png')`. Do NOT use `plt.show()`.
+    *   Ensure the plot has a title, labels, and a legend if applicable.
+3.  **Refinement**: Improve the code structure and add comments. Print meaningful output to stdout.
+4.  **Dependencies**: List any external/extra libraries required to run the code (e.g., 'matplotlib', 'numpy').
+
+Response Format:
+You MUST return ONLY a valid JSON object with the following structure:
+{{
+    "code": "The complete python script as a string",
+    "dependencies": ["list", "of", "libraries"]
+}}
 """

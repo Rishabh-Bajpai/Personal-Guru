@@ -21,6 +21,12 @@ md = MarkdownIt()
 def mode(topic_name):
     topic_data = load_topic(topic_name)
     
+    # Initialize Persistent Sandbox
+    sandbox_id = session.get('sandbox_id')
+    # If exists, reuse. If None, create new.
+    sandbox = Sandbox(sandbox_id=sandbox_id)
+    session['sandbox_id'] = sandbox.id
+    
     # If topic exists and has a plan, go directly to learning
     # If topic exists and has a plan, go directly to learning
     if topic_data and topic_data.get('plan'):
@@ -261,6 +267,49 @@ def export_topic_pdf(topic_name):
     response.headers["Content-Disposition"] = f"attachment; filename={topic_name}.pdf"
     response.headers["Content-Type"] = "application/pdf"
     return response
+
+from .code_agent import CodeExecutionAgent
+from app.core.sandbox import Sandbox
+
+code_agent = CodeExecutionAgent()
+
+@chapter_bp.route('/execute_code', methods=['POST'])
+def execute_code():
+    data = request.json
+    code = data.get('code')
+    
+    if not code:
+        return {"error": "No code provided"}, 400
+
+    # 1. Enhance code
+    enhanced_data = code_agent.enhance_code(code)
+    enhanced_code = enhanced_data.get('code')
+    dependencies = enhanced_data.get('dependencies', [])
+    
+    # 2. Run in Sandbox
+    sandbox_id = session.get('sandbox_id')
+    sandbox = Sandbox(sandbox_id=sandbox_id)
+    
+    # Ensure ID is in session (if it was lost or new)
+    if not sandbox_id:
+         session['sandbox_id'] = sandbox.id
+         
+    try:
+        # Install deps (basic caching could be used here in future)
+        if dependencies:
+            sandbox.install_deps(dependencies)
+            
+        result = sandbox.run_code(enhanced_code)
+        
+        return {
+            "output": result.get('output'),
+            "error": result.get('error'),
+            "images": result.get('images', []), # List of base64 strings
+            "enhanced_code": enhanced_code
+        }
+    finally:
+        # Do persistent cleanup later
+        pass
 
 def _get_topic_data_and_score(topic_name):
     topic_data = load_topic(topic_name)

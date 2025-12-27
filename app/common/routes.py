@@ -12,6 +12,17 @@ main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/', methods=['GET', 'POST'])
 def index():
+    # Cleanup persistent sandbox if exists
+    sandbox_id = session.get('sandbox_id')
+    if sandbox_id:
+        try:
+            from app.core.sandbox import Sandbox
+            sb = Sandbox(sandbox_id=sandbox_id)
+            sb.cleanup()
+        except Exception:
+            pass # Ignore cleanup errors
+        session.pop('sandbox_id', None)
+
     if request.method == 'POST':
         topic_name = request.form.get('topic', '').strip()
         mode = request.form.get('mode', 'chapter')
