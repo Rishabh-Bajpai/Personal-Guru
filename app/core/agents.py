@@ -1,5 +1,5 @@
 from app.core.utils import call_llm
-from app.modes.chapter.prompts import get_code_execution_prompt
+from app.core.prompts import get_code_execution_prompt
 import re
 import json
 
