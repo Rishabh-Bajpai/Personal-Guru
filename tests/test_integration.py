@@ -56,7 +56,7 @@ def test_quiz_agent(logger):
     assert len(quiz["questions"]) == 2
 
 
-from app.modes.chapter.agent import PlannerAgent
+from app.core.agents import PlannerAgent
 
 def test_planner_agent(logger):
     """Test that the PlannerAgent can generate a study plan."""
@@ -134,11 +134,100 @@ def test_assessor_agent(logger):
     # answers instead of option letters). We patch validation to ensure we test 
     # the integration flow (LLM connectivity and JSON parsing) without being 
     # blocked by model quality issues.
-    with patch('app.modes.chapter.agent.validate_quiz_structure', return_value=(None, None)):
-        question, error = retry_agent_call(agent.generate_question, "A chapter about Python.", "beginner")
+    # The AssessorAgent generates questions via LLM. 
+    # validate_quiz_structure is technically not called by AssessorAgent (it does simple basic validation check inline).
+    # But let's keep the call simple.
+    question, error = retry_agent_call(agent.generate_question, "A chapter about Python.", "beginner")
     
     logger.response("Question", question)
     assert error is None
     assert question is not None
     assert "questions" in question
     assert len(question["questions"]) > 0
+
+
+def test_chat_session_persistence(logger, app):
+    """Test that chat history is saved to ChatSession table."""
+    logger.section("test_chat_session_persistence")
+    from app.common.models import Topic, ChatSession, User, db
+    from app.core.storage import save_chat_history
+    
+    with app.app_context():
+        # Ensure user exists (created in conftest auth_client logic or manually here)
+        # Since we use app_context, creating fresh.
+        if not User.query.get('testuser'):
+            u = User(username='testuser')
+            u.set_password('password')
+            db.session.add(u)
+            db.session.commit()
+            
+        # Mock current_user
+        from unittest.mock import MagicMock, patch
+        
+        # Patching current_user in app.core.storage module scope
+        with patch('app.core.storage.current_user') as mock_user:
+            mock_user.is_authenticated = True
+            mock_user.username = 'testuser'
+            
+            topic_name = "Session Test"
+            history = [{"role": "user", "content": "Hi"}]
+            
+            save_chat_history(topic_name, history)
+            
+            # Verify
+            t = Topic.query.filter_by(name=topic_name).first()
+            assert t is not None
+            assert t.chat_session is not None
+            assert len(t.chat_session.history) == 1
+            assert t.chat_session.history[0]['content'] == "Hi"
+            
+            logger.info("ChatSession persistence verified.")
+
+def test_quiz_result_persistence(logger, app):
+    """Test that quiz result is saved to Quiz table."""
+    logger.section("test_quiz_result_persistence")
+    from app.common.models import Topic, Quiz, User, db
+    from app.core.storage import save_topic, load_topic
+    
+    with app.app_context():
+        # Ensure user exists
+        if not User.query.get('testuser'):
+            u = User(username='testuser')
+            u.set_password('password')
+            db.session.add(u)
+            db.session.commit()
+            
+        with patch('app.core.storage.current_user') as mock_user:
+            mock_user.is_authenticated = True
+            mock_user.username = 'testuser'
+            
+            topic_name = "Quiz Persistence Test"
+            quiz_result = {"score": 90, "details": "Great job"}
+            data = {
+                "plan": [],
+                "steps": [],
+                "quiz": {
+                    "questions": [{"q": "1"}],
+                    "score": 90
+                },
+                "last_quiz_result": quiz_result
+            }
+            
+            save_topic(topic_name, data)
+            
+            # Verify DB
+            t = Topic.query.filter_by(name=topic_name).first()
+            assert t is not None
+            assert len(t.quizzes) == 1
+            idx = -1
+            q = t.quizzes[idx]
+            assert q.result is not None
+            assert q.result['score'] == 90
+            assert q.result['details'] == "Great job"
+            
+            # Verify Load
+            loaded_data = load_topic(topic_name)
+            assert loaded_data is not None
+            assert loaded_data['last_quiz_result'] == quiz_result
+            
+            logger.info("Quiz result persistence verified.")

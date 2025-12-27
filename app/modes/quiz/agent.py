@@ -79,7 +79,8 @@ class QuizAgent:
         Returns (count, None) on success or (default_count, error) on failure.
         """
         if user_background is None:
-            user_background = os.getenv("USER_BACKGROUND", "a beginner")
+            from app.core.utils import get_user_context
+            user_background = get_user_context()
 
         from app.modes.quiz.prompts import get_quiz_count_prompt
         prompt = get_quiz_count_prompt(topic, user_background)

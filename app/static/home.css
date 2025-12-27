@@ -1,0 +1,27 @@
+.mode-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    /* Prevent overflow on small screens */
+    margin: 0 20px;
+}
+
+.topic-name {
+    flex-shrink: 0;
+    /* Ensure name doesn't collapse */
+    font-size: 1.1em;
+    width: 150px;
+    /* Fixed width for alignment, or remove for fluid */
+}
+
+@media (max-width: 768px) {
+    .topics-list li {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .mode-buttons {
+        margin: 0;
+    }
+}

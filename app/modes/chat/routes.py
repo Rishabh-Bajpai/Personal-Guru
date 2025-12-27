@@ -1,39 +1,32 @@
 from flask import render_template, request, session, redirect, url_for
 from . import chat_bp
 from app.core.storage import load_topic, save_chat_history, save_topic
-from .agent import ChatAgent
+from app.core.agents import PlannerAgent
+from app.modes.chat.agent import ChatModeMainChatAgent
+from app.modes.chapter.agent import ChapterModeChatAgent
 import os
 
-chat_agent = ChatAgent()
+chat_agent = ChatModeMainChatAgent()
+chapter_agent = ChapterModeChatAgent()
 
 @chat_bp.route('/<topic_name>')
 def mode(topic_name):
-    # Ensure a clean slate for a new chat session topic
-    # Reset chat history when switching topics
-    if session.get('chat_topic') != topic_name:
-        session.pop('chat_history', None)
-        session['chat_topic'] = topic_name
-        session.modified = True  # Required for Flask to detect mutable object changes
-
     # Try to load from DB first
     topic_data = load_topic(topic_name)
     if not topic_data:
         topic_data = {"name": topic_name}
         save_topic(topic_name, topic_data)
         topic_data = load_topic(topic_name)
-    if topic_data and topic_data.get('chat_history'):
-        chat_history = topic_data['chat_history']
-        session['chat_history'] = chat_history
-    else:
-        chat_history = session.get('chat_history', [])
+    
+    chat_history = topic_data.get('chat_history', []) if topic_data else []
 
     if not chat_history:
         # Generate welcome message if chat is new
-        user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+        from app.core.utils import get_user_context
+        user_background = get_user_context()
         
         # 1. Generate Plan if missing
         if not topic_data or not topic_data.get('plan'):
-             from app.modes.chapter.agent import PlannerAgent
              planner = PlannerAgent()
              plan_steps, error = planner.generate_study_plan(topic_name, user_background)
              if not error:
@@ -53,8 +46,6 @@ def mode(topic_name):
             return render_template('error.html', error=welcome_message)
 
         chat_history.append({"role": "assistant", "content": welcome_message})
-        session['chat_history'] = chat_history
-        session.modified = True
         
         # Save to DB immediately so the topic is created and persisted
         save_chat_history(topic_name, chat_history)
@@ -77,21 +68,35 @@ def update_plan(topic_name):
         return redirect(url_for('chat.mode', topic_name=topic_name))
 
     current_plan = topic_data.get('plan', [])
-    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    from app.core.utils import get_user_context
+    user_background = get_user_context()
 
+    planner = PlannerAgent()
     # Call agent to get a new plan
-    new_plan, error = chat_agent.update_study_plan(topic_name, user_background, current_plan, comment)
+    new_plan, error = planner.update_study_plan(topic_name, user_background, current_plan, comment)
+
+    from app.core.utils import reconcile_plan_steps
 
     if not error:
         # Save the new plan
         topic_data['plan'] = new_plan
+        
+        # Sync steps with new plan
+        current_steps = topic_data.get('steps', [])
+        # Note: Chat mode might not have loaded 'steps' if it wasn't accessed via load_topic deeply?
+        # load_topic DOES load steps.
+        
+        topic_data['steps'] = reconcile_plan_steps(current_steps, current_plan, new_plan)
+        
         save_topic(topic_name, topic_data)
 
         # Add a system message to the chat
-        chat_history = session.get('chat_history', [])
+        # Reload history from DB to be safe
+        topic_data = load_topic(topic_name)
+        chat_history = topic_data.get('chat_history', [])
+        
         system_message = f"Based on your feedback, I've updated the study plan. The new focus will be on: {', '.join(new_plan)}. Let's proceed with the new direction."
         chat_history.append({"role": "assistant", "content": system_message})
-        session['chat_history'] = chat_history
         save_chat_history(topic_name, chat_history)
 
     # Redirect back to the chat interface
@@ -113,9 +118,11 @@ def send_message(topic_name):
         context = f'The topic is {topic_name}. No additional details are available yet.'
         plan = []
     
-    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    from app.core.utils import get_user_context
+    user_background = get_user_context()
 
-    chat_history = session.get('chat_history', [])
+    # Load history from DB
+    chat_history = topic_data.get('chat_history', []) if topic_data else []
     chat_history.append({"role": "user", "content": user_message})
 
     # Get answer from agent
@@ -127,9 +134,6 @@ def send_message(topic_name):
     else:
         chat_history.append({"role": "assistant", "content": answer})
 
-    session['chat_history'] = chat_history
-    session.modified = True  # Ensure Flask saves the updated list
-    
     # Save to DB
     save_chat_history(topic_name, chat_history)
 
@@ -153,11 +157,19 @@ def chat(topic_name, step_index):
         return {"error": "Step index out of range"}, 400
     current_step_data = topic_data['steps'][step_index]
     teaching_material = current_step_data.get('teaching_material', '')
-    current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
-    # Pass an empty conversation history for the chapter mode chat
-    answer, error = chat_agent.get_answer(
+    
+    # Load step-specific chat history
+    step_history = current_step_data.get('chat_history', [])
+    step_history.append({"role": "user", "content": user_question})
+    
+    from app.core.utils import get_user_context
+    current_background = get_user_context()
+    
+    # Pass the history to the agent.
+    # Note: We pass 'plan=[]' effectively because chapter mode context is the teaching material itself.
+    answer, error = chapter_agent.get_answer(
         user_question,
-        conversation_history=[],
+        conversation_history=step_history,
         context=teaching_material,
         user_background=current_background,
         plan=[],
@@ -165,5 +177,13 @@ def chat(topic_name, step_index):
 
     if error:
         return {"error": answer}, 500
+
+    # Append assistant answer
+    step_history.append({"role": "assistant", "content": answer})
+    
+    # Save back to topic data
+    current_step_data['chat_history'] = step_history
+    # We must save the whole topic to persist the step update
+    save_topic(topic_name, topic_data)
 
     return {"answer": answer}

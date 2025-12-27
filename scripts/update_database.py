@@ -26,7 +26,9 @@ TARGET_MODELS = [
     models.Topic,
     models.StudyStep,
     models.Quiz,
-    models.Flashcard
+    models.Flashcard,
+    models.ChatSession,
+    models.User
 ]
 
 def get_column_type(column):
@@ -57,12 +59,57 @@ def update_database():
             existing_columns = inspector.get_columns(table_name)
             existing_col_map = {col['name']: col for col in existing_columns}
             
+            # Special check for Topic model migration
+            if table_name == 'topics':
+                has_user_id = 'user_id' in existing_col_map
+                if not has_user_id:
+                     logger.warning(" !! Detected old 'topics' table schema (missing user_id). Dropping table to recreate with proper constraints.")
+                     # Drop table
+                     sql = text('DROP TABLE "topics" CASCADE')
+                     db.session.execute(sql)
+                     db.session.commit()
+                     logger.info("    -> Table dropped. Re-running create_all...")
+                     db.create_all()
+                     db.create_all()
+                     continue # Skip column inspection for this pass
+
+            # Special check for 'chat_history' and 'last_quiz_result' column removal in Topics
+            if table_name == 'topics':
+                for deprecated_col in ['chat_history', 'last_quiz_result']:
+                    if deprecated_col in existing_col_map:
+                        logger.info(f"  [-] Dropping deprecated column: {deprecated_col}")
+                        try:
+                            sql = text(f'ALTER TABLE "topics" DROP COLUMN "{deprecated_col}"')
+                            db.session.execute(sql)
+                            db.session.commit()
+                            logger.info("      -> Dropped successfully.")
+                        except Exception as e:
+                            logger.error(f"      -> FAILED to drop column: {e}")
+                            db.session.rollback()
+            
             # Get model columns
             model_columns = model.__table__.columns
             
             for column in model_columns:
                 col_name = column.name
                 col_type = column.type
+                
+                if table_name == 'users':
+                     # Special check for User model change (id -> username)
+                     has_id = 'id' in existing_col_map
+                     has_username = 'username' in existing_col_map
+                     
+                     if has_id and not has_username:
+                         logger.warning(" !! Detected old 'users' table schema (id PK). Dropping table to recreate with 'username' PK.")
+                         # Drop table
+                         sql = text('DROP TABLE "users"')
+                         db.session.execute(sql)
+                         db.session.commit()
+                         # Remove from map so it gets created in step 1 logic? 
+                         # Actually step 1 ran already. We might need to run create_all() again or manually create it.
+                         logger.info("    -> Table dropped. Re-running create_all...")
+                         db.create_all()
+                         continue # Skip column inspection for this pass
                 
                 # Check if column exists
                 if col_name not in existing_col_map:

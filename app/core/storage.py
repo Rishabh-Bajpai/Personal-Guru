@@ -2,22 +2,30 @@ from app.common.extensions import db
 from app.common.models import Topic, StudyStep, Quiz, Flashcard
 import logging
 
+from flask_login import current_user
+
 def save_topic(topic_name, data):
     """
     Save topic data to PostgreSQL database.
     """
     try:
-        # Check if topic exists
-        topic = Topic.query.filter_by(name=topic_name).first()
+        # Check if topic exists for current user
+        # Handle case where current_user might not be authenticated (e.g. CLI usage?)
+        # For now, assume web context.
+        if not current_user.is_authenticated:
+             logging.warning(f"Attempt to save topic {topic_name} without auth user.")
+             raise Exception("User must be logged in to save topic.")
+
+        topic = Topic.query.filter_by(name=topic_name, user_id=current_user.username).first()
         if not topic:
-            topic = Topic(name=topic_name)
+            topic = Topic(name=topic_name, user_id=current_user.username)
             db.session.add(topic)
         
         # Update fields
         # Note: We rely on the JSON structure provided by the app
         # Fix: App uses 'plan', Model uses 'study_plan'
         topic.study_plan = data.get('plan', []) 
-        topic.last_quiz_result = data.get('last_quiz_result')
+        # topic.last_quiz_result = data.get('last_quiz_result') # MOVED to Quiz table
         
         # Clear existing children to rebuild (simple strategy for full replace)
         # For efficiency, could compare, but this ensures consistency with "overwrite" behavior of JSON
@@ -46,28 +54,21 @@ def save_topic(topic_name, data):
                 questions=step_data.get('questions'),
                 user_answers=step_data.get('user_answers'),
                 feedback=step_data.get('feedback'),
-                score=step_data.get('score')
+                score=step_data.get('score'),
+                chat_history=step_data.get('chat_history')
             )
             db.session.add(step)
             
         # Quiz
-        quiz_data = data.get('quiz') # 'quiz' key in JSON based on inspection? 
-        # Wait, let's check one of the JSON files again. 
-        # In black hole.json, I see "quizzes" (plural) in models? 
-        # Actually I didn't verify the exact key for quiz in JSON.
-        # Let's assume the JSON structure matches the 'data' arg.
-        
+        # "quiz" key in JSON
         if 'quiz' in data:
-            # Handle single quiz object or list? 
-            # Usually it's "quiz": { ... } or "quizzes": [ ... ]
-            # I need to verify this assumption.
-            # I will assume "quiz" key for now based on usual single-topic quizzes.
              q_data = data.get('quiz')
              if q_data:
                  quiz = Quiz(
                      topic=topic,
                      questions=q_data.get('questions'),
-                     score=q_data.get('score')
+                     score=q_data.get('score'),
+                     result=data.get('last_quiz_result') # Storing the result here
                  )
                  db.session.add(quiz)
 
@@ -91,12 +92,30 @@ def save_chat_history(topic_name, history):
     Save chat history for a topic.
     """
     try:
-        topic = Topic.query.filter_by(name=topic_name).first()
+        if not current_user.is_authenticated:
+             logging.warning(f"Attempt to save chat history {topic_name} without auth.")
+             raise Exception("User must be logged in.")
+
+        topic = Topic.query.filter_by(name=topic_name, user_id=current_user.username).first()
         if not topic:
-            topic = Topic(name=topic_name)
+            topic = Topic(name=topic_name, user_id=current_user.username)
             db.session.add(topic)
-        
-        topic.chat_history = history
+            db.session.flush() # Ensure ID exists
+
+        from app.common.models import ChatSession
+
+        if not topic.chat_session:
+            chat_session = ChatSession(topic=topic, history=[])
+            db.session.add(chat_session)
+        else:
+            chat_session = topic.chat_session
+
+        # Update history
+        from sqlalchemy.orm.attributes import flag_modified
+        chat_session.history = list(history)
+        flag_modified(chat_session, 'history')
+        db.session.add(chat_session)
+
         db.session.commit()
     except Exception as e:
         db.session.rollback()
@@ -107,15 +126,18 @@ def load_topic(topic_name):
     """
     Load topic data from PostgreSQL and reconstruct dictionary structure.
     """
-    topic = Topic.query.filter_by(name=topic_name).first()
+    if not current_user.is_authenticated:
+        return None
+
+    topic = Topic.query.filter_by(name=topic_name, user_id=current_user.username).first()
     if not topic:
         return None
         
     data = {
         "name": topic.name,
         "plan": topic.study_plan or [], # Map model 'study_plan' back to app 'plan'
-        "last_quiz_result": topic.last_quiz_result,
-        "chat_history": topic.chat_history or [],
+        "last_quiz_result": None, # Will populate from Quiz
+        "chat_history": topic.chat_session.history if topic.chat_session else [],
         "steps": [],
         "quiz": None,
         "flashcards": []
@@ -140,6 +162,7 @@ def load_topic(topic_name):
                 "user_answers": step_model.user_answers,
                 "feedback": step_model.feedback,
                 "score": step_model.score,
+                "chat_history": step_model.chat_history or [],
                 # Include derived fields if needed, e.g. teaching_material is actually 'content' in model?
                 # In model: content = db.Column(db.Text) # Markdown content
                 # In app: key is 'teaching_material'
@@ -164,6 +187,8 @@ def load_topic(topic_name):
             "score": latest_quiz.score,
             "date": latest_quiz.created_at.isoformat() if latest_quiz.created_at else None
         }
+        # Populate last_quiz_result from the quiz
+        data["last_quiz_result"] = latest_quiz.result
         
     # Flashcards
     for card in topic.flashcards:
@@ -175,11 +200,17 @@ def load_topic(topic_name):
     return data
 
 def get_all_topics():
-    topics = Topic.query.with_entities(Topic.name).all()
+    if not current_user.is_authenticated:
+        return []
+
+    topics = Topic.query.with_entities(Topic.name).filter_by(user_id=current_user.username).all()
     return [t.name for t in topics]
 
 def delete_topic(topic_name):
-    topic = Topic.query.filter_by(name=topic_name).first()
+    if not current_user.is_authenticated:
+        return 
+
+    topic = Topic.query.filter_by(name=topic_name, user_id=current_user.username).first()
     if topic:
         db.session.delete(topic)
         db.session.commit()
