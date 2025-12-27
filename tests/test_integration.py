@@ -56,7 +56,7 @@ def test_quiz_agent(logger):
     assert len(quiz["questions"]) == 2
 
 
-from app.modes.chapter.agent import PlannerAgent
+from app.core.agents import PlannerAgent
 
 def test_planner_agent(logger):
     """Test that the PlannerAgent can generate a study plan."""

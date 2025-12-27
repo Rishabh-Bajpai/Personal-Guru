@@ -18,7 +18,7 @@ def test_full_learning_flow(client, mocker, logger):
     topic_name = "testing"
 
     # Mock PlannerAgent
-    mocker.patch('app.modes.chapter.routes.PlannerAgent.generate_study_plan', return_value=(['Step 1', 'Step 2'], None))
+    mocker.patch('app.core.agents.PlannerAgent.generate_study_plan', return_value=(['Step 1', 'Step 2'], None))
 
     # Mock TopicTeachingAgent (ChapterTeachingAgent)
     mocker.patch('app.modes.chapter.routes.ChapterTeachingAgent.generate_teaching_material', return_value=("## Step Content", None))
