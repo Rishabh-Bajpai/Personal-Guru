@@ -4,6 +4,8 @@ This is a Flask-based web application that serves as a proof-of-concept for a pe
 
 ## Features
 
+- **User Accounts:** Secure sign-up, login, and profile management.
+- **Topic Isolation:** Each user has their own private learning materials and topics.
 - **Dynamic Study Plans:** Enter any topic and receive a custom, step-by-step study plan.
 - **Detailed Study Content:** Each step in the study plan now includes detailed content.
 - **Interactive Learning:** Progress through the plan one step at a time.
@@ -12,6 +14,7 @@ This is a Flask-based web application that serves as a proof-of-concept for a pe
 - **Personalized Background:** Set your own background (e.g., "I am a beginner") to tailor the learning content to your level.
 - **Adaptive Learning:** The study plan adapts to your performance on the "Check Your Understanding" questions.
 - **Q&A Chat:** Ask questions about the study material and get answers from an AI assistant.
+- **Background Database Viewer:** Admin tool to view, sort, and manage database records (with bulk delete).
 - **Instant Feedback:** Receive immediate feedback on your answers.
 - **Local AI Integration:** Designed to connect with locally-hosted AI services (LLM, TTS) for privacy and control.
 - **Export to Markdown:** At the end of a course, you can export the entire study plan and content to a markdown file, perfect for importing into note-taking apps like Notion, Obsidian, or NotebookLM.
@@ -139,6 +142,19 @@ Now, open the `.env` file and customize the settings.
 - `LLM_MODEL_NAME`: The name of the model to use (e.g., `llama3`, `gpt-4o`).
 - `LLM_API_KEY`: API Key (optional for local providers like Ollama).
 - `LLM_NUM_CTX`: Context window size (recommended: `18000` or higher if your hardware supports it).
+
+- `LLM_NUM_CTX`: Context window size (recommended: `18000` or higher if your hardware supports it).
+
+## Database Schema
+
+The application uses the following PostgreSQL tables:
+
+- **users**: Stores user accounts and profiles.
+- **topics**: Main table for each subject the user is learning.
+- **study_steps**: Steps within a study plan (one-to-many from topics).
+- **quizzes**: Quizzes generated for a topic.
+- **flashcards**: Flashcards for vocabulary terms.
+- **chat_sessions**: Stores the conversational history for "Chat Mode" (one-to-one with topics). Note: "Chapter Mode" side-chats are stored directly in `study_steps.chat_history`.
 
 ## Database Setup (Docker)
 

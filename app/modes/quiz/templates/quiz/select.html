@@ -12,19 +12,12 @@
     <button class="button" onclick="generateQuiz(50)">50 Questions</button>
 </div>
 
+<script src="{{ url_for('quiz.static', filename='select.js') }}"></script>
 <script>
-    function generateQuiz(count) {
-        const topicName = "{{ topic_name }}";
-        let url;
-        if (count === 'auto') {
-            url = `/quiz/generate/${topicName}/auto`;
-        } else {
-            url = `/quiz/generate/${topicName}/${count}`;
-        }
-        window.location.href = url;
-    }
-</script>
-
+    initQuizSelect({
+        topicName: "{{ topic_name }}",
+        baseUrl: "/quiz/generate"
+    });
 </script>
 
 <link rel="stylesheet" href="{{ url_for('quiz.static', filename='quiz.css') }}">

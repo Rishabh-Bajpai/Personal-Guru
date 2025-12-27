@@ -88,15 +88,84 @@ def index():
     
     return render_template('index.html', topics=topics_data)
 
-@main_bp.route('/background', methods=['GET', 'POST'])
-def set_background():
+from flask_login import login_user, logout_user, login_required, current_user
+
+@main_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+        
     if request.method == 'POST':
-        session['user_background'] = request.form['user_background']
-        set_key(find_dotenv(), "USER_BACKGROUND", session['user_background'])
+        username = request.form['username']
+        password = request.form['password']
+        
+        from app.common.models import User
+        user = User.query.filter_by(username=username).first()
+        
+        if user is None or not user.check_password(password):
+            return render_template('login.html', error='Invalid username or password')
+            
+        login_user(user)
+        return redirect(url_for('main.index'))
+        
+    return render_template('login.html')
+
+@main_bp.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+        
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        from app.common.models import User
+        from app.common.extensions import db
+        
+        user = User.query.filter_by(username=username).first()
+        if user:
+            return render_template('signup.html', error='Username already exists')
+            
+        new_user = User(username=username)
+        new_user.set_password(password)
+        db.session.add(new_user)
+        db.session.commit()
+        
+        login_user(new_user)
+        return redirect(url_for('main.user_profile'))
+        
+    return render_template('signup.html')
+
+@main_bp.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('main.index'))
+
+@main_bp.route('/user_profile', methods=['GET', 'POST'])
+@login_required
+def user_profile():
+    from app.common.extensions import db
+    
+    user = current_user
+        
+    if request.method == 'POST':
+        user.name = request.form.get('name')
+        user.age = request.form.get('age')
+        user.country = request.form.get('country')
+        user.primary_language = request.form.get('primary_language')
+        user.education_level = request.form.get('education_level')
+        user.field_of_study = request.form.get('field_of_study')
+        user.occupation = request.form.get('occupation')
+        user.learning_goals = request.form.get('learning_goals')
+        user.prior_knowledge = request.form.get('prior_knowledge')
+        user.learning_style = request.form.get('learning_style')
+        user.time_commitment = request.form.get('time_commitment')
+        user.preferred_format = request.form.get('preferred_format')
+        
+        db.session.commit()
         return redirect(url_for('main.index'))
 
-    current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
-    return render_template('background.html', user_background=current_background)
+    return render_template('user_profile.html', user=user)
 
 @main_bp.route('/delete/<topic_name>')
 def delete_topic_route(topic_name):

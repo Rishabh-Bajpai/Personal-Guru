@@ -14,7 +14,8 @@ feedback_agent = FeedbackAgent()
 @quiz_bp.route('/generate/<topic_name>/<count>', methods=['GET', 'POST'])
 def generate_quiz(topic_name, count):
     """Generate a quiz with the specified number of questions and save it."""
-    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    from app.core.utils import get_user_context
+    user_background = get_user_context()
     
     # Handle 'auto' or numeric count
     if count.lower() != 'auto':

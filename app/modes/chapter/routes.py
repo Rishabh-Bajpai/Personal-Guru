@@ -1,8 +1,8 @@
 from flask import render_template, request, session, redirect, url_for, make_response
 from . import chapter_bp
 from app.core.storage import load_topic, save_topic
-from app.core.agents import FeedbackAgent
-from .agent import ChapterTeachingAgent, AssessorAgent, PlannerAgent
+from app.core.agents import FeedbackAgent, PlannerAgent
+from .agent import ChapterTeachingAgent, AssessorAgent
 from app.core.utils import generate_audio
 from markdown_it import MarkdownIt
 from weasyprint import HTML
@@ -42,7 +42,8 @@ def mode(topic_name):
         return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=resume_step_index))
     
     # No plan exists - generate one automatically
-    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    from app.core.utils import get_user_context
+    user_background = get_user_context()
     plan_steps, error = planner.generate_study_plan(topic_name, user_background)
     
     if error:
@@ -64,7 +65,8 @@ def generate_plan():
     if not topic_name:
         return {"error": "Topic name required"}, 400
         
-    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    from app.core.utils import get_user_context
+    user_background = get_user_context()
     plan_steps, error = planner.generate_study_plan(topic_name, user_background)
     
     if error:
@@ -78,6 +80,43 @@ def generate_plan():
     save_topic(topic_name, topic_data)
     
     return {"status": "success", "plan": plan_steps}
+
+@chapter_bp.route('/<topic_name>/update_plan', methods=['POST'])
+def update_plan(topic_name):
+    comment = request.form.get('comment')
+    current_step_index = request.form.get('current_step_index', 0)
+    
+    if not comment or not comment.strip():
+         return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=current_step_index))
+
+    topic_data = load_topic(topic_name)
+    if not topic_data:
+        return "Topic not found", 404
+
+    current_plan = topic_data.get('plan', [])
+    from app.core.utils import get_user_context
+    user_background = get_user_context()
+
+    # Use the unified PlannerAgent
+    new_plan, error = planner.update_study_plan(topic_name, user_background, current_plan, comment)
+
+    if not error:
+        # Smart Update: Preserve content for unchanged steps
+        from app.core.utils import reconcile_plan_steps
+
+        # Smart Update using helper
+        topic_data['plan'] = new_plan
+        topic_data['steps'] = reconcile_plan_steps(
+            topic_data.get('steps', []),
+            current_plan, # Original plan strings! We need them.
+            new_plan
+        )
+        # Wait, reconcile_plan_steps signature: (current_steps, current_plan, new_plan)
+        # I have current_plan already (line 94).
+        
+        save_topic(topic_name, topic_data)
+
+    return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=0))
 
 @chapter_bp.route('/learn/<topic_name>/<int:step_index>')
 def learn_topic(topic_name, step_index):
@@ -103,12 +142,14 @@ def learn_topic(topic_name, step_index):
 
     if not current_step_data.get('teaching_material'):
         incorrect_questions = session.get('incorrect_questions')
-        current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+        from app.core.utils import get_user_context
+        current_background = get_user_context()
         teaching_material, error = teacher.generate_teaching_material(plan_steps[step_index], plan_steps, current_background, incorrect_questions)
         if error:
             return f"<h1>Error Generating Teaching Material</h1><p>{teaching_material}</p>"
         current_step_data['teaching_material'] = teaching_material
-        current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+        from app.core.utils import get_user_context
+        current_background = get_user_context()
         question_data, error = assessor.generate_question(teaching_material, current_background)
         if not error:
             current_step_data['questions'] = question_data

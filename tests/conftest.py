@@ -54,3 +54,21 @@ def app():
 def client(app):
     """A test client for the app."""
     return app.test_client()
+
+@pytest.fixture
+def auth_client(client, app):
+    """A logged-in test client."""
+    from app.common.models import User
+    
+    with app.app_context():
+        # Create test user
+        # Check if exists first to be safe (though db dropped per test)
+        if not User.query.get('testuser'):
+            user = User(username='testuser')
+            user.set_password('password')
+            db.session.add(user)
+            db.session.commit()
+            
+    # Login
+    client.post('/login', data={'username': 'testuser', 'password': 'password'}, follow_redirects=True)
+    return client

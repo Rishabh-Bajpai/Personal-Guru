@@ -1,0 +1,393 @@
+/* Theme color variables for light and dark modes */
+:root {
+    --user-bubble-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --assistant-bubble-bg: #ffffff;
+    --assistant-text: #333;
+    --chat-bg: #f0f2f5;
+    --input-bg: #ffffff;
+}
+
+body.dark-mode {
+    --user-bubble-bg: linear-gradient(135deg, #4a6fa5 0%, #6b5b95 100%);
+    --assistant-bubble-bg: #2d2d2d;
+    --assistant-text: #e0e0e0;
+    --chat-bg: #1a1a1a;
+    --input-bg: #2d2d2d;
+}
+
+#main-container {
+    display: flex;
+    height: 90vh;
+    max-width: 1400px;
+    margin: 20px auto;
+    gap: 20px;
+}
+
+#plan-sidebar {
+    flex: 0 0 320px;
+    background: var(--assistant-bubble-bg);
+    border-radius: 16px;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: width 0.3s ease, padding 0.3s ease, flex-basis 0.3s ease;
+    position: relative;
+}
+
+#plan-sidebar.collapsed {
+    flex: 0 0 60px !important;
+    padding: 25px 10px;
+    overflow: hidden;
+}
+
+#plan-sidebar.collapsed h2,
+#plan-sidebar.collapsed ul,
+#plan-sidebar.collapsed form,
+#plan-sidebar.collapsed .sidebar-content {
+    display: none;
+}
+
+.sidebar-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--assistant-text);
+    opacity: 0.7;
+    z-index: 100;
+    transition: right 0.3s ease;
+}
+
+#plan-sidebar.collapsed .sidebar-toggle {
+    right: 50%;
+    transform: translateX(50%);
+}
+
+#plan-sidebar h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-weight: 700;
+    font-size: 1.4rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding-bottom: 15px;
+    padding-right: 30px;
+    /* Space for toggle button */
+}
+
+#plan-sidebar ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0 0 20px 0;
+    font-size: 1rem;
+}
+
+#plan-sidebar li {
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    font-weight: 500;
+    opacity: 0.8;
+}
+
+#plan-sidebar li:last-child {
+    border-bottom: none;
+}
+
+#plan-modification-form {
+    margin-top: auto;
+    /* Pushes form to the bottom */
+}
+
+#plan-modification-form h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+#plan-modification-input {
+    width: 100%;
+    min-height: 80px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+    resize: vertical;
+    transition: opacity 0.3s ease, background-color 0.3s ease;
+}
+
+#plan-modification-input:read-only {
+    opacity: 0.6;
+    background-color: rgba(0, 0, 0, 0.05);
+    cursor: not-allowed;
+}
+
+#plan-modification-button {
+    transition: opacity 0.3s ease, cursor 0.3s ease;
+}
+
+#plan-modification-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+#chat-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--chat-bg);
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+#chat-header {
+    padding: 20px 30px;
+    background: var(--assistant-bubble-bg);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    flex-shrink: 0;
+}
+
+#chat-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+#chat-window {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    scroll-behavior: smooth;
+}
+
+.message-wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+/* Align user messages to the right, AI messages to the left */
+.message-wrapper.user-wrapper {
+    align-items: flex-end;
+}
+
+.message-wrapper.assistant-wrapper {
+    align-items: flex-start;
+}
+
+.message {
+    padding: 16px 20px;
+    border-radius: 18px;
+    line-height: 1.6;
+    word-wrap: break-word;
+    position: relative;
+    font-size: 1.05rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* User messages: purple gradient, compact, right-aligned */
+.user-message {
+    background: var(--user-bubble-bg);
+    color: white;
+    border-bottom-right-radius: 4px;
+    max-width: 70%;
+    font-weight: 500;
+}
+
+/* AI messages: light/dark background, wider, left-aligned */
+.assistant-message {
+    background-color: var(--assistant-bubble-bg);
+    color: var(--assistant-text);
+    border-bottom-left-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    max-width: 90%;
+}
+
+.message-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    opacity: 0.7;
+    color: var(--assistant-text);
+}
+
+#chat-input:disabled,
+#chat-input:read-only {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+#send-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.loading-indicator {
+    font-size: 0.9rem;
+    color: var(--assistant-text);
+    opacity: 0.7;
+    margin-left: 10px;
+}
+
+/* Markdown Styling inside Assistant Bubbles */
+.message-content h1,
+.message-content h2,
+.message-content h3 {
+    margin: 15px 0 10px 0;
+    color: inherit;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.message-content h2 {
+    font-size: 1.4rem;
+}
+
+.message-content h3 {
+    font-size: 1.2rem;
+}
+
+.message-content hr {
+    border: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    margin: 20px 0;
+}
+
+body.dark-mode .message-content hr {
+    border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.message-content p {
+    margin: 0 0 12px 0;
+}
+
+.message-content p:last-child {
+    margin-bottom: 0;
+}
+
+.message-content ul,
+.message-content ol {
+    margin: 12px 0;
+    padding-left: 25px;
+}
+
+.message-content li {
+    margin-bottom: 8px;
+}
+
+.message-content strong {
+    font-weight: 700;
+    color: inherit;
+}
+
+.message-content code {
+    background-color: rgba(0, 0, 0, 0.1);
+    padding: 3px 6px;
+    border-radius: 6px;
+    font-family: 'Fira Code', 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+body.dark-mode .message-content code {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.message-content pre {
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 16px;
+    border-radius: 12px;
+    overflow-x: auto;
+    margin: 15px 0;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+body.dark-mode .message-content pre {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+.message-content pre code {
+    background: none;
+    padding: 0;
+}
+
+#input-area {
+    padding: 25px 30px;
+    background: var(--assistant-bubble-bg);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+#chat-form {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+#chat-input {
+    flex-grow: 1;
+    padding: 15px 25px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-radius: 30px;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    outline: none;
+    background: var(--input-bg);
+    color: var(--assistant-text);
+}
+
+#chat-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+}
+
+body.dark-mode #chat-input:focus {
+    border-color: #697565;
+    box-shadow: 0 0 0 4px rgba(105, 117, 101, 0.2);
+}
+
+#send-button {
+    height: 54px;
+    padding: 0 30px;
+    border-radius: 27px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+#send-button:active {
+    transform: scale(0.95);
+}
+
+/* Custom Scrollbar */
+#chat-window::-webkit-scrollbar {
+    width: 8px;
+}
+
+#chat-window::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#chat-window::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+
+body.dark-mode #chat-window::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+}

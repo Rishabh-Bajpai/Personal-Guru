@@ -20,8 +20,13 @@
     </div>
     <div class="container">
         <div style="text-align: right; margin-bottom: 1rem;">
-            {% if request.path == '/' %}
-            <a href="{{ url_for('main.set_background') }}" class="button">Set Background</a>
+            {% if current_user.is_authenticated %}
+            <span style="margin-right: 15px; color: var(--text-color);">Hello, {{ current_user.username }}</span>
+            <a href="{{ url_for('main.user_profile') }}" class="button">Profile</a>
+            <a href="{{ url_for('main.logout') }}" class="button">Logout</a>
+            {% else %}
+            <a href="{{ url_for('main.login') }}" class="button">Log In</a>
+            <a href="{{ url_for('main.signup') }}" class="button">Sign Up</a>
             {% endif %}
             <a href="/" class="button">Home</a>
             <button id="theme-switcher" class="button">Toggle Theme</button>
@@ -29,37 +34,7 @@
         {% block content %}{% endblock %}
     </div>
 
-    <script>
-        const loader = document.getElementById('loader');
-        function showLoader() {
-            if (loader) {
-                loader.style.display = 'block';
-            }
-        }
-        function hideLoader() {
-            if (loader) {
-                loader.style.display = 'none';
-            }
-        }
-
-        const themeSwitcher = document.getElementById('theme-switcher');
-        const body = document.body;
-
-        themeSwitcher.addEventListener('click', () => {
-            body.classList.toggle('dark-mode');
-            localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light');
-        });
-
-        // Apply the saved theme on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'light') {
-                body.classList.remove('dark-mode');
-            } else {
-                body.classList.add('dark-mode');
-            }
-        });
-    </script>
+    <script src="{{ url_for('static', filename='base.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 

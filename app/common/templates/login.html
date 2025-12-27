@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Personal Guru{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-header">
+        <h1>Login</h1>
+    </div>
+
+    {% if error %}
+    <p class="error-msg">{{ error }}</p>
+    {% endif %}
+
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" class="form-control" required placeholder="Enter username">
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" class="form-control" required
+                placeholder="Enter password">
+        </div>
+
+        <button type="submit" class="btn-auth">Log In</button>
+    </form>
+
+    <div class="auth-links">
+        <p>Don't have an account? <a href="{{ url_for('main.signup') }}">Sign up</a></p>
+    </div>
+</div>
+{% endblock %}

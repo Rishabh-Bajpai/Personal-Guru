@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}User Profile{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='profile.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header">
+        <h1>Your Learning Profile</h1>
+        <p>Help us personalize your learning journey</p>
+    </div>
+
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="form-grid">
+            <!-- Personal Info -->
+            <div class="section-title">Personal Information</div>
+
+            <div class="form-group">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" name="name" class="form-control" value="{{ user.name or '' }}"
+                    placeholder="Enter your name">
+            </div>
+
+            <div class="form-group">
+                <label for="age">Age</label>
+                <input type="number" id="age" name="age" class="form-control" value="{{ user.age or '' }}"
+                    placeholder="Age">
+            </div>
+
+            <div class="form-group">
+                <label for="country">Country</label>
+                <input type="text" id="country" name="country" class="form-control" value="{{ user.country or '' }}"
+                    placeholder="Country">
+            </div>
+
+            <div class="form-group">
+                <label for="primary_language">Primary Language</label>
+                <input type="text" id="primary_language" name="primary_language" class="form-control"
+                    value="{{ user.primary_language or '' }}" placeholder="e.g. English, Spanish">
+            </div>
+
+            <!-- Education & Profession -->
+            <div class="section-title">Education & Profession</div>
+
+            <div class="form-group">
+                <label for="education_level">Education Level</label>
+                <select id="education_level" name="education_level" class="form-control">
+                    <option value="" disabled {% if not user.education_level %}selected{% endif %}>Select Level</option>
+                    <option value="High School" {% if user.education_level=='High School' %}selected{% endif %}>High
+                        School</option>
+                    <option value="Undergraduate" {% if user.education_level=='Undergraduate' %}selected{% endif %}>
+                        Undergraduate</option>
+                    <option value="Graduate" {% if user.education_level=='Graduate' %}selected{% endif %}>Graduate
+                    </option>
+                    <option value="PhD" {% if user.education_level=='PhD' %}selected{% endif %}>PhD</option>
+                    <option value="Self-Taught" {% if user.education_level=='Self-Taught' %}selected{% endif %}>
+                        Self-Taught</option>
+                    <option value="Other" {% if user.education_level=='Other' %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="field_of_study">Field of Study</label>
+                <input type="text" id="field_of_study" name="field_of_study" class="form-control"
+                    value="{{ user.field_of_study or '' }}" placeholder="e.g. Computer Science, Biology">
+            </div>
+
+            <div class="form-group full-width">
+                <label for="occupation">Current Occupation</label>
+                <input type="text" id="occupation" name="occupation" class="form-control"
+                    value="{{ user.occupation or '' }}" placeholder="e.g. Student, Software Engineer">
+            </div>
+
+            <!-- Learning Preferences -->
+            <div class="section-title">Learning Preferences</div>
+
+            <div class="form-group full-width">
+                <label for="learning_goals">Learning Goals</label>
+                <textarea id="learning_goals" name="learning_goals" class="form-control"
+                    placeholder="What do you want to achieve?">{{ user.learning_goals or '' }}</textarea>
+            </div>
+
+            <div class="form-group full-width">
+                <label for="prior_knowledge">Prior Knowledge</label>
+                <textarea id="prior_knowledge" name="prior_knowledge" class="form-control"
+                    placeholder="What do you already know?">{{ user.prior_knowledge or '' }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="learning_style">Learning Style</label>
+                <select id="learning_style" name="learning_style" class="form-control">
+                    <option value="" disabled {% if not user.learning_style %}selected{% endif %}>Select Style</option>
+                    <option value="Visual" {% if user.learning_style=='Visual' %}selected{% endif %}>Visual (Images,
+                        Diagrams)</option>
+                    <option value="Auditory" {% if user.learning_style=='Auditory' %}selected{% endif %}>Auditory
+                        (Listening)</option>
+                    <option value="Reading/Writing" {% if user.learning_style=='Reading/Writing' %}selected{% endif %}>
+                        Reading/Writing</option>
+                    <option value="Kinesthetic" {% if user.learning_style=='Kinesthetic' %}selected{% endif %}>
+                        Kinesthetic (Hands-on)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="preferred_format">Preferred Format</label>
+                <select id="preferred_format" name="preferred_format" class="form-control">
+                    <option value="" disabled {% if not user.preferred_format %}selected{% endif %}>Select Format
+                    </option>
+                    <option value="Text-heavy" {% if user.preferred_format=='Text-heavy' %}selected{% endif %}>Detailed
+                        Text</option>
+                    <option value="Interactive" {% if user.preferred_format=='Interactive' %}selected{% endif %}>
+                        Interactive (Quizzes, Code)</option>
+                    <option value="Concise" {% if user.preferred_format=='Concise' %}selected{% endif %}>Concise
+                        Summaries</option>
+                </select>
+            </div>
+
+            <div class="form-group full-width">
+                <label for="time_commitment">Time Commitment</label>
+                <input type="text" id="time_commitment" name="time_commitment" class="form-control"
+                    value="{{ user.time_commitment or '' }}" placeholder="e.g. 2 hours/week, 30 mins/day">
+            </div>
+        </div>
+
+        <button type="submit" class="btn-save">Save Profile</button>
+    </form>
+</div>
+{% endblock %}

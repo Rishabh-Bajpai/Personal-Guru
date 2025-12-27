@@ -1,93 +1,96 @@
-def get_teaching_material_prompt(topic, full_plan_text, user_background, incorrect_questions_text):
-    return f"""
-You are an expert teacher. Your role is to teach a topic in detail.
-The full study plan is:
-{full_plan_text}
-The user's background is: '{user_background}'
-The current topic is: "{topic}"
+def get_chapter_system_message(context, user_background, is_guided_mode, plan=None):
+    """
+    Returns a system message for the Chapter Mode side-chat.
+    Focuses on concise, direct answers based on the teaching material.
+    """
+    
+    base_prompt = f"""
+You are an expert Tutor assisting a student with a specific learning module.
+Your goal is to answer questions about the current content concisely and directly.
 
-The user has previously answered the following questions incorrectly:
-{incorrect_questions_text}
+The user's background is: '{user_background}'.
+The current learning material is:
+"{context}"
 
-Based on the topic, the full study plan, and the user's incorrect answers, generate detailed teaching material for the current topic.
-Avoid generating content that is covered in other steps of the plan.
-The material should be comprehensive and include python code examples with minimal dependencies/libraries where appropriate.
-The output should be a single string of markdown-formatted text.
+INSTRUCTIONS:
+1. **Be Concise**: The user is looking at a side-panel chat. Keep answers short and to the point. Avoid long paragraphs.
+2. **Context First**: Answer based primarily on the provided learning material content.
+3. **Directness**: Do not use "Certainly!" or "Here is the answer". Just answer.
+4. **No Artifacts**: Do not output internal thought processes, <tool_call> tags, or <think> tags. Output ONLY the answer.
+5. **Formatting**: You can use bullet points for lists, but keep them compact.
 """
-
-def get_assessment_question_prompt(step_text, user_background):
-    return f"""
-You are an expert assessor. Based on the following learning material, create between 1 and 3 multiple-choice questions to test understanding.
-The number of questions should be appropriate for the length and complexity of the material.
-Return a JSON object with a single key "questions", which is an array of question objects.
-Each question object MUST have keys:
-- "question": string
-- "options": array of 4 strings
-- "correct_answer": string (one of 'A', 'B', 'C', 'D')
-
-The user's background is: '{user_background}'
-Learning Material: "{step_text}"
-
-Example JSON response:
-{{
-  "questions": [
-    {{
-      "question": "What is the primary function of the Flask `request` object?",
-      "options": [
-        "To render HTML templates.",
-        "To handle incoming HTTP requests and access data.",
-        "To connect to the database.",
-        "To serve static files."
-      ],
-      "correct_answer": "B"
-    }}
-  ]
-}}
-"""
-
-def get_study_plan_prompt(topic, user_background):
-    return f"""
-You are an expert in creating personalized study plans. For the topic '{topic}', create a high-level learning plan with 4-7 manageable steps, depending on the complexity of the topic.
-The user's background is: '{user_background}'
-The output should be a JSON object with a single key "plan", which is an array of strings. Each string is a step in the learning plan.
-Do not generate the content for each step, only the plan itself.
-
-Example of a good plan for the topic 'Flask':
-"Our Flask Learning Plan:
-
-Introduction to Flask & Setup: What is Flask? Why use it? Setting up a Conda environment and installing Flask. (Today)
-Your First Flask App: A basic "Hello, World!" application. Understanding routes and the app object.
-Templates & Rendering: Using Jinja2 templates to separate logic from presentation. Passing data to templates.
-Static Files: Serving CSS, JavaScript, and images.
-Request Handling: Accessing data sent by the user (form data, URL parameters).
-Forms & User Input: Working with HTML forms and validating user data.
-Databases (SQLite): Connecting to a database and performing basic operations.
-More Advanced Topics (Optional): User authentication, sessions, and scaling."
-
-Now, generate a similar plan for the topic: '{topic}'.
-"""
+    return base_prompt
 
 CODE_EXECUTION_PROMPT = """
-You are a Python expert. Your task is to take a user-provided code snippet and transform it into a complete, runnable, and visually appealing script.
+You are an expert Python coding assistant.
+Your goal is to enhance the provided code snippet to make it runnable, robust, and visually appealing if it involves plots.
 
-Original Code:
+INPUT CODE:
 ```python
 {code}
 ```
 
-Instructions:
-1.  **Completeness**: Add any missing imports. Ensure the code is self-contained, and error free. and use minimal dependencies/libraries.
-2.  **Visualization**:
-    *   If the code involves data or math, use `matplotlib` or `seaborn` to create a plot.
-    *   **Crucial**: Save the plot to a file named 'plot.png' using `plt.savefig('plot.png')`. Do NOT use `plt.show()`.
-    *   Ensure the plot has a title, labels, and a legend if applicable.
-3.  **Refinement**: Improve the code structure and add comments. Print meaningful output to stdout.
-4.  **Dependencies**: List any external/extra libraries required to run the code (e.g., 'matplotlib', 'numpy').
+INSTRUCTIONS:
+1. **Import Dependencies**: Ensure all necessary libraries (e.g., matplotlib, pandas, numpy) are imported.
+2. **Error Handling**: Wrap the main logic in try-except blocks to print meaningful errors instead of crashing.
+3. **Visualization**: If the code generates plots, ensure they are saved to a file or buffer if needed, or better yet, assume standard plt.show() works in the sandbox which captures stdout/images.
+4. **Dependencies List**: Identify all external pip packages required.
 
-Response Format:
-You MUST return ONLY a valid JSON object with the following structure:
+OUTPUT FORMAT:
+Return a strictly valid JSON object with the following structure:
 {{
-    "code": "The complete python script as a string",
-    "dependencies": ["list", "of", "libraries"]
+    "code": "The full enhanced python code string...",
+    "dependencies": ["list", "of", "pip", "packages"]
+}}
+"""
+
+def get_teaching_material_prompt(topic, full_plan, user_background, incorrect_questions=None):
+    prompt = f"""
+You are an expert tutor. Create detailed teaching material for the topic: "{topic}".
+The user's background is: "{user_background}".
+
+FULL STUDY PLAN CONTEXT:
+{chr(10).join([f"- {s}" for s in full_plan])}
+
+INSTRUCTIONS:
+1. **Explain the Topic**: Provide a clear, comprehensive explanation of the concept "{topic}".
+2. **Relevance**: Explain why this is important in the context of the overall study plan.
+3. **Examples**: Provide concrete code examples or real-world analogies.
+4. **Formatting**: Use Markdown headers, bullet points, and code blocks for readability.
+5. **Interactive Encouragement**: Encourage the user to try the code examples.
+"""
+    if incorrect_questions:
+        prompt += f"""
+IMPORTANT: The user previously struggled with the following questions. Please pay extra attention to clarifying these concepts:
+{chr(10).join([f"- {q.get('question')}" for q in incorrect_questions])}
+"""
+    return prompt
+
+def get_assessment_prompt(teaching_material, user_background):
+    return f"""
+You are an expert examiner. Based on the teaching material provided below, generate a set of 3 multiple-choice assessment questions to test the user's understanding.
+
+TEACHING MATERIAL:
+{teaching_material}
+
+USER BACKGROUND:
+{user_background}
+
+INSTRUCTIONS:
+1. Generate exactly 3 questions.
+2. Each question must have 4 options (A, B, C, D).
+3. Identify the correct answer option.
+4. The output must be a valid JSON object with a single key "questions", which is a list of question objects.
+
+JSON FORMAT:
+{{
+    "questions": [
+        {{
+            "question": "Question text here?",
+            "options": ["Option A", "Option B", "Option C", "Option D"],
+            "correct_answer": "A"
+        }},
+        ...
+    ]
 }}
 """
