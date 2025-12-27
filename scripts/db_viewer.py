@@ -41,15 +41,15 @@ VIEWER_HTML = """
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DB Viewer</title>
     <style>
-      body { font-family: sans-serif; padding: 20px; }
+      body { font-family: sans-serif; padding: 20px; background-color: #1a1a1a; color: #e0e0e0; }
       nav { margin-bottom: 20px; }
-      nav a { margin-right: 10px; text-decoration: none; color: #007bff; }
+      nav a { margin-right: 10px; text-decoration: none; color: #66b0ff; }
       nav a:hover { text-decoration: underline; }
-      table { border-collapse: collapse; width: 100%; }
-      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
-      th { background-color: #f2f2f2; }
-      tr:nth-child(even) { background-color: #f9f9f9; }
-      pre { margin: 0; white-space: pre-wrap; font-size: 0.9em; color: #333; }
+      table { border-collapse: collapse; width: 100%; border: 1px solid #444; }
+      th, td { border: 1px solid #444; padding: 8px; text-align: left; vertical-align: top; }
+      th { background-color: #333; color: #fff; }
+      tr:nth-child(even) { background-color: #252525; }
+      pre { margin: 0; white-space: pre-wrap; font-size: 0.9em; color: #ccc; }
     </style>
   </head>
   <body>
