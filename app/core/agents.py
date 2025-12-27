@@ -30,8 +30,8 @@ class CodeExecutionAgent:
                 data = json.loads(json_match.group())
                 return data
             else:
-                 # Fallback if no JSON found
-                 return {"code": original_code, "dependencies": []}
+                # Fallback if no JSON found
+                return {"code": original_code, "dependencies": []}
         except Exception as e:
             print(f"Error parsing LLM response: {e}")
             return {"code": original_code, "dependencies": []}
