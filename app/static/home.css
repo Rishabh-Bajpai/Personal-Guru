@@ -1,3 +1,4 @@
+/* Topics List - default (Light Mode) */
 .topics-list {
     margin-top: 20px;
 }
@@ -11,11 +12,23 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: #f9f9f9;
+    background-color: #ffffff;
+    /* White background */
     padding: 15px;
     margin-bottom: 10px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: 1px solid #ddd;
+    /* Standard border matching inputs */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    /* Very subtle shadow */
+    transition: all 0.2s ease;
+}
+
+.topics-list li:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-color: #007bff;
+    /* Highlight border with primary color on hover */
 }
 
 .mode-buttons {
@@ -32,6 +45,8 @@
     font-size: 1.1em;
     width: 150px;
     /* Fixed width for alignment, or remove for fluid */
+    color: #333;
+    font-weight: 600;
 }
 
 @media (max-width: 768px) {
@@ -46,7 +61,7 @@
     }
 }
 
-/* Suggestions Area */
+/* Suggestions Area - default (Light Mode) */
 .suggestions-chips {
     display: flex;
     flex-wrap: wrap;
@@ -55,24 +70,29 @@
 }
 
 .suggestion-chip {
-    background-color: #e0e0e0;
-    color: #333;
-    border: none;
+    background-color: #ffffff;
+    color: #007bff;
+    /* Primary color text */
+    border: 1px solid #007bff;
+    /* Primary color border */
     border-radius: 20px;
-    padding: 8px 16px;
+    padding: 6px 16px;
     cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
+    transition: all 0.2s ease;
     font-size: 0.9em;
     font-weight: 500;
 }
 
 .suggestion-chip:hover {
-    background-color: #d0d0d0;
-    transform: translateY(-2px);
+    background-color: #007bff;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 123, 255, 0.3);
 }
 
 .suggestion-chip:active {
     transform: translateY(0);
+    box-shadow: none;
 }
 
 /* Skeletal Loader */
@@ -102,29 +122,38 @@
     }
 }
 
-/* Dark Mode Support (using media query as a baseline, or class-based if app supports toggle) */
-@media (prefers-color-scheme: dark) {
-    .topics-list li {
-        background-color: #2c2c2c;
-        color: #ddd;
-    }
+/* Dark Mode Overrides - STRICTLY tied to the body class */
+body.dark-mode .topics-list li {
+    background-color: #2c2c2c;
+    border-color: #444;
+    box-shadow: none;
+}
 
-    .suggestion-chip {
-        background-color: #3a3a3a;
-        color: #eee;
-    }
+body.dark-mode .topics-list li:hover {
+    background-color: #333;
+    border-color: #555;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
 
-    .suggestion-chip:hover {
-        background-color: #4a4a4a;
-    }
+body.dark-mode .topic-name,
+body.dark-mode .topic-name strong {
+    color: #eee;
+}
 
-    .skeleton-chip {
-        background: #333;
-        background: linear-gradient(to right, #333 0%, #444 50%, #333 100%);
-        background-size: 200% 100%;
-    }
+body.dark-mode .suggestion-chip {
+    background-color: #3a3a3a;
+    color: #e8eaed;
+    border-color: #5f6368;
+}
 
-    .topic-name strong {
-        color: #eee;
-    }
+body.dark-mode .suggestion-chip:hover {
+    background-color: #4a4a4a;
+    border-color: #70757a;
+    color: #fff;
+}
+
+body.dark-mode .skeleton-chip {
+    background: #333;
+    background: linear-gradient(to right, #333 0%, #444 50%, #333 100%);
+    background-size: 200% 100%;
 }
