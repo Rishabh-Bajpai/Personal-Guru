@@ -1,10 +1,9 @@
-from flask import render_template, request, session, redirect, url_for
+from flask import render_template, request, redirect, url_for
 from . import chat_bp
 from app.core.storage import load_topic, save_chat_history, save_topic
 from app.core.agents import PlannerAgent
 from app.modes.chat.agent import ChatModeMainChatAgent
 from app.modes.chapter.agent import ChapterModeChatAgent
-import os
 
 chat_agent = ChatModeMainChatAgent()
 chapter_agent = ChapterModeChatAgent()

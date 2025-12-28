@@ -52,3 +52,27 @@ Based on the user's feedback, generate a revised, concise study plan as a Python
 - Do NOT add any introductory text or explanation outside the list.
 - The number of steps in the plan should be between 3 and 7.
 """
+
+def get_code_execution_prompt(code):
+    return f"""
+You are an expert Python coding assistant.
+Your goal is to enhance the provided code snippet to make it runnable, robust, and visually appealing if it involves plots.
+
+INPUT CODE:
+```python
+{code}
+```
+
+INSTRUCTIONS:
+1. **Import Dependencies**: Ensure all necessary libraries (e.g., matplotlib, pandas, numpy) are imported.
+2. **Error Handling**: Wrap the main logic in try-except blocks to print meaningful errors instead of crashing.
+3. **Visualization**: If the code generates plots, ensure they are saved to a file or buffer if needed, or better yet, assume standard plt.show() works in the sandbox which captures stdout/images.
+4. **Dependencies List**: Identify all external pip packages required.
+
+OUTPUT FORMAT:
+Return a strictly valid JSON object with the following structure:
+{{
+    "code": "The full enhanced python code string...",
+    "dependencies": ["list", "of", "pip", "packages"]
+}}
+"""

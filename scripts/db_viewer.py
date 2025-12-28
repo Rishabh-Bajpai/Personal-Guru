@@ -382,7 +382,6 @@ def bulk_delete_items(model_name):
 @app.route('/db-viewer')
 @app.route('/db-viewer/<model_name>')
 def db_viewer(model_name=None):
-    from flask import request, redirect
     
     if model_name and model_name in MODELS:
         model = MODELS[model_name]
@@ -423,5 +422,8 @@ def index():
     return render_template_string(VIEWER_HTML, models=MODELS.keys(), current_model=None)
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+        print("Database tables created/verified.")
     print("Starting DB Viewer on http://localhost:5012/")
     app.run(host='0.0.0.0', port=5012, debug=True)

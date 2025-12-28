@@ -1,6 +1,5 @@
 # scripts/generate_cert.py
 
-import os
 from OpenSSL import crypto
 from pathlib import Path
 

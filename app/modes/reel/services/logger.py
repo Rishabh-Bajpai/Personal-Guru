@@ -5,7 +5,7 @@ Creates timestamped log files for each search session.
 import json
 import os
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 
 class SessionLogger:
