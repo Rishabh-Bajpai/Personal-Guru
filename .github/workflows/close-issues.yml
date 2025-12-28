@@ -5,6 +5,10 @@ on:
     types: [closed]
     branches: [new-feature-branch, main]
 
+permissions:
+  issues: write
+  pull-requests: read
+
 jobs:
   close-issues:
     runs-on: ubuntu-latest
@@ -16,6 +20,8 @@ jobs:
             const pr = context.payload.pull_request;
             const regex = /(?:Fixes|Closes|Resolves)\s+#(\d+)/gi;
             let match;
+            let hasError = false;
+
             while ((match = regex.exec(pr.body)) !== null) {
               const issueNumber = Number(match[1]);
               try {
@@ -28,5 +34,10 @@ jobs:
                 console.log(`Successfully closed issue #${issueNumber} referenced by PR #${pr.number}.`);
               } catch (error) {
                 console.error(`Failed to close issue #${issueNumber} referenced by PR #${pr.number}:`, error);
+                hasError = true;
               }
+            }
+
+            if (hasError) {
+              core.setFailed("Failed to close one or more issues. Check logs for details.");
             }
