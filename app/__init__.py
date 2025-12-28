@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session, redirect, url_for
+from flask import Flask, request, redirect, url_for
 from config import Config
 from .common.extensions import db, migrate
 from flask_wtf.csrf import CSRFProtect
