@@ -34,7 +34,6 @@ jobs:
             let hasError = false;
 
             for (const issueNumber of issueNumbers) {
-              const issueNumber = Number(match[1]);
               try {
                 await github.rest.issues.update({
                   owner: context.repo.owner,
