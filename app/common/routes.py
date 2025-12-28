@@ -1,8 +1,6 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for
-from app.core.storage import get_all_topics, load_topic, save_topic
+from app.core.storage import get_all_topics, load_topic
 
-import os
-from dotenv import set_key, find_dotenv
 
 main_bp = Blueprint('main', __name__)
 

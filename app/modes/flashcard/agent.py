@@ -1,4 +1,3 @@
-import os
 from app.core.utils import call_llm
 from app.core.agents import TopicTeachingAgent
 

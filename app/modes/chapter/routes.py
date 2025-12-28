@@ -7,8 +7,6 @@ from app.core.utils import generate_audio
 from markdown_it import MarkdownIt
 from weasyprint import HTML
 import datetime
-import os
-import urllib.parse
 
 # Instantiate agents
 teacher = ChapterTeachingAgent()
