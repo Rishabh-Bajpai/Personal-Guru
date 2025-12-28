@@ -17,4 +17,8 @@ jobs:
           pip install ruff
       - name: Lint with Ruff
         run: |
+          # Run Ruff using its default rule set. This project intentionally relies on
+          # Ruff's built-in defaults rather than a custom configuration file.
+          # To customize linting behavior in the future, add a Ruff config file
+          # (pyproject.toml, ruff.toml, or .ruff.toml) at the repository root.
           ruff check .
