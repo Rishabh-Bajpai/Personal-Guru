@@ -37,6 +37,9 @@ function renderMarkdown() {
 
 function scrollToBottom() {
     const chatWindow = document.getElementById('chat-window');
+    if (!chatWindow) {
+        return;
+    }
     const messages = chatWindow.querySelectorAll('.message-wrapper');
 
     if (messages.length > 0) {
