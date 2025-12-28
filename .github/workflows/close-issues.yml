@@ -18,11 +18,22 @@ jobs:
         with:
           script: |
             const pr = context.payload.pull_request;
-            const regex = /(?:Fixes|Closes|Resolves)\s+#(\d+)/gi;
+            const body = pr.body;
+            const keywords = ['Fixes', 'Closes', 'Resolves'];
+            const regex = new RegExp(`(?:${keywords.join('|')})\\s+(?:#\\d+\\s*,?\\s*)+`, 'gi');
+            const issueNumbers = new Set();
             let match;
+
+            while ((match = regex.exec(body)) !== null) {
+              const issues = match[0].match(/#\d+/g) || [];
+              issues.forEach(issue => {
+                issueNumbers.add(Number(issue.slice(1)));
+              });
+            }
+
             let hasError = false;
 
-            while ((match = regex.exec(pr.body)) !== null) {
+            for (const issueNumber of issueNumbers) {
               const issueNumber = Number(match[1]);
               try {
                 await github.rest.issues.update({
