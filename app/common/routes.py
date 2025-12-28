@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for
 from app.core.storage import get_all_topics, load_topic
+from flask_login import login_user, logout_user, login_required, current_user
 
 
 main_bp = Blueprint('main', __name__)
@@ -86,7 +87,6 @@ def index():
     
     return render_template('index.html', topics=topics_data)
 
-from flask_login import login_user, logout_user, login_required, current_user
 
 @main_bp.route('/login', methods=['GET', 'POST'])
 def login():

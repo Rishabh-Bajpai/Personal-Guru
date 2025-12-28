@@ -30,7 +30,8 @@ def mode(topic_name):
              plan_steps, error = planner.generate_study_plan(topic_name, user_background)
              if not error:
                  # Save plan
-                 if not topic_data: topic_data = {"name": topic_name}
+                 if not topic_data:
+                     topic_data = {"name": topic_name}
                  topic_data['plan'] = plan_steps
                  # Initialize empty steps list to match plan length (required by storage logic)
                  topic_data['steps'] = [{} for _ in plan_steps]

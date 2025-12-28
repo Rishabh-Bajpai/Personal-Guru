@@ -1,15 +1,14 @@
 import pytest
 import time
 from unittest.mock import patch
-
-# Mark all tests in this file as 'integration'
-pytestmark = pytest.mark.integration
-
 from app.core.utils import call_llm
 from app.modes.quiz.agent import QuizAgent
 from app.core.agents import PlannerAgent, FeedbackAgent
 from app.modes.chapter.agent import ChapterTeachingAgent, AssessorAgent
 from app.modes.flashcard.agent import FlashcardTeachingAgent
+
+# Mark all tests in this file as 'integration'
+pytestmark = pytest.mark.integration
 
 def retry_agent_call(func, *args, max_retries=3, **kwargs):
     """Helper to retry agent calls that might fail due to LLM flakiness."""

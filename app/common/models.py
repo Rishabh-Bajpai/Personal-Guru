@@ -2,6 +2,8 @@ from app.common.extensions import db
 # from pgvector.sqlalchemy import Vector
 import datetime
 from sqlalchemy import JSON
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 
 class Topic(db.Model):
     __tablename__ = 'topics'
@@ -66,8 +68,6 @@ class Flashcard(db.Model):
     term = db.Column(db.String(255), nullable=False)
     definition = db.Column(db.Text, nullable=False)
 
-from flask_login import UserMixin
-from werkzeug.security import generate_password_hash, check_password_hash
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -99,22 +99,32 @@ class User(UserMixin, db.Model):
     def to_context_string(self):
         """Generates a text description of the user profile for LLM context."""
         parts = []
-        if self.name: parts.append(f"Name: {self.name}")
-        if self.age: parts.append(f"Age: {self.age}")
-        if self.country: parts.append(f"Country: {self.country}")
-        if self.primary_language: parts.append(f"Primary Language: {self.primary_language}")
-        if self.education_level: parts.append(f"Education Level: {self.education_level}")
-        if self.field_of_study: parts.append(f"Field of Study: {self.field_of_study}")
-        if self.occupation: parts.append(f"Occupation: {self.occupation}")
+        if self.name:
+            parts.append(f"Name: {self.name}")
+        if self.age:
+            parts.append(f"Age: {self.age}")
+        if self.country:
+            parts.append(f"Country: {self.country}")
+        if self.primary_language:
+            parts.append(f"Primary Language: {self.primary_language}")
+        if self.education_level:
+            parts.append(f"Education Level: {self.education_level}")
+        if self.field_of_study:
+            parts.append(f"Field of Study: {self.field_of_study}")
+        if self.occupation:
+            parts.append(f"Occupation: {self.occupation}")
         
         if self.learning_goals: 
             parts.append(f"Learning Goals: {self.learning_goals}")
         if self.prior_knowledge:
             parts.append(f"Prior Knowledge: {self.prior_knowledge}")
             
-        if self.learning_style: parts.append(f"Learning Style: {self.learning_style}")
-        if self.time_commitment: parts.append(f"Time Commitment: {self.time_commitment}")
-        if self.preferred_format: parts.append(f"Preferred Format: {self.preferred_format}")
+        if self.learning_style:
+            parts.append(f"Learning Style: {self.learning_style}")
+        if self.time_commitment:
+            parts.append(f"Time Commitment: {self.time_commitment}")
+        if self.preferred_format:
+            parts.append(f"Preferred Format: {self.preferred_format}")
         
         return "\n".join(parts)
 

@@ -7,6 +7,8 @@ from app.core.utils import generate_audio
 from markdown_it import MarkdownIt
 from weasyprint import HTML
 import datetime
+from app.core.agents import CodeExecutionAgent
+from app.core.sandbox import Sandbox
 
 # Instantiate agents
 teacher = ChapterTeachingAgent()
@@ -307,8 +309,6 @@ def export_topic_pdf(topic_name):
     response.headers["Content-Type"] = "application/pdf"
     return response
 
-from app.core.agents import CodeExecutionAgent
-from app.core.sandbox import Sandbox
 
 code_agent = CodeExecutionAgent()
 
