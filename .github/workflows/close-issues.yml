@@ -17,10 +17,16 @@ jobs:
             const regex = /(?:Fixes|Closes|Resolves)\s+#(\d+)/gi;
             let match;
             while ((match = regex.exec(pr.body)) !== null) {
-              github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: match[1],
-                state: 'closed'
-              });
+              const issueNumber = Number(match[1]);
+              try {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  state: 'closed'
+                });
+                console.log(`Successfully closed issue #${issueNumber} referenced by PR #${pr.number}.`);
+              } catch (error) {
+                console.error(`Failed to close issue #${issueNumber} referenced by PR #${pr.number}:`, error);
+              }
             }
