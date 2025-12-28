@@ -1,9 +1,8 @@
-from flask import render_template, request, session, redirect, url_for, make_response
+from flask import render_template, request, make_response
 from . import flashcard_bp
 from app.core.storage import load_topic, save_topic
 from .agent import FlashcardTeachingAgent
 from weasyprint import HTML
-import os
 
 teacher = FlashcardTeachingAgent()
 

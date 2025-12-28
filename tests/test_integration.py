@@ -1,5 +1,4 @@
 import pytest
-import os
 import time
 
 # Mark all tests in this file as 'integration'
@@ -149,7 +148,7 @@ def test_assessor_agent(logger):
 def test_chat_session_persistence(logger, app):
     """Test that chat history is saved to ChatSession table."""
     logger.section("test_chat_session_persistence")
-    from app.common.models import Topic, ChatSession, User, db
+    from app.common.models import Topic, User, db
     from app.core.storage import save_chat_history
     
     with app.app_context():
@@ -162,7 +161,7 @@ def test_chat_session_persistence(logger, app):
             db.session.commit()
             
         # Mock current_user
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import patch
         
         # Patching current_user in app.core.storage module scope
         with patch('app.core.storage.current_user') as mock_user:
@@ -186,7 +185,7 @@ def test_chat_session_persistence(logger, app):
 def test_quiz_result_persistence(logger, app):
     """Test that quiz result is saved to Quiz table."""
     logger.section("test_quiz_result_persistence")
-    from app.common.models import Topic, Quiz, User, db
+    from app.common.models import Topic, User, db
     from app.core.storage import save_topic, load_topic
     
     with app.app_context():

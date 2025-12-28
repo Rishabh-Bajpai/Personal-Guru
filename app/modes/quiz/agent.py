@@ -1,4 +1,3 @@
-import os
 import json
 from datetime import datetime
 from app.core.utils import call_llm, validate_quiz_structure

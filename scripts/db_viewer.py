@@ -382,7 +382,6 @@ def bulk_delete_items(model_name):
 @app.route('/db-viewer')
 @app.route('/db-viewer/<model_name>')
 def db_viewer(model_name=None):
-    from flask import request, redirect
     
     if model_name and model_name in MODELS:
         model = MODELS[model_name]

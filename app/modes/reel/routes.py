@@ -1,4 +1,4 @@
-from flask import render_template, request, session, redirect, url_for
+from flask import render_template, request
 from . import reel_bp
 from .services.youtube_search import search_youtube_reels
 from .services.validator import validate_videos_batch
