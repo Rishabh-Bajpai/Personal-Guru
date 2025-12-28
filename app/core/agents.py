@@ -24,7 +24,13 @@ class CodeExecutionAgent:
         
         # Parse JSON from response
         try:
-            # Simple cleanup to find JSON block
+            # 1. Try to find JSON within markdown code blocks first (most reliable)
+            code_block_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response, re.DOTALL)
+            if code_block_match:
+                return json.loads(code_block_match.group(1))
+
+            # 2. Fallback: Find the first valid JSON object structure using greedy match
+            # Note: This might fail if there are trailing braces in the text, but it's a reasonable fallback
             json_match = re.search(r'\{.*\}', response, re.DOTALL)
             if json_match:
                 data = json.loads(json_match.group())
