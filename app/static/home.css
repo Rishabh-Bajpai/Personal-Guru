@@ -1,3 +1,36 @@
+/* Topics List - default (Light Mode) */
+.topics-list {
+    margin-top: 20px;
+}
+
+.topics-list ul {
+    list-style: none;
+    padding: 0;
+}
+
+.topics-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #ffffff;
+    /* White background */
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    /* Standard border matching inputs */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    /* Very subtle shadow */
+    transition: all 0.2s ease;
+}
+
+.topics-list li:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-color: #007bff;
+    /* Highlight border with primary color on hover */
+}
+
 .mode-buttons {
     display: flex;
     gap: 10px;
@@ -12,6 +45,8 @@
     font-size: 1.1em;
     width: 150px;
     /* Fixed width for alignment, or remove for fluid */
+    color: #333;
+    font-weight: 600;
 }
 
 @media (max-width: 768px) {
@@ -24,4 +59,101 @@
     .mode-buttons {
         margin: 0;
     }
+}
+
+/* Suggestions Area - default (Light Mode) */
+.suggestions-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.suggestion-chip {
+    background-color: #ffffff;
+    color: #007bff;
+    /* Primary color text */
+    border: 1px solid #007bff;
+    /* Primary color border */
+    border-radius: 20px;
+    padding: 6px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+.suggestion-chip:hover {
+    background-color: #007bff;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 123, 255, 0.3);
+}
+
+.suggestion-chip:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* Skeletal Loader */
+.suggestions-loader {
+    display: flex;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.skeleton-chip {
+    width: 100px;
+    height: 32px;
+    background: #e0e0e0;
+    border-radius: 20px;
+    animation: shimmer 1.5s infinite linear;
+    background: linear-gradient(to right, #e0e0e0 0%, #f0f0f0 50%, #e0e0e0 100%);
+    background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* Dark Mode Overrides - STRICTLY tied to the body class */
+body.dark-mode .topics-list li {
+    background-color: #2c2c2c;
+    border-color: #444;
+    box-shadow: none;
+}
+
+body.dark-mode .topics-list li:hover {
+    background-color: #333;
+    border-color: #555;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .topic-name,
+body.dark-mode .topic-name strong {
+    color: #eee;
+}
+
+body.dark-mode .suggestion-chip {
+    background-color: #3a3a3a;
+    color: #e8eaed;
+    border-color: #5f6368;
+}
+
+body.dark-mode .suggestion-chip:hover {
+    background-color: #4a4a4a;
+    border-color: #70757a;
+    color: #fff;
+}
+
+body.dark-mode .skeleton-chip {
+    background: #333;
+    background: linear-gradient(to right, #333 0%, #444 50%, #333 100%);
+    background-size: 200% 100%;
 }

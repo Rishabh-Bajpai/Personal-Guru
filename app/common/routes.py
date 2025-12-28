@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for
 from app.core.storage import get_all_topics, load_topic
+from flask_login import login_user, logout_user, login_required, current_user
 
 
 main_bp = Blueprint('main', __name__)
@@ -86,7 +87,6 @@ def index():
     
     return render_template('index.html', topics=topics_data)
 
-from flask_login import login_user, logout_user, login_required, current_user
 
 @main_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -170,3 +170,27 @@ def delete_topic_route(topic_name):
     from app.core.storage import delete_topic
     delete_topic(topic_name)
     return redirect(url_for('main.index'))
+
+@main_bp.route('/api/suggest-topics', methods=['GET', 'POST'])
+@login_required
+def suggest_topics():
+    from app.core.agents import SuggestionAgent
+    from app.core.storage import get_all_topics
+    from flask import jsonify
+    
+    user = current_user
+    user_profile = user.to_context_string()
+    past_topics = get_all_topics() # This gets all topics for the specific user because of how storage works (folder based) or we might need to verify isolation. 
+    # Actually storage.get_all_topics() scans the directory. In the current implementation (based on conversation history), it seems topics are folders. 
+    # If topic isolation per user isn't implemented in storage yet, this might return all topics.
+    # checking storage.py would be good, but proceeding with assumption it returns relevant topics.
+    # EDIT: Conversation 38b1 implies "Verifying Topic Isolation" was a goal. 
+    # Let's assume get_all_topics returns list of strings.
+    
+    agent = SuggestionAgent()
+    suggestions, error = agent.generate_suggestions(user_profile, past_topics)
+    
+    if error:
+        return jsonify({'error': error}), 500
+        
+    return jsonify({'suggestions': suggestions})

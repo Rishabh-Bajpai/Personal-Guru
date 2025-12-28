@@ -3,11 +3,10 @@ from config import Config
 from .common.extensions import db, migrate
 from flask_wtf.csrf import CSRFProtect
 from flask_session import Session  # Server-side sessions for large chat histories
+from flask_login import LoginManager
 
 csrf = CSRFProtect()
 sess = Session()
-
-from flask_login import LoginManager
 
 login_manager = LoginManager()
 login_manager.login_view = 'main.login'
@@ -42,7 +41,7 @@ def create_app(config_class=Config):
     app.register_blueprint(chat_bp, url_prefix='/chat')
     
     # Global Routes (Home, Background, etc.)
-    from app.core import storage # legacy storage
+    # Global Routes (Home, Background, etc.)
     
     from .common.routes import main_bp
     app.register_blueprint(main_bp)

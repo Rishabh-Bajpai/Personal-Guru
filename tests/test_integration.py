@@ -1,10 +1,14 @@
 import pytest
 import time
+from unittest.mock import patch
+from app.core.utils import call_llm
+from app.modes.quiz.agent import QuizAgent
+from app.core.agents import PlannerAgent, FeedbackAgent
+from app.modes.chapter.agent import ChapterTeachingAgent, AssessorAgent
+from app.modes.flashcard.agent import FlashcardTeachingAgent
 
 # Mark all tests in this file as 'integration'
 pytestmark = pytest.mark.integration
-
-from app.core.utils import call_llm
 
 def retry_agent_call(func, *args, max_retries=3, **kwargs):
     """Helper to retry agent calls that might fail due to LLM flakiness."""
@@ -30,9 +34,6 @@ def test_call_llm(logger):
     assert len(response) > 0
 
 
-from app.modes.quiz.agent import QuizAgent
-from unittest.mock import patch
-
 def test_quiz_agent(logger):
     """Test that the QuizAgent can generate a quiz."""
     logger.section("test_quiz_agent")
@@ -55,8 +56,6 @@ def test_quiz_agent(logger):
     assert len(quiz["questions"]) == 2
 
 
-from app.core.agents import PlannerAgent
-
 def test_planner_agent(logger):
     """Test that the PlannerAgent can generate a study plan."""
     logger.section("test_planner_agent")
@@ -70,8 +69,6 @@ def test_planner_agent(logger):
     assert isinstance(plan, list)
     assert len(plan) > 0
 
-
-from app.core.agents import FeedbackAgent
 
 def test_feedback_agent(logger):
     """Test that the FeedbackAgent can generate feedback."""
@@ -88,8 +85,6 @@ def test_feedback_agent(logger):
     assert not feedback["is_correct"]
 
 
-from app.modes.chapter.agent import ChapterTeachingAgent
-
 def test_chapter_teaching_agent(logger):
     """Test that the ChapterTeachingAgent can generate teaching material."""
     logger.section("test_chapter_teaching_agent")
@@ -104,8 +99,6 @@ def test_chapter_teaching_agent(logger):
     assert len(material) > 0
 
 
-from app.modes.flashcard.agent import FlashcardTeachingAgent
-
 def test_flashcard_teaching_agent(logger):
     """Test that the FlashcardTeachingAgent can generate flashcards."""
     logger.section("test_flashcard_teaching_agent")
@@ -119,8 +112,6 @@ def test_flashcard_teaching_agent(logger):
     assert isinstance(flashcards, list)
     assert len(flashcards) > 0
 
-
-from app.modes.chapter.agent import AssessorAgent
 
 def test_assessor_agent(logger):
     """Test that the AssessorAgent can generate a question."""

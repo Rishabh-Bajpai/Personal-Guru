@@ -2,6 +2,14 @@
 
 {% block title %}Quiz Mode - {{ topic_name }}{% endblock %}
 
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('quiz.static', filename='quiz.css') }}">
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('quiz.static', filename='quiz.js') }}"></script>
+{% endblock %}
+
 {% block content %}
 <h1>Quiz on {{ topic_name }}</h1>
 <form method="post" action="{{ url_for('quiz.submit_quiz', topic_name=topic_name) }}">

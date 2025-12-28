@@ -18,3 +18,15 @@ function generateQuiz(count) {
     let url = `${baseUrl}/${topicName}/${count}`;
     window.location.href = url;
 }
+
+function generateCustomQuiz() {
+    const input = document.getElementById('custom-quiz-count');
+    const count = input.value;
+
+    if (!count || count < 1) {
+        alert("Please enter a valid number of questions (min 1).");
+        return;
+    }
+
+    generateQuiz(count);
+}

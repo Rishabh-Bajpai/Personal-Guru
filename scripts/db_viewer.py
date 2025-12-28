@@ -10,9 +10,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Load environment variables
 load_dotenv()
 
-from config import Config
-from app.common.extensions import db
-from app.common import models
+from config import Config  # noqa: E402
+from app.common.extensions import db  # noqa: E402
+from app.common import models  # noqa: E402
 
 # --- Standalone App Setup ---
 def create_viewer_app():
@@ -363,14 +363,14 @@ def bulk_delete_items(model_name):
             try:
                 # Filter by list of IDs
                 # We assume PK is the first key
-                filter_args = {pk_name: ids}
+                # filter_args = {pk_name: ids} # Unused
                 # Using in_ for bulk delete
                 # model.query.filter(getattr(model, pk_name).in_(ids)).delete(synchronize_session=False) ## This is faster
                 # But let's stick to safe iteration for now to reuse logic or if cascade needed (though delete usually cascades)
                 
                 # Fetch and delete to handle potential complex relationships if needed (though batch is better)
                 # Let's use batch delete
-                count = model.query.filter(getattr(model, pk_name).in_(ids)).delete(synchronize_session=False)
+                model.query.filter(getattr(model, pk_name).in_(ids)).delete(synchronize_session=False)
                 db.session.commit()
             except Exception as e:
                 db.session.rollback()

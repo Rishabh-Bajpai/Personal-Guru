@@ -76,3 +76,17 @@ Return a strictly valid JSON object with the following structure:
     "dependencies": ["list", "of", "pip", "packages"]
 }}
 """
+
+def get_topic_suggestions_prompt(user_profile, past_topics):
+    return f"""
+You are an intelligent study companion. Based on the user's profile and their past study topics, suggest 3-5 new, interesting, and relevant topics they might like to learn next.
+
+User Profile:
+{user_profile}
+
+Past Topics:
+{past_topics if past_topics else "None"}
+
+Please provide the suggestions as a JSON object with a single key "suggestions", which is a list of strings.
+Example: {{ "suggestions": ["Quantum Computing", "Ancient Rome", "React Hooks"] }}
+"""

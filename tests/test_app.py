@@ -177,3 +177,55 @@ def test_chat_route(auth_client, mocker, logger):
     assert response.status_code == 200
     assert b"hello world" in response.data
     assert b"This is the answer." in response.data
+
+def test_suggestions_unauthorized(client):
+    """Test that the suggestions endpoint requires login."""
+    response = client.get('/api/suggest-topics')
+    assert response.status_code == 302 # Redirect to login
+    assert '/login' in response.headers['Location']
+
+def test_suggestions_success(auth_client, mocker, logger):
+    """Test successful generation of topic suggestions."""
+    logger.section("test_suggestions_success")
+    
+    # Mock data
+    past_topics = ['Python', 'History']
+    suggested_topics = ['Math', 'Science', 'Art']
+    
+    # Mock storage
+    mocker.patch('app.core.storage.get_all_topics', return_value=past_topics)
+    
+    # Mock Agent
+    mocker.patch('app.core.agents.SuggestionAgent.generate_suggestions', return_value=(suggested_topics, None))
+    
+    logger.step("Calling suggestions API")
+    response = auth_client.get('/api/suggest-topics')
+    
+    assert response.status_code == 200
+    data = response.get_json()
+    
+    logger.step(f"Received suggestions: {data}")
+    assert 'suggestions' in data
+    assert data['suggestions'] == suggested_topics
+    assert len(data['suggestions']) == 3
+
+def test_suggestions_agent_error(auth_client, mocker, logger):
+    """Test error handling when the agent fails."""
+    logger.section("test_suggestions_agent_error")
+    
+    # Mock storage
+    mocker.patch('app.core.storage.get_all_topics', return_value=[])
+    
+    # Mock Agent failure
+    error_message = "LLM failure"
+    mocker.patch('app.core.agents.SuggestionAgent.generate_suggestions', return_value=([], error_message))
+    
+    logger.step("Calling suggestions API (expecting error)")
+    response = auth_client.get('/api/suggest-topics')
+    
+    assert response.status_code == 500
+    data = response.get_json()
+    
+    logger.step(f"Received error: {data}")
+    assert 'error' in data
+    assert data['error'] == error_message

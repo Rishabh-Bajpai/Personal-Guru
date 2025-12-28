@@ -1,6 +1,5 @@
 function initFlashcardMode(config) {
     document.addEventListener('DOMContentLoaded', function () {
-        const generateBtn = document.getElementById('generate-flashcards');
         const container = document.getElementById('flashcard-container');
         const err = document.getElementById('flash-error');
         const termEl = document.getElementById('flash-term');
@@ -71,12 +70,26 @@ function initFlashcardMode(config) {
             });
         }
 
-        generateBtn.addEventListener('click', async () => {
+        // Unified Generation Logic
+        async function triggerGeneration(count, btnElement) {
             err.textContent = '';
-            const sel = document.querySelector('input[name="flashcount"]:checked').value;
-            const payload = { topic: topicName, count: sel };
-            generateBtn.disabled = true;
-            generateBtn.textContent = 'Generating...';
+
+            // Basic validation for custom count
+            if (parseInt(count) < 1) {
+                err.textContent = 'Please enter a valid number (min 1).';
+                return;
+            }
+
+            const originalText = btnElement.textContent;
+            btnElement.disabled = true;
+            btnElement.textContent = '...';
+
+            // Disable all other buttons during generation
+            const allBtns = document.querySelectorAll('.button');
+            allBtns.forEach(b => b.disabled = true);
+
+            const payload = { topic: topicName, count: count };
+
             try {
                 const res = await fetch(config.urls.generate, {
                     method: 'POST',
@@ -92,6 +105,7 @@ function initFlashcardMode(config) {
                     if (cards.length === 0) { err.textContent = 'No flashcards generated.'; }
                     idx = 0;
                     renderCard(idx);
+                    // Hide controls on success
                     document.querySelector('.flashcard-controls').style.display = 'none';
                 } else {
                     err.textContent = data.error || 'Error generating flashcards';
@@ -99,9 +113,30 @@ function initFlashcardMode(config) {
             } catch (e) {
                 err.textContent = e.toString();
             } finally {
-                generateBtn.disabled = false;
-                generateBtn.textContent = 'Generate Flashcards';
+                // Re-enable buttons (though controls might be hidden if successful)
+                allBtns.forEach(b => b.disabled = false);
+                btnElement.textContent = originalText;
             }
+        }
+
+        // Preset Buttons
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                triggerGeneration(btn.dataset.count, btn);
+            });
+        });
+
+        // Custom "Go" Button
+        const customBtn = document.getElementById('generate-custom-btn');
+        const customInput = document.getElementById('custom-flashcount');
+
+        customBtn.addEventListener('click', () => {
+            const val = customInput.value;
+            if (!val) {
+                err.textContent = 'Please enter a number.';
+                return;
+            }
+            triggerGeneration(val, customBtn);
         });
     });
 }
