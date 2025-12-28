@@ -37,7 +37,22 @@ function renderMarkdown() {
 
 function scrollToBottom() {
     const chatWindow = document.getElementById('chat-window');
-    chatWindow.scrollTop = chatWindow.scrollHeight;
+    if (!chatWindow) {
+        return;
+    }
+    const messages = chatWindow.querySelectorAll('.message-wrapper');
+
+    if (messages.length > 0) {
+        const lastMessage = messages[messages.length - 1];
+
+        // If the last message is from the assistant, scroll to its top
+        if (lastMessage.classList.contains('assistant-wrapper')) {
+            lastMessage.scrollIntoView({ block: 'start', behavior: 'auto' });
+        } else {
+            // Otherwise (e.g. user message or empty), scroll to the very bottom
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function () {

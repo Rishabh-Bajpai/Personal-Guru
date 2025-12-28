@@ -309,7 +309,7 @@ def export_topic_pdf(topic_name):
     response.headers["Content-Type"] = "application/pdf"
     return response
 
-from .code_agent import CodeExecutionAgent
+from app.core.agents import CodeExecutionAgent
 from app.core.sandbox import Sandbox
 
 code_agent = CodeExecutionAgent()
