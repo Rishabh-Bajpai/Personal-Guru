@@ -10,6 +10,17 @@
     {% if error %}
     <p class="error error-text">{{ error }}</p>
     {% endif %}
+    <div id="suggestions-container" style="display: none; margin-top: 10px; margin-bottom: 20px;">
+        <div id="suggestions-list" class="suggestions-chips">
+            <!-- Suggestions will be populated here -->
+        </div>
+        <div id="suggestions-loading" class="suggestions-loader">
+            <div class="skeleton-chip"></div>
+            <div class="skeleton-chip"></div>
+            <div class="skeleton-chip"></div>
+        </div>
+    </div>
+
     <div class="learning-modes">
         <p>Choose a learning mode:</p>
         <label>
@@ -82,4 +93,6 @@
 {% else %}
 <p>You don't have any saved topics yet.</p>
 {% endif %}
+
+<script src="{{ url_for('static', filename='suggestions.js') }}"></script>
 {% endblock %}

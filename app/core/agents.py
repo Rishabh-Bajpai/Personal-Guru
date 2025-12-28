@@ -196,3 +196,18 @@ class ChatAgent:
         answer = re.sub(r'<tool_call>.*?</tool_call>', '', answer, flags=re.DOTALL).strip()
 
         return answer, None
+
+class SuggestionAgent:
+    def generate_suggestions(self, user_profile, past_topics):
+        from app.core.prompts import get_topic_suggestions_prompt
+        prompt = get_topic_suggestions_prompt(user_profile, past_topics)
+        
+        response, error = call_llm(prompt, is_json=True)
+        if error:
+            return [], error
+            
+        suggestions = response.get("suggestions", [])
+        if not isinstance(suggestions, list):
+             return [], "Invalid format from LLM"
+             
+        return suggestions, None
