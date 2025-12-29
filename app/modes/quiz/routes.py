@@ -1,12 +1,10 @@
-from flask import render_template, request, session, redirect, url_for, make_response
+from flask import render_template, request, session, make_response
 from . import quiz_bp
 from app.core.storage import load_topic, save_topic
 from app.core.agents import FeedbackAgent
 from .agent import QuizAgent
 from weasyprint import HTML
 import datetime
-import os
-import json
 
 quiz_agent = QuizAgent()
 feedback_agent = FeedbackAgent()
@@ -14,7 +12,8 @@ feedback_agent = FeedbackAgent()
 @quiz_bp.route('/generate/<topic_name>/<count>', methods=['GET', 'POST'])
 def generate_quiz(topic_name, count):
     """Generate a quiz with the specified number of questions and save it."""
-    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    from app.core.utils import get_user_context
+    user_background = get_user_context()
     
     # Handle 'auto' or numeric count
     if count.lower() != 'auto':
@@ -104,6 +103,11 @@ def submit_quiz(topic_name):
             'feedback_results': feedback_results,
             'date': datetime.date.today().isoformat()
         }
+        
+        # Ensure the score is also saved to the Quiz table
+        if topic_data.get('quiz'):
+            topic_data['quiz']['score'] = score
+
         save_topic(topic_name, topic_data)
     
     session.pop('quiz_questions', None)

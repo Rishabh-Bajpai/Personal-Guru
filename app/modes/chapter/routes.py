@@ -1,14 +1,14 @@
 from flask import render_template, request, session, redirect, url_for, make_response
 from . import chapter_bp
 from app.core.storage import load_topic, save_topic
-from app.core.agents import FeedbackAgent
-from .agent import ChapterTeachingAgent, AssessorAgent, PlannerAgent
+from app.core.agents import FeedbackAgent, PlannerAgent
+from .agent import ChapterTeachingAgent, AssessorAgent
 from app.core.utils import generate_audio
 from markdown_it import MarkdownIt
 from weasyprint import HTML
 import datetime
-import os
-import urllib.parse
+from app.core.agents import CodeExecutionAgent
+from app.core.sandbox import Sandbox
 
 # Instantiate agents
 teacher = ChapterTeachingAgent()
@@ -21,12 +21,29 @@ md = MarkdownIt()
 def mode(topic_name):
     topic_data = load_topic(topic_name)
     
+    # Initialize Persistent Sandbox
+    sandbox_id = session.get('sandbox_id')
+    # If exists, reuse. If None, create new.
+    sandbox = Sandbox(sandbox_id=sandbox_id)
+    session['sandbox_id'] = sandbox.id
+    
+    # If topic exists and has a plan, go directly to learning
     # If topic exists and has a plan, go directly to learning
     if topic_data and topic_data.get('plan'):
-        return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=0))
+        # Resume logic: find the last step with content
+        steps = topic_data.get('steps', [])
+        resume_step_index = 0
+        for i, step in enumerate(steps):
+             # Check if step has content (teaching_material or questions)
+             has_content = bool(step.get('teaching_material') or step.get('questions'))
+             if has_content:
+                 resume_step_index = i
+        
+        return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=resume_step_index))
     
     # No plan exists - generate one automatically
-    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    from app.core.utils import get_user_context
+    user_background = get_user_context()
     plan_steps, error = planner.generate_study_plan(topic_name, user_background)
     
     if error:
@@ -48,7 +65,8 @@ def generate_plan():
     if not topic_name:
         return {"error": "Topic name required"}, 400
         
-    user_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+    from app.core.utils import get_user_context
+    user_background = get_user_context()
     plan_steps, error = planner.generate_study_plan(topic_name, user_background)
     
     if error:
@@ -63,6 +81,43 @@ def generate_plan():
     
     return {"status": "success", "plan": plan_steps}
 
+@chapter_bp.route('/<topic_name>/update_plan', methods=['POST'])
+def update_plan(topic_name):
+    comment = request.form.get('comment')
+    current_step_index = request.form.get('current_step_index', 0)
+    
+    if not comment or not comment.strip():
+         return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=current_step_index))
+
+    topic_data = load_topic(topic_name)
+    if not topic_data:
+        return "Topic not found", 404
+
+    current_plan = topic_data.get('plan', [])
+    from app.core.utils import get_user_context
+    user_background = get_user_context()
+
+    # Use the unified PlannerAgent
+    new_plan, error = planner.update_study_plan(topic_name, user_background, current_plan, comment)
+
+    if not error:
+        # Smart Update: Preserve content for unchanged steps
+        from app.core.utils import reconcile_plan_steps
+
+        # Smart Update using helper
+        topic_data['plan'] = new_plan
+        topic_data['steps'] = reconcile_plan_steps(
+            topic_data.get('steps', []),
+            current_plan, # Original plan strings! We need them.
+            new_plan
+        )
+        # Wait, reconcile_plan_steps signature: (current_steps, current_plan, new_plan)
+        # I have current_plan already (line 94).
+        
+        save_topic(topic_name, topic_data)
+
+    return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=0))
+
 @chapter_bp.route('/learn/<topic_name>/<int:step_index>')
 def learn_topic(topic_name, step_index):
     topic_data = load_topic(topic_name)
@@ -72,12 +127,13 @@ def learn_topic(topic_name, step_index):
     plan_steps = topic_data.get('plan', [])
     
     # If topic has no plan (quiz/flashcard only), redirect
-    if not plan_steps:
-        # Checking logic from app.py
-        if 'flashcards' in topic_data and topic_data['flashcards']:
-            return redirect(url_for('flashcard.mode', topic_name=topic_name)) # Adjusted endpoint name
-        elif 'quiz' in topic_data:
-            return redirect(url_for('quiz.mode', topic_name=topic_name)) # Adjusted endpoint name
+    # Not needed after issue #28 is fixed, but keeping the commented logic for now
+    # if not plan_steps:
+    #     # Checking logic from app.py
+    #     if 'flashcards' in topic_data and topic_data['flashcards']:
+    #         return redirect(url_for('flashcard.mode', topic_name=topic_name)) # Adjusted endpoint name
+    #     elif 'quiz' in topic_data:
+    #         return redirect(url_for('quiz.mode', topic_name=topic_name)) # Adjusted endpoint name
     
     if not 0 <= step_index < len(plan_steps):
         return "Invalid step index", 404
@@ -86,12 +142,14 @@ def learn_topic(topic_name, step_index):
 
     if not current_step_data.get('teaching_material'):
         incorrect_questions = session.get('incorrect_questions')
-        current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+        from app.core.utils import get_user_context
+        current_background = get_user_context()
         teaching_material, error = teacher.generate_teaching_material(plan_steps[step_index], plan_steps, current_background, incorrect_questions)
         if error:
             return f"<h1>Error Generating Teaching Material</h1><p>{teaching_material}</p>"
         current_step_data['teaching_material'] = teaching_material
-        current_background = session.get('user_background', os.getenv("USER_BACKGROUND", "a beginner"))
+        from app.core.utils import get_user_context
+        current_background = get_user_context()
         question_data, error = assessor.generate_question(teaching_material, current_background)
         if not error:
             current_step_data['questions'] = question_data
@@ -156,6 +214,24 @@ def assess_step(topic_name, step_index):
                            step_index=step_index,
                            next_step_index=step_index + 1,
                            total_steps=len(topic_data['plan']))
+
+@chapter_bp.route('/reset_quiz/<topic_name>/<int:step_index>', methods=['POST'])
+def reset_quiz(topic_name, step_index):
+    topic_data = load_topic(topic_name)
+    if not topic_data:
+        return "Topic not found", 404
+    
+    if 0 <= step_index < len(topic_data['steps']):
+        current_step_data = topic_data['steps'][step_index]
+        if 'user_answers' in current_step_data:
+            del current_step_data['user_answers']
+        if 'feedback' in current_step_data:
+            del current_step_data['feedback']
+        if 'score' in current_step_data:
+            del current_step_data['score']
+        save_topic(topic_name, topic_data)
+        
+    return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=step_index))
 
 @chapter_bp.route('/generate-audio/<int:step_index>', methods=['POST'])
 def generate_audio_route(step_index):
@@ -232,6 +308,47 @@ def export_topic_pdf(topic_name):
     response.headers["Content-Disposition"] = f"attachment; filename={topic_name}.pdf"
     response.headers["Content-Type"] = "application/pdf"
     return response
+
+
+code_agent = CodeExecutionAgent()
+
+@chapter_bp.route('/execute_code', methods=['POST'])
+def execute_code():
+    data = request.json
+    code = data.get('code')
+    
+    if not code:
+        return {"error": "No code provided"}, 400
+
+    # 1. Enhance code
+    enhanced_data = code_agent.enhance_code(code)
+    enhanced_code = enhanced_data.get('code')
+    dependencies = enhanced_data.get('dependencies', [])
+    
+    # 2. Run in Sandbox
+    sandbox_id = session.get('sandbox_id')
+    sandbox = Sandbox(sandbox_id=sandbox_id)
+    
+    # Ensure ID is in session (if it was lost or new)
+    if not sandbox_id:
+         session['sandbox_id'] = sandbox.id
+         
+    try:
+        # Install deps (basic caching could be used here in future)
+        if dependencies:
+            sandbox.install_deps(dependencies)
+            
+        result = sandbox.run_code(enhanced_code)
+        
+        return {
+            "output": result.get('output'),
+            "error": result.get('error'),
+            "images": result.get('images', []), # List of base64 strings
+            "enhanced_code": enhanced_code
+        }
+    finally:
+        # Do persistent cleanup later
+        pass
 
 def _get_topic_data_and_score(topic_name):
     topic_data = load_topic(topic_name)

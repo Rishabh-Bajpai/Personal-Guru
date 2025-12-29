@@ -1,8 +1,12 @@
 
 import os
 import json
-from app import create_app, db
-from app.core import storage
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from app import create_app, db  # noqa: E402
+from app.core import storage  # noqa: E402
 
 def migrate():
     """

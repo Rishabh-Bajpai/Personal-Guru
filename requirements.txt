@@ -1,4 +1,5 @@
 Flask
+Flask-Session
 python-dotenv
 requests
 pytest
@@ -12,3 +13,4 @@ pgvector
 flask-migrate
 flask-wtf
 psycopg2-binary
+flask-login

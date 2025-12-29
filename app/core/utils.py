@@ -12,10 +12,11 @@ LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME")
 LLM_NUM_CTX = int(os.getenv("LLM_NUM_CTX", 18000))
 LLM_API_KEY = os.getenv("LLM_API_KEY", "dummy")
 
-def call_llm(prompt, is_json=False):
+def call_llm(prompt_or_messages, is_json=False):
     """
     A helper function to call the LLM API using OpenAI-compatible protocol.
     Works with OpenAI, Ollama, LMStudio, VLLM, etc.
+    Accepts specific 'messages' list for chat history or a simple string 'prompt'.
     """
     if not LLM_ENDPOINT or not LLM_MODEL_NAME:
         return "Error: LLM environment variables not set.", "Config Error"
@@ -48,7 +49,10 @@ def call_llm(prompt, is_json=False):
     try:
         print(f"Calling LLM: {api_url}")
         
-        messages = [{"role": "user", "content": prompt}]
+        if isinstance(prompt_or_messages, list):
+            messages = prompt_or_messages
+        else:
+            messages = [{"role": "user", "content": prompt_or_messages}]
         
         data = {
             "model": LLM_MODEL_NAME,
@@ -177,3 +181,46 @@ def generate_audio(text, step_index, tts_engine="coqui"):
         return f"step_{step_index}.wav", None # Return relative filename for url_for
     except requests.exceptions.RequestException as e:
         return None, f"Error calling Coqui TTS: {e}"
+
+def reconcile_plan_steps(current_steps, current_plan, new_plan):
+    """
+    Reconciles the list of dict-based steps with a new list of plan strings.
+    Preserves content for steps that still exist (matching title/text),
+    initializes new steps, and updates step_index.
+    """
+    step_content_map = {}
+    for i, plan_text in enumerate(current_plan):
+        if i < len(current_steps):
+             step_content_map[plan_text] = current_steps[i]
+
+    new_steps = []
+    for i, step_text in enumerate(new_plan):
+        if step_text in step_content_map:
+            # Preserve existing content
+            step_data = step_content_map[step_text]
+            # Update step_index to match new position
+            step_data['step_index'] = i
+            new_steps.append(step_data)
+        else:
+            # New step, empty content with correct index
+            new_steps.append({'step_index': i})
+    
+    return new_steps
+
+def get_user_context():
+    """
+    Retrieves the user context string from the database for LLM usage.
+    Falls back to environment variable if no user or empty profile.
+    """
+    from flask_login import current_user
+    
+    try:
+        if current_user.is_authenticated:
+            context = current_user.to_context_string()
+            if context.strip():
+                return context
+    except Exception as e:
+        print(f"Error fetching user context from current_user: {e}")
+        pass
+        
+    return os.getenv("USER_BACKGROUND", "a beginner")

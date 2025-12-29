@@ -1,4 +1,3 @@
-import os
 from app.core.utils import call_llm
 from app.core.agents import TopicTeachingAgent
 
@@ -10,7 +9,8 @@ class FlashcardTeachingAgent(TopicTeachingAgent):
         Expected return JSON from LLM: {"flashcards": [{"term": "...", "definition": "..."}, ...]}
         """
         if user_background is None:
-            user_background = os.getenv("USER_BACKGROUND", "a beginner")
+            from app.core.utils import get_user_context
+            user_background = get_user_context()
 
         from app.modes.flashcard.prompts import get_flashcard_generation_prompt
         prompt = get_flashcard_generation_prompt(topic, count, user_background)
@@ -77,7 +77,8 @@ class FlashcardTeachingAgent(TopicTeachingAgent):
         Returns (count, None) on success or (default_count, error) on failure.
         """
         if user_background is None:
-            user_background = os.getenv("USER_BACKGROUND", "a beginner")
+            from app.core.utils import get_user_context
+            user_background = get_user_context()
 
         from app.modes.flashcard.prompts import get_flashcard_count_prompt
         prompt = get_flashcard_count_prompt(topic, user_background)

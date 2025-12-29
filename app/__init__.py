@@ -1,9 +1,15 @@
-from flask import Flask, render_template, request, session, redirect, url_for
+from flask import Flask, request, redirect, url_for
 from config import Config
 from .common.extensions import db, migrate
 from flask_wtf.csrf import CSRFProtect
+from flask_session import Session  # Server-side sessions for large chat histories
+from flask_login import LoginManager
 
 csrf = CSRFProtect()
+sess = Session()
+
+login_manager = LoginManager()
+login_manager.login_view = 'main.login'
 
 def create_app(config_class=Config):
     app = Flask(__name__, template_folder='common/templates')
@@ -13,6 +19,13 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
+    sess.init_app(app)  # Initialize server-side sessions
+    login_manager.init_app(app)
+
+    from app.common.models import User
+    @login_manager.user_loader
+    def load_user(username):
+        return User.query.get(username)
 
     # Register Blueprints
     from app.modes.chapter import chapter_bp
@@ -28,9 +41,18 @@ def create_app(config_class=Config):
     app.register_blueprint(chat_bp, url_prefix='/chat')
     
     # Global Routes (Home, Background, etc.)
-    from app.core import storage # legacy storage
+    # Global Routes (Home, Background, etc.)
     
     from .common.routes import main_bp
     app.register_blueprint(main_bp)
+
+    @app.before_request
+    def require_login():
+        from flask_login import current_user
+        if not current_user.is_authenticated:
+            # List of endpoints accessible without login
+            # 'main.login', 'main.signup', 'static'
+            if request.endpoint and request.endpoint not in ['main.login', 'main.signup', 'static'] and not request.endpoint.startswith('static'):
+                 return redirect(url_for('main.login'))
 
     return app
