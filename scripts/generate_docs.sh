@@ -8,5 +8,8 @@ fi
 
 # Generate documentation
 echo "Generating documentation..."
-pydoc-markdown
+if ! pydoc-markdown; then
+    echo "Error: Failed to generate documentation with pydoc-markdown." >&2
+    exit 1
+fi
 echo "Documentation generated in docs/reference"
