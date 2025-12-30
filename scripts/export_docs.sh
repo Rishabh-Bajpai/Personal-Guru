@@ -14,7 +14,22 @@ fi
 
 # 1. Generate Docs
 ./scripts/generate_docs.sh
+if [ $? -ne 0 ]; then
+    echo "Error: Documentation generation script failed. Aborting."
+    exit 1
+fi
 
+DOCS_DIR="./docs/reference"
+if [ ! -d "$DOCS_DIR" ]; then
+    echo "Error: Docs directory '$DOCS_DIR' not found after generation. Aborting."
+    exit 1
+fi
+
+# Ensure docs directory is not empty
+if ! find "$DOCS_DIR" -mindepth 1 -maxdepth 1 | read -r _; then
+    echo "Error: Docs directory '$DOCS_DIR' is empty after generation. Aborting."
+    exit 1
+fi
 # 2. Clone/Update Repo B
 if [ -d "$TARGET_DIR" ]; then
     echo "Updating existing repo at $TARGET_DIR..."
