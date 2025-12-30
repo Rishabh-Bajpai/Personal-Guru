@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # Usage: ./scripts/export_docs.sh <REPO_URL> <TARGET_DIR>
 # Example: ./scripts/export_docs.sh git@github.com:username/repo-b.git /tmp/repo-b
