@@ -42,18 +42,22 @@ class ChapterTeachingAgent(TopicTeachingAgent):
 
 class AssessorAgent:
     """
-    Agent responsible for generating assessment questions based on teaching material.
+    Agent responsible for generating assessment question data based on teaching material.
     """
     def generate_question(self, teaching_material, user_background):
         """
-        Generates assessment questions for the provided teaching material.
+        Generates assessment question data for the provided teaching material.
+
+        The returned dictionary is expected to include a ``"questions"`` key containing
+        a list of assessment questions.
 
         Args:
             teaching_material (str): The material to base questions on.
             user_background (str): The background of the user.
 
         Returns:
-            tuple: A dictionary containing questions and an error object (or None).
+            tuple: A dictionary containing the generated assessment question data and
+            an error object (or None).
         """
         from app.modes.chapter.prompts import get_assessment_prompt
         prompt = get_assessment_prompt(teaching_material, user_background)
