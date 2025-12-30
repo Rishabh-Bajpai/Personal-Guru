@@ -52,7 +52,10 @@ if [ -n "$(git status --porcelain)" ]; then
     echo "Changes detected. Committing and pushing..."
     git add .
     git commit -m "Update API documentation from Personal-Guru"
-    git push
+    if ! git push; then
+        echo "Error: Failed to push changes to remote repository." >&2
+        exit 1
+    fi
 else
     echo "No changes detected."
 fi
