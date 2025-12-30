@@ -22,4 +22,10 @@ class ChatModeMainChatAgent(ChatAgent):
         Returns:
             tuple: The welcome message string and an error object (or None).
         """
+        # We override/implement this here since it's specific to the main chat start
+        prompt = get_welcome_prompt(topic_name, user_background, plan)
+        answer, error = call_llm(prompt)
+        if error:
+            return f"Error getting welcome message from LLM: {error}", error
+        return answer, None
 

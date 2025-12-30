@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # Ensure pydoc-markdown is installed
 if ! command -v pydoc-markdown &> /dev/null; then
