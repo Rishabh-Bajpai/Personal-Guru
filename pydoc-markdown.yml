@@ -1,0 +1,25 @@
+loaders:
+  - type: python
+    search_path: [./app]
+    modules:
+      - common.models
+      - common.extensions
+      - common.routes
+      - core.agents
+      - modes.chapter.agent
+      - modes.chapter.routes
+      - modes.chat.agent
+      - modes.chat.routes
+      - modes.flashcard.routes
+      - modes.quiz.agent
+      - modes.quiz.routes
+      - modes.reel.routes
+processors:
+  - type: filter
+    skip_empty_modules: true
+    skip_empty_classes: true
+  - type: crossref
+renderer:
+  type: docusaurus
+  docs_base_path: docs/reference
+  sidebar_top_level_label: "API Reference"

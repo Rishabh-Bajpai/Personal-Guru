@@ -89,6 +89,7 @@ instance/
 # DOCUMENTATION & DATA SCIENCE
 # ==============================================================================
 docs/_build/
+docs/reference/
 /site
 .ipynb_checkpoints
 profile_default/

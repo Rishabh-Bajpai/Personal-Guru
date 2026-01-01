@@ -1,0 +1,74 @@
+name: Publish API Documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/**'
+      - 'pydoc-markdown.yml'
+      - 'scripts/**'
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  publish-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Personal-Guru
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          set -e
+          python -m pip install --upgrade pip
+          pip install pydoc-markdown
+
+      - name: Generate Documentation
+        run: |
+          set -e
+          ./scripts/generate_docs.sh
+          if [ $? -ne 0 ]; then
+            echo "Error: Documentation generation failed"
+            exit 1
+          fi
+
+      - name: Push to Repo B
+        env:
+          REPO_B_URL: ${{ secrets.REPO_B_URL }}
+          REPO_B_TOKEN: ${{ secrets.REPO_B_TOKEN }} # Recommend using a PAT for cross-repo pushes
+        run: |
+          set -euo pipefail
+          
+          # Configure Git
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+          # Validate required secrets
+          if [ -z "${REPO_B_URL:-}" ]; then
+            echo "Error: REPO_B_URL secret is not set"
+            exit 1
+          fi
+          if [ -z "${REPO_B_TOKEN:-}" ]; then
+            echo "Error: REPO_B_TOKEN secret is not set"
+            exit 1
+          fi
+
+          # Use REPO_B_TOKEN if URL doesn't contain it
+          # Assuming REPO_B_URL is like 'github.com/username/repo-b'
+          PUSH_URL="https://x-access-token:${REPO_B_TOKEN}@${REPO_B_URL#*//}"
+          
+          # Target directory for temporary clone
+          TARGET_DIR="/tmp/repo-b"
+
+          # Run the export script with the authenticated URL
+          if ! ./scripts/export_docs.sh "$PUSH_URL" "$TARGET_DIR"; then
+            echo "Error: Failed to export documentation to Repo B"
+            exit 1
+          fi
+          
+          echo "Documentation successfully published to Repo B"
