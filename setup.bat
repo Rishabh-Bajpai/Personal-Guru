@@ -1,4 +1,5 @@
 @echo off
+setlocal
 chcp 65001 >nul 2>nul
 
 echo [INFO] Starting Personal Guru Setup...
@@ -7,6 +8,7 @@ echo [INFO] Starting Personal Guru Setup...
 where conda >nul 2>nul
 if %errorlevel% neq 0 (
     echo [ERROR] Conda is not installed. Please install Miniconda or Anaconda first.
+    pause
     exit /b 1
 )
 
@@ -14,6 +16,7 @@ if %errorlevel% neq 0 (
 call conda activate base
 if %errorlevel% neq 0 (
     echo [ERROR] Failed to initialize conda. Make sure conda init has been run.
+    pause
     exit /b 1
 )
 
@@ -37,7 +40,7 @@ echo.
 set /p install_tts="Install TTS dependencies? (Large download) [y/N]: "
 
 :: Check if environment already exists
-call conda info --envs | findstr /C:"Personal-Guru" >nul 2>nul
+call conda info --envs | findstr /B /C:"Personal-Guru " >nul 2>nul
 if %errorlevel% equ 0 (
     echo [INFO] Environment 'Personal-Guru' already exists. Skipping creation.
 ) else (
@@ -61,7 +64,7 @@ if %errorlevel% equ 0 (
 )
 
 :: Verify environment was created
-call conda info --envs | findstr /C:"Personal-Guru" >nul 2>nul
+call conda info --envs | findstr /B /C:"Personal-Guru " >nul 2>nul
 if %errorlevel% neq 0 (
     echo [ERROR] Environment 'Personal-Guru' does not exist. Setup cannot continue.
     pause
@@ -84,10 +87,18 @@ if %errorlevel% neq 0 (
     echo [WARNING] Some dependencies may have failed to install.
 )
 
+:: Optional TTS
+if /i "%install_tts%"=="y" (
+    echo.
+    echo [INFO] Installing TTS dependencies...
+    echo [WARNING] High-quality TTS is best run via Docker (see deployment guide).
+    echo          Local installation of TTS on Windows is experimental.
+)
+
 :: Install GTK3 for WeasyPrint (required for PDF generation on Windows)
 echo.
 echo [INFO] Installing GTK3 runtime for WeasyPrint (PDF generation)...
-call conda install -c conda-forge gtk3 -y
+call conda install -n Personal-Guru -c conda-forge gtk3 -y
 if %errorlevel% neq 0 (
     echo [WARNING] GTK3 installation via conda failed.
     echo          WeasyPrint PDF generation may not work.
@@ -113,11 +124,10 @@ python scripts/update_database.py
 echo.
 echo [SUCCESS] Setup Complete!
 echo.
-echo The environment 'Personal-Guru' is now active.
+echo The setup for environment 'Personal-Guru' is complete.
 echo To run the application:
 echo   python run.py
 echo.
 echo If you open a new terminal, first run:
 echo   conda activate Personal-Guru
-echo.
-pause
+echo.endlocal
