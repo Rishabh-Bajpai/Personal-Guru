@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for
-from app.core.storage import get_all_topics, load_topic
+from app.common.storage import get_all_topics, load_topic
 from flask_login import login_user, logout_user, login_required, current_user
 import os
 
@@ -16,7 +16,7 @@ def index():
     sandbox_id = session.get('sandbox_id')
     if sandbox_id:
         try:
-            from app.core.sandbox import Sandbox
+            from app.common.sandbox import Sandbox
             sb = Sandbox(sandbox_id=sandbox_id)
             sb.cleanup()
         except Exception:
@@ -98,7 +98,7 @@ def login():
         username = request.form['username']
         password = request.form['password']
         
-        from app.common.models import User
+        from app.core.models import User
         user = User.query.filter_by(username=username).first()
         
         if user is None or not user.check_password(password):
@@ -118,8 +118,8 @@ def signup():
         username = request.form['username']
         password = request.form['password']
         
-        from app.common.models import User
-        from app.common.extensions import db
+        from app.core.models import User
+        from app.core.extensions import db
         
         user = User.query.filter_by(username=username).first()
         if user:
@@ -143,7 +143,7 @@ def logout():
 @main_bp.route('/user_profile', methods=['GET', 'POST'])
 @login_required
 def user_profile():
-    from app.common.extensions import db
+    from app.core.extensions import db
     
     user = current_user
         
@@ -168,15 +168,15 @@ def user_profile():
 
 @main_bp.route('/delete/<topic_name>')
 def delete_topic_route(topic_name):
-    from app.core.storage import delete_topic
+    from app.common.storage import delete_topic
     delete_topic(topic_name)
     return redirect(url_for('main.index'))
 
 @main_bp.route('/api/suggest-topics', methods=['GET', 'POST'])
 @login_required
 def suggest_topics():
-    from app.core.agents import SuggestionAgent
-    from app.core.storage import get_all_topics
+    from app.common.agents import SuggestionAgent
+    from app.common.storage import get_all_topics
     from flask import jsonify
     
     user = current_user

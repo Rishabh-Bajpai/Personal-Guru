@@ -1,6 +1,6 @@
 from flask import render_template, request, make_response
 from . import flashcard_bp
-from app.core.storage import load_topic, save_topic
+from app.common.storage import load_topic, save_topic
 from .agent import FlashcardTeachingAgent
 from weasyprint import HTML
 
@@ -27,7 +27,7 @@ def generate_flashcards_route():
     if not topic_name:
         return {"error": "No topic provided"}, 400
 
-    from app.core.utils import get_user_context
+    from app.common.utils import get_user_context
     user_background = get_user_context()
 
     # Determine flashcard count
@@ -43,7 +43,7 @@ def generate_flashcards_route():
             num = 25
 
     # Refetch background just in case
-    from app.core.utils import get_user_context
+    from app.common.utils import get_user_context
     user_background = get_user_context()
 
     cards, error = teacher.generate_teaching_material(topic_name, count=num, user_background=user_background)

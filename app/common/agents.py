@@ -1,5 +1,5 @@
-from app.core.utils import call_llm
-from app.core.prompts import get_code_execution_prompt
+from app.common.utils import call_llm
+from app.common.prompts import get_code_execution_prompt
 import re
 import json
 
@@ -103,7 +103,7 @@ class FeedbackAgent:
             feedback = "That's correct! Great job."
             return {"is_correct": True, "feedback": feedback}, None
 
-        from app.core.prompts import get_feedback_prompt
+        from app.common.prompts import get_feedback_prompt
         prompt = get_feedback_prompt(question_text, correct_answer_text, user_answer_text)
         feedback, error = call_llm(prompt)
         if error:
@@ -142,7 +142,7 @@ class PlannerAgent:
             tuple: A list of study steps (strings) and an error object (or None).
         """
         print(f"DEBUG: Generating study plan for user with background: {user_background}")
-        from app.core.prompts import get_study_plan_prompt
+        from app.common.prompts import get_study_plan_prompt
         prompt = get_study_plan_prompt(topic, user_background)
         plan_data, error = call_llm(prompt, is_json=True)
         if error:
@@ -170,7 +170,7 @@ class PlannerAgent:
         Returns:
             tuple: The updated list of steps and an error object (or None).
         """
-        from app.core.prompts import get_plan_update_prompt
+        from app.common.prompts import get_plan_update_prompt
         import ast
 
         prompt = get_plan_update_prompt(topic_name, user_background, current_plan, comment)
@@ -280,7 +280,7 @@ class SuggestionAgent:
         Returns:
             tuple: A list of suggested topic strings and an error object (or None).
         """
-        from app.core.prompts import get_topic_suggestions_prompt
+        from app.common.prompts import get_topic_suggestions_prompt
         prompt = get_topic_suggestions_prompt(user_profile, past_topics)
         
         response, error = call_llm(prompt, is_json=True)

@@ -1,5 +1,5 @@
 import pytest
-from app.core.config_validator import validate_config
+from app.common.config_validator import validate_config
 from app.setup_app import create_setup_app
 
 # Mark all tests in this file as 'unit'
@@ -8,7 +8,7 @@ pytestmark = pytest.mark.unit
 def test_home_page(auth_client, mocker, logger):
     """Test that the home page loads correctly."""
     logger.section("test_home_page")
-    mocker.patch('app.common.routes.get_all_topics', return_value=[])
+    mocker.patch('app.core.routes.get_all_topics', return_value=[])
     response = auth_client.get('/')
     logger.step("GET /")
     assert response.status_code == 200
@@ -20,7 +20,7 @@ def test_full_learning_flow(auth_client, mocker, logger):
     topic_name = "testing"
 
     # Mock PlannerAgent
-    mocker.patch('app.core.agents.PlannerAgent.generate_study_plan', return_value=(['Step 1', 'Step 2'], None))
+    mocker.patch('app.common.agents.PlannerAgent.generate_study_plan', return_value=(['Step 1', 'Step 2'], None))
 
     # Mock TopicTeachingAgent (ChapterTeachingAgent)
     mocker.patch('app.modes.chapter.routes.ChapterTeachingAgent.generate_teaching_material', return_value=("## Step Content", None))
@@ -31,10 +31,10 @@ def test_full_learning_flow(auth_client, mocker, logger):
     }, None))
 
     # Mock storage functions
-    mocker.patch('app.common.routes.load_topic', return_value=None)
+    mocker.patch('app.core.routes.load_topic', return_value=None)
     mocker.patch('app.modes.chapter.routes.load_topic', return_value=None)
     mocker.patch('app.modes.chapter.routes.save_topic', return_value=None)
-    mocker.patch('app.common.routes.get_all_topics', return_value=[])
+    mocker.patch('app.core.routes.get_all_topics', return_value=[])
 
     # 1. User submits a new topic
     logger.step("1. User submits a new topic")
@@ -132,7 +132,7 @@ def test_delete_topic(auth_client, mocker, logger):
     """Test deleting a topic."""
     logger.section("test_delete_topic")
     topic_name = "delete_test"
-    mocker.patch('app.common.routes.get_all_topics', return_value=[topic_name])
+    mocker.patch('app.core.routes.get_all_topics', return_value=[topic_name])
 
     # Check that the topic is listed
     response = auth_client.get('/')
@@ -140,13 +140,13 @@ def test_delete_topic(auth_client, mocker, logger):
 
     # Delete the topic
     logger.step(f"Deleting topic: {topic_name}")
-    mocker.patch('app.core.storage.delete_topic', return_value=None)
+    mocker.patch('app.common.storage.delete_topic', return_value=None)
     response = auth_client.get(f'/delete/{topic_name}')
     assert response.status_code == 302
     assert response.headers['Location'] == '/'
 
     # Check that the topic is no longer listed
-    mocker.patch('app.common.routes.get_all_topics', return_value=[])
+    mocker.patch('app.core.routes.get_all_topics', return_value=[])
     response = auth_client.get('/')
     assert bytes(topic_name, 'utf-8') not in response.data
 
@@ -162,7 +162,7 @@ def test_chat_route(auth_client, mocker, logger):
     }
     mocker.patch('app.modes.chat.routes.load_topic', return_value=topic_data)
     mocker.patch('app.modes.chat.agent.ChatModeMainChatAgent.get_welcome_message', return_value=("Welcome to the chat!", None))
-    mocker.patch('app.core.agents.ChatAgent.get_answer', return_value=("This is the answer.", None))
+    mocker.patch('app.common.agents.ChatAgent.get_answer', return_value=("This is the answer.", None))
     mocker.patch('app.modes.chat.routes.save_chat_history')
 
     # Test initial GET request to establish the session and get welcome message
@@ -195,10 +195,10 @@ def test_suggestions_success(auth_client, mocker, logger):
     suggested_topics = ['Math', 'Science', 'Art']
     
     # Mock storage
-    mocker.patch('app.core.storage.get_all_topics', return_value=past_topics)
+    mocker.patch('app.common.storage.get_all_topics', return_value=past_topics)
     
     # Mock Agent
-    mocker.patch('app.core.agents.SuggestionAgent.generate_suggestions', return_value=(suggested_topics, None))
+    mocker.patch('app.common.agents.SuggestionAgent.generate_suggestions', return_value=(suggested_topics, None))
     
     logger.step("Calling suggestions API")
     response = auth_client.get('/api/suggest-topics')
@@ -216,11 +216,11 @@ def test_suggestions_agent_error(auth_client, mocker, logger):
     logger.section("test_suggestions_agent_error")
     
     # Mock storage
-    mocker.patch('app.core.storage.get_all_topics', return_value=[])
+    mocker.patch('app.common.storage.get_all_topics', return_value=[])
     
     # Mock Agent failure
     error_message = "LLM failure"
-    mocker.patch('app.core.agents.SuggestionAgent.generate_suggestions', return_value=([], error_message))
+    mocker.patch('app.common.agents.SuggestionAgent.generate_suggestions', return_value=([], error_message))
     
     logger.step("Calling suggestions API (expecting error)")
     response = auth_client.get('/api/suggest-topics')

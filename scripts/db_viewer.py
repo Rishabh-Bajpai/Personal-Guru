@@ -11,8 +11,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 load_dotenv()
 
 from config import Config  # noqa: E402
-from app.common.extensions import db  # noqa: E402
-from app.common import models  # noqa: E402
+from app.core.extensions import db  # noqa: E402
+from app.core import models  # noqa: E402
 
 # --- Standalone App Setup ---
 def create_viewer_app():

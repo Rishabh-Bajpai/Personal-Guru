@@ -19,7 +19,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 load_dotenv()
 
 from app import create_app, db  # noqa: E402
-from app.common import models  # noqa: E402
+from app.core import models  # noqa: E402
 
 # List of models to check
 TARGET_MODELS = [

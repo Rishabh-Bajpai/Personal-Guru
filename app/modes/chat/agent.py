@@ -1,5 +1,5 @@
-from app.core.utils import call_llm
-from app.core.agents import ChatAgent
+from app.common.utils import call_llm
+from app.common.agents import ChatAgent
 from app.modes.chat.prompts import get_chat_system_message, get_welcome_prompt
 
 class ChatModeMainChatAgent(ChatAgent):

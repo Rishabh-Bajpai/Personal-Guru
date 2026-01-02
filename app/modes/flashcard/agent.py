@@ -1,5 +1,5 @@
-from app.core.utils import call_llm
-from app.core.agents import TopicTeachingAgent
+from app.common.utils import call_llm
+from app.common.agents import TopicTeachingAgent
 
 class FlashcardTeachingAgent(TopicTeachingAgent):
     def generate_teaching_material(self, topic, count=50, user_background=None, **kwargs):
@@ -9,7 +9,7 @@ class FlashcardTeachingAgent(TopicTeachingAgent):
         Expected return JSON from LLM: {"flashcards": [{"term": "...", "definition": "..."}, ...]}
         """
         if user_background is None:
-            from app.core.utils import get_user_context
+            from app.common.utils import get_user_context
             user_background = get_user_context()
 
         from app.modes.flashcard.prompts import get_flashcard_generation_prompt
@@ -77,7 +77,7 @@ class FlashcardTeachingAgent(TopicTeachingAgent):
         Returns (count, None) on success or (default_count, error) on failure.
         """
         if user_background is None:
-            from app.core.utils import get_user_context
+            from app.common.utils import get_user_context
             user_background = get_user_context()
 
         from app.modes.flashcard.prompts import get_flashcard_count_prompt

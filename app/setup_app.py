@@ -2,7 +2,7 @@ from flask import Flask, render_template, request
 import os
 
 def create_setup_app():
-    app = Flask(__name__, template_folder='common/templates')
+    app = Flask(__name__, template_folder='core/templates')
     
     # Load defaults
     defaults = {}

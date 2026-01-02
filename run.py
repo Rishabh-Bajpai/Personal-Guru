@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from app.core.config_validator import validate_config
+from app.common.config_validator import validate_config
 
 load_dotenv()
 
