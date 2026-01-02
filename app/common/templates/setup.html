@@ -101,6 +101,19 @@
     <div class="container">
         <h1>🛠️ Configure Personal Guru</h1>
 
+        {% if success %}
+        <div
+            style="background:#d1fae5; color:#065f46; padding:1rem; border-radius:6px; margin-bottom:1rem; border:1px solid #a7f3d0;">
+            {{ success }}
+        </div>
+        {% endif %}
+        {% if error %}
+        <div
+            style="background:#fee2e2; color:#991b1b; padding:1rem; border-radius:6px; margin-bottom:1rem; border:1px solid #fecaca;">
+            {{ error }}
+        </div>
+        {% endif %}
+
         <form method="POST">
             <div class="section-title">Database</div>
             <div class="form-group">
@@ -118,7 +131,8 @@
                 <div class="hint">
                     Ollama: http://localhost:11434/v1<br>
                     LMStudio: http://localhost:1234/v1<br>
-                    OpenAI: https://api.openai.com/v1
+                    OpenAI: https://api.openai.com/v1<br>
+                    Gemini: https://generativelanguage.googleapis.com/v1beta/openai/
                 </div>
             </div>
 

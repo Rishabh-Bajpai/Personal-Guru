@@ -126,6 +126,29 @@ If you prefer full control over your environment.
 4.  **Init Database**: `python scripts/update_database.py`
 5.  **Run**: `python run.py`
 
+### Setup Environment Variables
+
+The application is configured using a `.env` file. Copy the example file and edit it with the URLs and models for your local AI services.
+
+```bash
+cp .env.example .env
+```
+
+Now, open the `.env` file and customize the settings.
+
+**Key Variables:**
+
+- `DATABASE_URL`: Connection string for the PostgreSQL database (e.g., `postgresql://postgres:postgres@localhost:5433/personal_guru`).
+- `PORT`: The port the application will run on (default `5011`).
+- `LLM_ENDPOINT`: The base URL of your LLM provider.
+  - For **Ollama**: `http://localhost:11434/v1`
+  - For **LMStudio**: `http://localhost:1234/v1`
+  - For **OpenAI**: `https://api.openai.com/v1`
+  - For **Gemini**: `https://generativelanguage.googleapis.com/v1beta/openai/`
+- `LLM_MODEL_NAME`: The name of the model to use (e.g., `llama3`, `gpt-4o`).
+- `LLM_API_KEY`: API Key (optional for local providers like Ollama).
+- `LLM_NUM_CTX`: Context window size (recommended: `18000` or higher if your hardware supports it).
+
 ## Database Schema
 
 The application uses the following PostgreSQL tables:

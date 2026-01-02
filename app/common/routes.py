@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for
 from app.core.storage import get_all_topics, load_topic
 from flask_login import login_user, logout_user, login_required, current_user
+import os
 
 
 main_bp = Blueprint('main', __name__)
@@ -194,3 +195,48 @@ def suggest_topics():
         return jsonify({'error': error}), 500
         
     return jsonify({'suggestions': suggestions})
+
+@main_bp.route('/settings', methods=['GET', 'POST'])
+def settings():
+    # Load defaults
+    defaults = {}
+    
+    # Try loading from .env first, then .env.example
+    env_path = '.env' if os.path.exists('.env') else '.env.example'
+    if os.path.exists(env_path):
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    defaults[key] = value
+
+    if request.method == 'POST':
+        # Gather form data
+        config = {
+            'DATABASE_URL': request.form.get('database_url'),
+            'PORT': request.form.get('port', '5011'),
+            'LLM_ENDPOINT': request.form.get('llm_endpoint'),
+            'LLM_MODEL_NAME': request.form.get('llm_model'),
+            'LLM_API_KEY': request.form.get('llm_key', ''),
+            'LLM_NUM_CTX': request.form.get('llm_ctx', '18000'),
+            'TTS_URL': request.form.get('tts_url', ''),
+            'YOUTUBE_API_KEY': request.form.get('youtube_key', '')
+        }
+        
+        # Simple validation
+        if not config['DATABASE_URL'] or not config['LLM_ENDPOINT']:
+            return render_template('setup.html', defaults=defaults, error="Missing required fields")
+        
+        # Write to .env
+        with open('.env', 'w') as f:
+            for key, value in config.items():
+                f.write(f"{key}={value}\n")
+            
+        # flash("Settings saved! Please restart the application to apply changes.") ? 
+        # Flask flash needs secret key. Base template might not display it?
+        # Setup app returned "Setup Complete" string. 
+        # Here we should probably redirect or render success.
+        return render_template('setup.html', defaults=config, success="Settings saved! Restart app to apply.")
+    
+    return render_template('setup.html', defaults=defaults)
