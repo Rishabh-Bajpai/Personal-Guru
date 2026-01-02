@@ -305,8 +305,12 @@ def test_setup_success_mock_fs(setup_client, mocker):
     # Verify file write
     m.assert_called_with('.env', 'w')
     handle = m()
-    handle.write.assert_called()
-    content = handle.write.call_args[0][0]
-    assert "DATABASE_URL=postgresql://test" in content
-    assert "LLM_NUM_CTX=20000" in content
-    assert "YOUTUBE_API_KEY=yt123" in content
+    
+    # Collect all content written
+    written_content = ""
+    for call in handle.write.call_args_list:
+        written_content += call[0][0]
+        
+    assert "DATABASE_URL=postgresql://test" in written_content
+    assert "LLM_NUM_CTX=20000" in written_content
+    assert "YOUTUBE_API_KEY=yt123" in written_content

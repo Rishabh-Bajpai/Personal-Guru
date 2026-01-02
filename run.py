@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
-load_dotenv()
 from app.core.config_validator import validate_config
+
+load_dotenv()
 
 # Check configuration
 missing_vars = validate_config()

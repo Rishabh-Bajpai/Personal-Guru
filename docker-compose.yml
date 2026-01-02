@@ -4,7 +4,7 @@ services:
     build: ./coqui_tts
     profiles: [ "tts" ]
     ports:
-      - "5003:5002"
+      - "5002:5002"
     environment:
       - USE_CUDA=false
       # Set to 'true' in docker-compose.override.yml or .env if GPU is available.
