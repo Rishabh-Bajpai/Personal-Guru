@@ -90,60 +90,31 @@ Using a reverse proxy like Nginx or Caddy is the standard way to handle HTTPS in
 
 After saving, you can access Personal-Guru securely at your public domain.
 
-## Setup and Installation
+## Installation & Setup
 
-Follow these instructions to get the application running on your local machine.
+We offer three ways to install Personal Guru, depending on your needs.
 
-### 1. Clone the Repository
+### Method 1: Automatic Setup (Recommended)
+Best for most users. Interactive script guides you through the process.
 
-First, clone this repository to your local machine:
+- **Linux/Mac**: `./setup.sh`
+- **Windows**: `setup.bat`
 
-```bash
-git clone https://github.com/Rishabh-Bajpai/Personal-Guru.git
-cd Personal-Guru
-```
+### Method 2: Docker (Cross-Platform)
+Run the entire stack (App + DB + Optional LLM) in containers.
 
-### 2. Create a Conda Environment
+- **Linux/Mac**: `./start_docker.sh`
+- **Windows**: `start_docker.bat`
+- **Manual**: `docker compose --profile llm up`
 
-We recommend using Conda to manage your Python environment. Create and activate a new environment with Python 3.9:
+### Method 3: Manual Installation (For Developers)
+If you prefer full control over your environment.
 
-```bash
-conda create -n Personal-Guru python=3.9
-conda activate Personal-Guru
-```
-
-### 3. Install Dependencies
-
-Install the required Python packages using pip:
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Setup Environment Variables
-
-The application is configured using a `.env` file. Copy the example file and edit it with the URLs and models for your local AI services.
-
-```bash
-cp .env.example .env
-```
-
-Now, open the `.env` file and customize the settings.
-
-**Key Variables:**
-
-- `DATABASE_URL`: Connection string for the PostgreSQL database (e.g., `postgresql://postgres:postgres@localhost:5433/personal_guru`).
-- `PORT`: The port the application will run on (default `5011`).
-- `LLM_ENDPOINT`: The base URL of your LLM provider.
-  - For **Ollama**: `http://localhost:11434/v1`
-  - For **LMStudio**: `http://localhost:1234/v1`
-  - For **OpenAI**: `https://api.openai.com/v1`
-  - For **Gemini**: `https://generativelanguage.googleapis.com/v1beta/openai/`
-- `LLM_MODEL_NAME`: The name of the model to use (e.g., `llama3`, `gpt-4o`).
-- `LLM_API_KEY`: API Key (optional for local providers like Ollama).
-- `LLM_NUM_CTX`: Context window size (recommended: `18000` or higher if your hardware supports it).
-
-- `LLM_NUM_CTX`: Context window size (recommended: `18000` or higher if your hardware supports it).
+1.  **Create Environment**: `conda create -n Personal-Guru python=3.10 && conda activate Personal-Guru`
+2.  **Install Dependencies**: `pip install -r requirements/base.txt` (or `dev.txt`, `prod.txt`)
+3.  **Start Database**: `docker compose up -d db`
+4.  **Init Database**: `python scripts/update_database.py`
+5.  **Run**: `python run.py`
 
 ## Database Schema
 

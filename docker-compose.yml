@@ -2,6 +2,37 @@ version: '3.8'
 
 services:
 
+  ollama:
+    image: ollama/ollama:latest
+    profiles: [ "llm" ]
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+
+  app:
+    build: .
+    ports:
+      - "5011:5011"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/personal_guru
+      - PORT=5011
+      - LLM_ENDPOINT=http://ollama:11434/v1
+      - LLM_MODEL_NAME=llama3
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - .:/app
+
   db:
     image: postgres:15
     restart: always
@@ -16,3 +47,4 @@ services:
 
 volumes:
   postgres_data:
+  ollama_data:
