@@ -1,5 +1,4 @@
 import pytest
-import os
 from app.core.config_validator import validate_config
 from app.setup_app import create_setup_app
 
