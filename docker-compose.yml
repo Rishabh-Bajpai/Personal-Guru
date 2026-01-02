@@ -5,6 +5,7 @@ services:
     profiles: [ "tts" ]
     ports:
       - "5002:5002"
+    restart: always
     environment:
       - USE_CUDA=false
       # Set to 'true' in docker-compose.override.yml or .env if GPU is available.
@@ -13,6 +14,7 @@ services:
     build: .
     ports:
       - "5011:5011"
+    restart: always
     depends_on:
       - db
     environment:

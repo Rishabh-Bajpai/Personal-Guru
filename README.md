@@ -47,6 +47,108 @@ C4Context
 
 See [docs/architecture.md](docs/architecture.md) for Container, Component, and Sequence diagrams.
 
+## Installation & Setup
+
+We offer three ways to install Personal Guru, depending on your needs.
+
+### Global Prerequisites (All Methods)
+
+Before starting, ensure you have the following:
+
+1.  **Docker Desktop** (Required for the Database).
+    *   [Download Docker](https://www.docker.com/products/docker-desktop/)
+2.  **LLM Provider** (One of the following):
+    *   [Ollama](https://ollama.com/) (Free, Local - Recommended)
+    *   [LM Studio](https://lmstudio.ai/) (Free, Local)
+    *   **OpenAI / Gemini API Key or any other openai compatible LLM API Key** (Cloud)
+
+### Getting Started
+
+First, clone the repository and navigate to the project directory:
+
+```bash
+git clone https://github.com/Rishabh-Bajpai/Personal-Guru.git
+cd Personal-Guru
+```
+
+### Method 1: Automatic Setup (Recommended)
+Best for most users. An interactive script guides you through the process, setting up the environment and dependencies for you.
+
+- **Linux/Mac**: `./setup.sh`
+- **Windows**: `setup.bat`
+
+### Method 2: Docker
+Run the entire stack (App + DB + Optional TTS) in containers.
+
+1.  **Configure Environment (Optional)**:
+    Create a `.env` file if you want to connect to a specific LLM (e.g. LMStudio on another machine).
+    ```bash
+    LLM_ENDPOINT=http://192.168.1.50:1234/v1
+    ```
+    *If not set, it defaults to connecting to your local host's Ollama at port 11434.*
+
+2.  **Run**:
+    - **Linux/Mac**: `./start_docker.sh`
+    - **Windows**: `start_docker.bat`
+
+    *Note: The script will ask if you want to run in detached mode (background).*
+
+3.  **Access the App**:
+    Open your browser and go to:
+    - **http://localhost:5011** (or the port defined in your `.env`)
+    
+    *Tip: You can change the configuration (LLM, Keys, etc.) directly from the UI by clicking "⚙️ Setup Environment" on the home page.*
+
+### Method 3: Manual Installation (For Developers)
+If you prefer full control over your environment.
+
+1.  **Create Environment**: `conda create -n Personal-Guru python=3.11 && conda activate Personal-Guru`
+2.  **Install Dependencies**: `pip install -r requirements/base.txt` (or `dev.txt`, `prod.txt`)
+3.  **Setup Environment Variables**:
+    Creating a `.env` file is **optional** as the application has a built-in UI Wizard to help you configure these settings. However, you can configure it manually:
+    
+    ```bash
+    cp .env.example .env
+    ```
+    
+    **Key Variables:**
+    - `DATABASE_URL`: Connection string (e.g., `postgresql://postgres:postgres@localhost:5433/personal_guru`).
+    - `PORT`: Default `5011`.
+    - `LLM_ENDPOINT`:
+      - **Ollama**: `http://localhost:11434/v1`
+      - **LMStudio**: `http://localhost:1234/v1`
+      - **OpenAI**: `https://api.openai.com/v1`
+      - **Gemini**: `https://generativelanguage.googleapis.com/v1beta/openai/`
+    - `LLM_MODEL_NAME`: e.g., `llama3`, `gpt-4o`.
+    
+4.  **Database Setup (Docker)**:
+    Start the Postgres database using Docker:
+    ```bash
+    docker compose up -d db
+    ```
+    *Starts PostgreSQL on `localhost:5433`.*
+
+5.  **Init Database**:
+    ```bash
+    python scripts/update_database.py
+    ```
+
+6.  **Run**:
+    ```bash
+    python run.py
+    ```
+
+## Database Schema
+
+The application uses the following PostgreSQL tables:
+
+- **users**: Stores user accounts and profiles.
+- **topics**: Main table for each subject the user is learning.
+- **study_steps**: Steps within a study plan (one-to-many from topics).
+- **quizzes**: Quizzes generated for a topic.
+- **flashcards**: Flashcards for vocabulary terms.
+- **chat_sessions**: Stores the conversational history for "Chat Mode" (one-to-one with topics). Note: "Chapter Mode" side-chats are stored directly in `study_steps.chat_history`.
+
 ## Enabling HTTPS for Microphone Access, reels and other security features
 
 Modern web browsers require a secure (HTTPS) connection to allow web pages to access the microphone, and to enable reels mode.
@@ -89,153 +191,6 @@ Using a reverse proxy like Nginx or Caddy is the standard way to handle HTTPS in
     - Enable "Force SSL" and "HTTP/2 Support".
 
 After saving, you can access Personal-Guru securely at your public domain.
-
-## Installation & Setup
-
-We offer three ways to install Personal Guru, depending on your needs.
-
-### Method 1: Automatic Setup (Recommended)
-Best for most users. Interactive script guides you through the process.
-
-- **Linux/Mac**: `./setup.sh`
-- **Windows**: `setup.bat`
-
-### Method 2: Docker
-
-1.  **Install Prerequisites**:
-    *   [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-    *   [Ollama](https://ollama.com/) (Run on your host machine)
-
-2.  **Configure Environment (Optional)**:
-    Create a `.env` file if you want to connect to a specific LLM (e.g. LMStudio on another machine).
-    ```bash
-    LLM_ENDPOINT=http://192.168.1.50:1234/v1
-    ```
-    *If not set, it defaults to connecting to your local host's Ollama at port 11434.*
-
-3.  **Run**:
-    - **Linux/Mac**: `./start_docker.sh`
-    - **Windows**: `start_docker.bat`
-
-### Method 3: Manual Installation (For Developers)
-If you prefer full control over your environment.
-
-1.  **Create Environment**: `conda create -n Personal-Guru python=3.10 && conda activate Personal-Guru`
-2.  **Install Dependencies**: `pip install -r requirements/base.txt` (or `dev.txt`, `prod.txt`)
-3.  **Start Database**: `docker compose up -d db`
-4.  **Init Database**: `python scripts/update_database.py`
-5.  **Run**: `python run.py`
-
-### Setup Environment Variables
-
-The application is configured using a `.env` file. Copy the example file and edit it with the URLs and models for your local AI services.
-
-```bash
-cp .env.example .env
-```
-
-Now, open the `.env` file and customize the settings.
-
-**Key Variables:**
-
-- `DATABASE_URL`: Connection string for the PostgreSQL database (e.g., `postgresql://postgres:postgres@localhost:5433/personal_guru`).
-- `PORT`: The port the application will run on (default `5011`).
-- `LLM_ENDPOINT`: The base URL of your LLM provider.
-  - For **Ollama**: `http://localhost:11434/v1`
-  - For **LMStudio**: `http://localhost:1234/v1`
-  - For **OpenAI**: `https://api.openai.com/v1`
-  - For **Gemini**: `https://generativelanguage.googleapis.com/v1beta/openai/`
-- `LLM_MODEL_NAME`: The name of the model to use (e.g., `llama3`, `gpt-4o`).
-- `LLM_API_KEY`: API Key (optional for local providers like Ollama).
-- `LLM_NUM_CTX`: Context window size (recommended: `18000` or higher if your hardware supports it).
-
-## Database Schema
-
-The application uses the following PostgreSQL tables:
-
-- **users**: Stores user accounts and profiles.
-- **topics**: Main table for each subject the user is learning.
-- **study_steps**: Steps within a study plan (one-to-many from topics).
-- **quizzes**: Quizzes generated for a topic.
-- **flashcards**: Flashcards for vocabulary terms.
-- **chat_sessions**: Stores the conversational history for "Chat Mode" (one-to-one with topics). Note: "Chapter Mode" side-chats are stored directly in `study_steps.chat_history`.
-
-## Database Setup (Docker)
-
-This application uses a PostgreSQL database running in a Docker container.
-
-### 1. Start the Database
-Run the following command to start the database service:
-
-```bash
-docker compose up -d db
-```
-
-This starts a PostgreSQL instance on `localhost:5433`.
-
-### 2. Initialize the Database
-Run the following script to create the necessary tables in the database. This is necessary when setting up the project for the first time, or if you have reset your Docker database volume.
-
-```bash
-python scripts/create_tables.py
-```
-
-### 3. Inspecting the Database (Optional)
-To manually inspect the database content:
-
-```bash
-docker compose exec db psql -U postgres -d personal_guru
-```
-
-## Running the Application
-
-To run the application, ensure the database is running, then start the Flask server locally.
-
-### 1. Start the Server
-
-```bash
-python run.py
-```
-
-The application will be available at `http://localhost:5011` (or the port defined in your `.env`).
-
-### 2. Data Migration (Optional)
-If you need to migrate legacy JSON data to the new database, run:
-
-```bash
-python migrate_data.py
-```
-
-### 3. External Services
-Ensure your LLM server (Ollama/LMStudio) and optional TTS server are running as described below.
-
-#### LLM Server (Ollama / LMStudio / etc.)
-Ensure your LLM server is running and accessible. The application uses the OpenAI API protocol for all LLM providers (including Ollama).
-
-**If using Ollama:**
-```bash
-docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
-```
-
-#### Coqui TTS Server (TTS) (Optional: also experimental)
-
-This service provides high-quality, human-like text-to-speech. The repository includes a `Dockerfile` for Coqui TTS in the `coqui_tts` directory.
-
-First, build the Docker image:
-
-```bash
-cd coqui_tts
-sudo docker build -t coqui-chanakya-tts .
-cd ..
-```
-
-Then, run the Docker container:
-
-```bash
-sudo docker run -d -p 5001:5002 --gpus all --restart unless-stopped --name coqui-tts-server coqui-chanakya-tts
-```
-
-This will start the TTS server on port 5001 of your host machine, connected to port 5002 inside the container.
 
 ## For Developers: Running Tests
 
