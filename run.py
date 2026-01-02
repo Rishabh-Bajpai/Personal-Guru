@@ -1,8 +1,18 @@
 from dotenv import load_dotenv
-load_dotenv()
-from app import create_app  # noqa: E402
+from app.common.config_validator import validate_config
 
-app = create_app()
+load_dotenv()
+
+# Check configuration
+missing_vars = validate_config()
+
+if missing_vars:
+    print(f"Missing configuration variables: {missing_vars}. Starting Setup Wizard...")
+    from app.setup_app import create_setup_app
+    app = create_setup_app()
+else:
+    from app import create_app  # noqa: E402
+    app = create_app()
 
 import os  # noqa: E402
 if __name__ == '__main__':

@@ -1,9 +1,9 @@
 import pytest
 import time
 from unittest.mock import patch
-from app.core.utils import call_llm
+from app.common.utils import call_llm
 from app.modes.quiz.agent import QuizAgent
-from app.core.agents import PlannerAgent, FeedbackAgent
+from app.common.agents import PlannerAgent, FeedbackAgent
 from app.modes.chapter.agent import ChapterTeachingAgent, AssessorAgent
 from app.modes.flashcard.agent import FlashcardTeachingAgent
 
@@ -139,8 +139,8 @@ def test_assessor_agent(logger):
 def test_chat_session_persistence(logger, app):
     """Test that chat history is saved to ChatSession table."""
     logger.section("test_chat_session_persistence")
-    from app.common.models import Topic, User, db
-    from app.core.storage import save_chat_history
+    from app.core.models import Topic, User, db
+    from app.common.storage import save_chat_history
     
     with app.app_context():
         # Ensure user exists (created in conftest auth_client logic or manually here)
@@ -154,8 +154,8 @@ def test_chat_session_persistence(logger, app):
         # Mock current_user
         from unittest.mock import patch
         
-        # Patching current_user in app.core.storage module scope
-        with patch('app.core.storage.current_user') as mock_user:
+        # Patching current_user in app.common.storage module scope
+        with patch('app.common.storage.current_user') as mock_user:
             mock_user.is_authenticated = True
             mock_user.username = 'testuser'
             
@@ -176,8 +176,8 @@ def test_chat_session_persistence(logger, app):
 def test_quiz_result_persistence(logger, app):
     """Test that quiz result is saved to Quiz table."""
     logger.section("test_quiz_result_persistence")
-    from app.common.models import Topic, User, db
-    from app.core.storage import save_topic, load_topic
+    from app.core.models import Topic, User, db
+    from app.common.storage import save_topic, load_topic
     
     with app.app_context():
         # Ensure user exists
@@ -187,7 +187,7 @@ def test_quiz_result_persistence(logger, app):
             db.session.add(u)
             db.session.commit()
             
-        with patch('app.core.storage.current_user') as mock_user:
+        with patch('app.common.storage.current_user') as mock_user:
             mock_user.is_authenticated = True
             mock_user.username = 'testuser'
             

@@ -1,7 +1,7 @@
-from app.core.agents import ChatAgent, TopicTeachingAgent
+from app.common.agents import ChatAgent, TopicTeachingAgent
 from app.modes.chapter.prompts import get_chapter_system_message
 import re
-from app.core.utils import call_llm
+from app.common.utils import call_llm
 
 class ChapterModeChatAgent(ChatAgent):
     """

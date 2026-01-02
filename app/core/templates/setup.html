@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Guru - Setup</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            padding: 2rem 0;
+            margin: 0;
+        }
+
+        .container {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #1a1a1a;
+            font-size: 1.8rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #374151;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+            transition: border 0.2s;
+        }
+
+        input:focus {
+            border-color: #3b82f6;
+            outline: none;
+            ring: 2px solid rgba(59, 130, 246, 0.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 1rem;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .hint {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-top: 0.35rem;
+            line-height: 1.4;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #111827;
+            margin: 2rem 0 1rem;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🛠️ Configure Personal Guru</h1>
+
+        {% if success %}
+        <div
+            style="background:#d1fae5; color:#065f46; padding:1rem; border-radius:6px; margin-bottom:1rem; border:1px solid #a7f3d0;">
+            {{ success }}
+        </div>
+        {% endif %}
+        {% if error %}
+        <div
+            style="background:#fee2e2; color:#991b1b; padding:1rem; border-radius:6px; margin-bottom:1rem; border:1px solid #fecaca;">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST">
+            <div class="section-title">Database</div>
+            <div class="form-group">
+                <label for="database_url">Database URL</label>
+                <input type="text" id="database_url" name="database_url" required
+                    value="{{ defaults.get('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5433/personal_guru') }}">
+                <div class="hint">Connection string (e.g., postgresql://user:pass@host:port/db)</div>
+            </div>
+
+            <div class="section-title">LLM Settings</div>
+            <div class="form-group">
+                <label for="llm_endpoint">LLM Endpoint</label>
+                <input type="url" id="llm_endpoint" name="llm_endpoint" required
+                    value="{{ defaults.get('LLM_ENDPOINT', 'http://localhost:11434/v1') }}">
+                <div class="hint">
+                    Ollama: http://localhost:11434/v1<br>
+                    LMStudio: http://localhost:1234/v1<br>
+                    OpenAI: https://api.openai.com/v1<br>
+                    Gemini: https://generativelanguage.googleapis.com/v1beta/openai/
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="llm_model">Model Name</label>
+                <input type="text" id="llm_model" name="llm_model" required
+                    value="{{ defaults.get('LLM_MODEL_NAME', 'llama3') }}">
+                <div class="hint">e.g., llama3, gpt-4o, qwen:14b</div>
+            </div>
+
+            <div class="form-group">
+                <label for="llm_key">API Key</label>
+                <input type="password" id="llm_key" name="llm_key" value="{{ defaults.get('LLM_API_KEY', '') }}">
+                <div class="hint">Required for OpenAI/Gemini. Optional for local Ollama/LMStudio.</div>
+            </div>
+
+            <div class="form-group">
+                <label for="llm_ctx">Context Window</label>
+                <input type="number" id="llm_ctx" name="llm_ctx" value="{{ defaults.get('LLM_NUM_CTX', '18000') }}">
+                <div class="hint">Recommended: 18000+ for best long-context performance.</div>
+            </div>
+
+            <div class="section-title">Optional Services</div>
+            <div class="form-group">
+                <label for="tts_url">TTS URL</label>
+                <input type="url" id="tts_url" name="tts_url"
+                    value="{{ defaults.get('TTS_URL', 'http://localhost:5002/api/tts') }}">
+                <div class="hint">URL for Coqui TTS service (if running).</div>
+            </div>
+
+            <div class="form-group">
+                <label for="youtube_key">YouTube API Key</label>
+                <input type="password" id="youtube_key" name="youtube_key"
+                    value="{{ defaults.get('YOUTUBE_API_KEY', '') }}">
+                <div class="hint">Required for Reel Mode and Video Search features.</div>
+            </div>
+
+            <div class="form-group">
+                <label for="port">App Port</label>
+                <input type="number" id="port" name="port" value="{{ defaults.get('PORT', '5011') }}">
+            </div>
+
+            <button type="submit">Save Configuration</button>
+        </form>
+    </div>
+</body>
+
+</html>

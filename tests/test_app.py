@@ -1,4 +1,6 @@
 import pytest
+from app.common.config_validator import validate_config
+from app.setup_app import create_setup_app
 
 # Mark all tests in this file as 'unit'
 pytestmark = pytest.mark.unit
@@ -6,7 +8,7 @@ pytestmark = pytest.mark.unit
 def test_home_page(auth_client, mocker, logger):
     """Test that the home page loads correctly."""
     logger.section("test_home_page")
-    mocker.patch('app.common.routes.get_all_topics', return_value=[])
+    mocker.patch('app.core.routes.get_all_topics', return_value=[])
     response = auth_client.get('/')
     logger.step("GET /")
     assert response.status_code == 200
@@ -18,7 +20,7 @@ def test_full_learning_flow(auth_client, mocker, logger):
     topic_name = "testing"
 
     # Mock PlannerAgent
-    mocker.patch('app.core.agents.PlannerAgent.generate_study_plan', return_value=(['Step 1', 'Step 2'], None))
+    mocker.patch('app.common.agents.PlannerAgent.generate_study_plan', return_value=(['Step 1', 'Step 2'], None))
 
     # Mock TopicTeachingAgent (ChapterTeachingAgent)
     mocker.patch('app.modes.chapter.routes.ChapterTeachingAgent.generate_teaching_material', return_value=("## Step Content", None))
@@ -29,10 +31,10 @@ def test_full_learning_flow(auth_client, mocker, logger):
     }, None))
 
     # Mock storage functions
-    mocker.patch('app.common.routes.load_topic', return_value=None)
+    mocker.patch('app.core.routes.load_topic', return_value=None)
     mocker.patch('app.modes.chapter.routes.load_topic', return_value=None)
     mocker.patch('app.modes.chapter.routes.save_topic', return_value=None)
-    mocker.patch('app.common.routes.get_all_topics', return_value=[])
+    mocker.patch('app.core.routes.get_all_topics', return_value=[])
 
     # 1. User submits a new topic
     logger.step("1. User submits a new topic")
@@ -130,7 +132,7 @@ def test_delete_topic(auth_client, mocker, logger):
     """Test deleting a topic."""
     logger.section("test_delete_topic")
     topic_name = "delete_test"
-    mocker.patch('app.common.routes.get_all_topics', return_value=[topic_name])
+    mocker.patch('app.core.routes.get_all_topics', return_value=[topic_name])
 
     # Check that the topic is listed
     response = auth_client.get('/')
@@ -138,13 +140,13 @@ def test_delete_topic(auth_client, mocker, logger):
 
     # Delete the topic
     logger.step(f"Deleting topic: {topic_name}")
-    mocker.patch('app.core.storage.delete_topic', return_value=None)
+    mocker.patch('app.common.storage.delete_topic', return_value=None)
     response = auth_client.get(f'/delete/{topic_name}')
     assert response.status_code == 302
     assert response.headers['Location'] == '/'
 
     # Check that the topic is no longer listed
-    mocker.patch('app.common.routes.get_all_topics', return_value=[])
+    mocker.patch('app.core.routes.get_all_topics', return_value=[])
     response = auth_client.get('/')
     assert bytes(topic_name, 'utf-8') not in response.data
 
@@ -160,7 +162,7 @@ def test_chat_route(auth_client, mocker, logger):
     }
     mocker.patch('app.modes.chat.routes.load_topic', return_value=topic_data)
     mocker.patch('app.modes.chat.agent.ChatModeMainChatAgent.get_welcome_message', return_value=("Welcome to the chat!", None))
-    mocker.patch('app.core.agents.ChatAgent.get_answer', return_value=("This is the answer.", None))
+    mocker.patch('app.common.agents.ChatAgent.get_answer', return_value=("This is the answer.", None))
     mocker.patch('app.modes.chat.routes.save_chat_history')
 
     # Test initial GET request to establish the session and get welcome message
@@ -193,10 +195,10 @@ def test_suggestions_success(auth_client, mocker, logger):
     suggested_topics = ['Math', 'Science', 'Art']
     
     # Mock storage
-    mocker.patch('app.core.storage.get_all_topics', return_value=past_topics)
+    mocker.patch('app.common.storage.get_all_topics', return_value=past_topics)
     
     # Mock Agent
-    mocker.patch('app.core.agents.SuggestionAgent.generate_suggestions', return_value=(suggested_topics, None))
+    mocker.patch('app.common.agents.SuggestionAgent.generate_suggestions', return_value=(suggested_topics, None))
     
     logger.step("Calling suggestions API")
     response = auth_client.get('/api/suggest-topics')
@@ -214,11 +216,11 @@ def test_suggestions_agent_error(auth_client, mocker, logger):
     logger.section("test_suggestions_agent_error")
     
     # Mock storage
-    mocker.patch('app.core.storage.get_all_topics', return_value=[])
+    mocker.patch('app.common.storage.get_all_topics', return_value=[])
     
     # Mock Agent failure
     error_message = "LLM failure"
-    mocker.patch('app.core.agents.SuggestionAgent.generate_suggestions', return_value=([], error_message))
+    mocker.patch('app.common.agents.SuggestionAgent.generate_suggestions', return_value=([], error_message))
     
     logger.step("Calling suggestions API (expecting error)")
     response = auth_client.get('/api/suggest-topics')
@@ -227,5 +229,88 @@ def test_suggestions_agent_error(auth_client, mocker, logger):
     data = response.get_json()
     
     logger.step(f"Received error: {data}")
+    logger.step(f"Received error: {data}")
     assert 'error' in data
     assert data['error'] == error_message
+
+
+# --- New Tests for Config & Setup ---
+
+def test_validate_config_all_present(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://localhost:5432/db")
+    monkeypatch.setenv("LLM_ENDPOINT", "http://localhost:11434")
+    monkeypatch.setenv("LLM_MODEL_NAME", "llama3")
+    
+    missing = validate_config()
+    assert len(missing) == 0
+
+def test_validate_config_missing_vars(monkeypatch):
+    # Ensure they are unset
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("LLM_ENDPOINT", raising=False)
+    monkeypatch.delenv("LLM_MODEL_NAME", raising=False)
+    
+    missing = validate_config()
+    assert "DATABASE_URL" in missing
+    assert "LLM_ENDPOINT" in missing
+    assert "LLM_MODEL_NAME" in missing
+
+def test_validate_config_partial_missing(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://localhost:5432/db")
+    monkeypatch.delenv("LLM_ENDPOINT", raising=False)
+    monkeypatch.setenv("LLM_MODEL_NAME", "llama3")
+    
+    missing = validate_config()
+    assert "LLM_ENDPOINT" in missing
+    assert "DATABASE_URL" not in missing
+
+@pytest.fixture
+def setup_client():
+    app = create_setup_app()
+    app.config['TESTING'] = True
+    with app.test_client() as client:
+        yield client
+
+def test_setup_page_loads(setup_client):
+    rv = setup_client.get('/')
+    assert rv.status_code == 200
+    assert b"Configure Personal Guru" in rv.data
+
+def test_setup_submission(setup_client):
+    rv = setup_client.post('/', data={
+        'database_url': '',
+        'llm_endpoint': ''
+    })
+    assert rv.status_code == 400
+    assert b"Missing required fields" in rv.data
+
+def test_setup_success_mock_fs(setup_client, mocker):
+    m = mocker.mock_open()
+    mocker.patch('builtins.open', m)
+    
+    rv = setup_client.post('/', data={
+        'database_url': 'postgresql://test',
+        'port': '5011',
+        'llm_endpoint': 'http://test',
+        'llm_model': 'gpt-4',
+        'llm_key': 'secret',
+        'llm_ctx': '20000',
+        'tts_url': 'http://tts',
+        'youtube_key': 'yt123'
+    })
+    
+    assert rv.status_code == 200
+    assert b"Setup Complete" in rv.data
+    
+    # Verify file write
+    m.assert_called_with('.env', 'w')
+    handle = m()
+    
+    # Collect all content written
+    written_content = ""
+    for call in handle.write.call_args_list:
+        written_content += call[0][0]
+        
+    assert "DATABASE_URL=postgresql://test" in written_content
+    assert "LLM_NUM_CTX=20000" in written_content
+    assert "YOUTUBE_API_KEY=yt123" in written_content

@@ -5,7 +5,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app import create_app
-from app.common.models import Topic, StudyStep, Quiz, Flashcard
+from app.core.models import Topic, StudyStep, Quiz, Flashcard
 from sqlalchemy.orm import class_mapper
 
 def generate_mermaid_er():

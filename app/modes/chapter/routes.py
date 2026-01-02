@@ -1,14 +1,14 @@
 from flask import render_template, request, session, redirect, url_for, make_response
 from . import chapter_bp
-from app.core.storage import load_topic, save_topic
-from app.core.agents import FeedbackAgent, PlannerAgent
+from app.common.storage import load_topic, save_topic
+from app.common.agents import FeedbackAgent, PlannerAgent
 from .agent import ChapterTeachingAgent, AssessorAgent
-from app.core.utils import generate_audio
+from app.common.utils import generate_audio
 from markdown_it import MarkdownIt
 from weasyprint import HTML
 import datetime
-from app.core.agents import CodeExecutionAgent
-from app.core.sandbox import Sandbox
+from app.common.agents import CodeExecutionAgent
+from app.common.sandbox import Sandbox
 
 # Instantiate agents
 teacher = ChapterTeachingAgent()
@@ -42,7 +42,7 @@ def mode(topic_name):
         return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=resume_step_index))
     
     # No plan exists - generate one automatically
-    from app.core.utils import get_user_context
+    from app.common.utils import get_user_context
     user_background = get_user_context()
     plan_steps, error = planner.generate_study_plan(topic_name, user_background)
     
@@ -65,7 +65,7 @@ def generate_plan():
     if not topic_name:
         return {"error": "Topic name required"}, 400
         
-    from app.core.utils import get_user_context
+    from app.common.utils import get_user_context
     user_background = get_user_context()
     plan_steps, error = planner.generate_study_plan(topic_name, user_background)
     
@@ -94,7 +94,7 @@ def update_plan(topic_name):
         return "Topic not found", 404
 
     current_plan = topic_data.get('plan', [])
-    from app.core.utils import get_user_context
+    from app.common.utils import get_user_context
     user_background = get_user_context()
 
     # Use the unified PlannerAgent
@@ -102,7 +102,7 @@ def update_plan(topic_name):
 
     if not error:
         # Smart Update: Preserve content for unchanged steps
-        from app.core.utils import reconcile_plan_steps
+        from app.common.utils import reconcile_plan_steps
 
         # Smart Update using helper
         topic_data['plan'] = new_plan
@@ -142,13 +142,13 @@ def learn_topic(topic_name, step_index):
 
     if not current_step_data.get('teaching_material'):
         incorrect_questions = session.get('incorrect_questions')
-        from app.core.utils import get_user_context
+        from app.common.utils import get_user_context
         current_background = get_user_context()
         teaching_material, error = teacher.generate_teaching_material(plan_steps[step_index], plan_steps, current_background, incorrect_questions)
         if error:
             return f"<h1>Error Generating Teaching Material</h1><p>{teaching_material}</p>"
         current_step_data['teaching_material'] = teaching_material
-        from app.core.utils import get_user_context
+        from app.common.utils import get_user_context
         current_background = get_user_context()
         question_data, error = assessor.generate_question(teaching_material, current_background)
         if not error:

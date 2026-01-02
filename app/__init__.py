@@ -1,6 +1,6 @@
 from flask import Flask, request, redirect, url_for
 from config import Config
-from .common.extensions import db, migrate
+from .core.extensions import db, migrate
 from flask_wtf.csrf import CSRFProtect
 from flask_session import Session  # Server-side sessions for large chat histories
 from flask_login import LoginManager
@@ -12,7 +12,7 @@ login_manager = LoginManager()
 login_manager.login_view = 'main.login'
 
 def create_app(config_class=Config):
-    app = Flask(__name__, template_folder='common/templates')
+    app = Flask(__name__, template_folder='core/templates')
     app.config.from_object(config_class)
 
     # Initialize Flask extensions
@@ -22,7 +22,7 @@ def create_app(config_class=Config):
     sess.init_app(app)  # Initialize server-side sessions
     login_manager.init_app(app)
 
-    from app.common.models import User
+    from app.core.models import User
     @login_manager.user_loader
     def load_user(username):
         return User.query.get(username)
@@ -43,7 +43,7 @@ def create_app(config_class=Config):
     # Global Routes (Home, Background, etc.)
     # Global Routes (Home, Background, etc.)
     
-    from .common.routes import main_bp
+    from .core.routes import main_bp
     app.register_blueprint(main_bp)
 
     @app.before_request

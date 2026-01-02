@@ -1,6 +1,6 @@
 import pytest
 from app import create_app
-from app.common.models import db
+from app.core.models import db
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -58,7 +58,7 @@ def client(app):
 @pytest.fixture
 def auth_client(client, app):
     """A logged-in test client."""
-    from app.common.models import User
+    from app.core.models import User
     
     with app.app_context():
         # Create test user
