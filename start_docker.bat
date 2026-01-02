@@ -5,11 +5,11 @@ echo.
 
 set PROFILES=
 
-:: Check LLM
-set /p run_llm="Do you want to run a local LLM via Docker (Ollama)? [y/N]: "
-if /i "%run_llm%"=="y" (
-    set PROFILES=%PROFILES% --profile llm
-    echo ✅ Enabled 'llm' profile.
+:: Check TTS
+set /p run_tts="Do you want to run local Coqui TTS? (Large download ~5GB) [y/N]: "
+if /i "%run_tts%"=="y" (
+    set PROFILES=%PROFILES% --profile tts
+    echo ✅ Enabled 'tts' profile.
 )
 
 echo.

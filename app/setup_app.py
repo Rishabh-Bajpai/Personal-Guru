@@ -2,35 +2,47 @@ from flask import Flask, render_template, request, redirect, url_for
 import os
 
 def create_setup_app():
-    app = Flask(__name__, template_folder='templates') # Checks strictly inside app/templates/ if run from app? No, relative to file.
-    # Actually, if this file is in app/setup_app.py, template_folder='templates' looks in app/templates. Correct.
+    app = Flask(__name__, template_folder='templates')
     
+    # Load defaults
+    defaults = {}
+    
+    # Try loading from .env first, then .env.example
+    env_path = '.env' if os.path.exists('.env') else '.env.example'
+    if os.path.exists(env_path):
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    defaults[key] = value
+
     @app.route('/', methods=['GET', 'POST'])
     def setup():
         if request.method == 'POST':
             # Gather form data
-            db_url = request.form.get('database_url')
-            llm_endpoint = request.form.get('llm_endpoint')
-            llm_model = request.form.get('llm_model')
-            llm_key = request.form.get('llm_key', '')
+            config = {
+                'DATABASE_URL': request.form.get('database_url'),
+                'PORT': request.form.get('port', '5011'),
+                'LLM_ENDPOINT': request.form.get('llm_endpoint'),
+                'LLM_MODEL_NAME': request.form.get('llm_model'),
+                'LLM_API_KEY': request.form.get('llm_key', ''),
+                'LLM_NUM_CTX': request.form.get('llm_ctx', '18000'),
+                'TTS_URL': request.form.get('tts_url', ''),
+                'YOUTUBE_API_KEY': request.form.get('youtube_key', '')
+            }
             
             # Simple validation
-            if not db_url or not llm_endpoint or not llm_model:
+            if not config['DATABASE_URL'] or not config['LLM_ENDPOINT']:
                 return "Missing required fields", 400
             
             # Write to .env
-            env_content = f"""DATABASE_URL={db_url}
-LLM_ENDPOINT={llm_endpoint}
-LLM_MODEL_NAME={llm_model}
-LLM_API_KEY={llm_key}
-LLM_NUM_CTX=18000
-PORT=5011
-"""
             with open('.env', 'w') as f:
-                f.write(env_content)
+                for key, value in config.items():
+                    f.write(f"{key}={value}\n")
                 
             return "Setup Complete! Please restart the application."
         
-        return render_template('setup.html')
+        return render_template('setup.html', defaults=defaults)
         
     return app

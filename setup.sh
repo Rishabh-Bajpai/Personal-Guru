@@ -33,9 +33,9 @@ echo "3) Production (Server Optimization)"
 read -p "Enter number [1-3]: " install_type
 
 case $install_type in
-    1) req_file="requirements/dev.txt"; env_opts="python=3.10";;
-    3) req_file="requirements/prod.txt"; env_opts="python=3.10";;
-    *) req_file="requirements/base.txt"; env_opts="python=3.10";;
+    1) req_file="requirements/dev.txt"; env_opts="python=3.11";;
+    3) req_file="requirements/prod.txt"; env_opts="python=3.11";;
+    *) req_file="requirements/base.txt"; env_opts="python=3.11";;
 esac
 
 echo ""

@@ -1,21 +1,13 @@
-version: '3.8'
-
 services:
 
-  ollama:
-    image: ollama/ollama:latest
-    profiles: [ "llm" ]
-    volumes:
-      - ollama_data:/root/.ollama
+  coqui-tts:
+    build: ./coqui_tts
+    profiles: [ "tts" ]
     ports:
-      - "11434:11434"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [ gpu ]
+      - "5003:5002"
+    environment:
+      - USE_CUDA=false
+      # Set to 'true' in docker-compose.override.yml or .env if GPU is available.
 
   app:
     build: .
@@ -26,12 +18,18 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/personal_guru
       - PORT=5011
-      - LLM_ENDPOINT=http://ollama:11434/v1
-      - LLM_MODEL_NAME=llama3
+      # Use env var if set, otherwise fallback to host.docker.internal
+      - LLM_ENDPOINT=${LLM_ENDPOINT:-http://host.docker.internal:11434/v1}
+      - LLM_MODEL_NAME=${LLM_MODEL_NAME:-llama3}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_NUM_CTX=${LLM_NUM_CTX:-18000}
+      - TTS_URL=${TTS_URL:-http://coqui-tts:5002/api/tts}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - .:/app
+    command: flask run --host=0.0.0.0 --port=5011
 
   db:
     image: postgres:15
@@ -47,4 +45,3 @@ services:
 
 volumes:
   postgres_data:
-  ollama_data:

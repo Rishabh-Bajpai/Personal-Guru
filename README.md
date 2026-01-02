@@ -100,12 +100,22 @@ Best for most users. Interactive script guides you through the process.
 - **Linux/Mac**: `./setup.sh`
 - **Windows**: `setup.bat`
 
-### Method 2: Docker (Cross-Platform)
-Run the entire stack (App + DB + Optional LLM) in containers.
+### Method 2: Docker
 
-- **Linux/Mac**: `./start_docker.sh`
-- **Windows**: `start_docker.bat`
-- **Manual**: `docker compose --profile llm up`
+1.  **Install Prerequisites**:
+    *   [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+    *   [Ollama](https://ollama.com/) (Run on your host machine)
+
+2.  **Configure Environment (Optional)**:
+    Create a `.env` file if you want to connect to a specific LLM (e.g. LMStudio on another machine).
+    ```bash
+    LLM_ENDPOINT=http://192.168.1.50:1234/v1
+    ```
+    *If not set, it defaults to connecting to your local host's Ollama at port 11434.*
+
+3.  **Run**:
+    - **Linux/Mac**: `./start_docker.sh`
+    - **Windows**: `start_docker.bat`
 
 ### Method 3: Manual Installation (For Developers)
 If you prefer full control over your environment.

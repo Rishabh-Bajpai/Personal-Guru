@@ -274,7 +274,7 @@ def setup_client():
 def test_setup_page_loads(setup_client):
     rv = setup_client.get('/')
     assert rv.status_code == 200
-    assert b"Welcome to Personal Guru" in rv.data
+    assert b"Configure Personal Guru" in rv.data
 
 def test_setup_submission(setup_client):
     rv = setup_client.post('/', data={
@@ -290,9 +290,13 @@ def test_setup_success_mock_fs(setup_client, mocker):
     
     rv = setup_client.post('/', data={
         'database_url': 'postgresql://test',
+        'port': '5011',
         'llm_endpoint': 'http://test',
         'llm_model': 'gpt-4',
-        'llm_key': 'secret'
+        'llm_key': 'secret',
+        'llm_ctx': '20000',
+        'tts_url': 'http://tts',
+        'youtube_key': 'yt123'
     })
     
     assert rv.status_code == 200
@@ -304,3 +308,5 @@ def test_setup_success_mock_fs(setup_client, mocker):
     handle.write.assert_called()
     content = handle.write.call_args[0][0]
     assert "DATABASE_URL=postgresql://test" in content
+    assert "LLM_NUM_CTX=20000" in content
+    assert "YOUTUBE_API_KEY=yt123" in content

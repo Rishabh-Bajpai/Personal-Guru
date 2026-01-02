@@ -29,7 +29,7 @@ echo.
 set /p install_tts="Install TTS dependencies? (Large download) [y/N]: "
 
 :: Create Environment
-call conda create -n Personal-Guru python=3.10 -y
+call conda create -n Personal-Guru python=3.11 -y
 
 :: Install Dependencies
 echo 📦 Installing Dependencies from %req_file%...
