@@ -54,10 +54,13 @@ We offer three ways to install Personal Guru, depending on your needs.
 ### Global Prerequisites (All Methods)
 
 Before starting, ensure you have the following:
-
-1.  **Docker Desktop** (Required for the Database).
+1. **Python 3.11** (Required for the Application).
+    *   [Download Python](https://www.python.org/downloads/)
+2. **Conda** (Required for the Application).
+    *   [Download Miniconda](https://docs.conda.io/en/latest/miniconda.html)
+3.  **Docker Desktop** (Required for the Database).
     *   [Download Docker](https://www.docker.com/products/docker-desktop/)
-2.  **LLM Provider** (One of the following):
+4.  **LLM Provider** (One of the following):
     *   [Ollama](https://ollama.com/) (Free, Local - Recommended)
     *   [LM Studio](https://lmstudio.ai/) (Free, Local)
     *   **OpenAI / Gemini API Key or any other openai compatible LLM API Key** (Cloud)
