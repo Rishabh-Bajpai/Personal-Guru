@@ -8,6 +8,7 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('chapter.static', filename='chapter.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat_popup.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -65,15 +66,6 @@
             <source src="" type="audio/wav">
             Your browser does not support the audio element.
         </audio>
-
-        <div class="chat-container">
-            <h3>Ask a Question</h3>
-            <div id="chat-history"></div>
-            <form id="chat-form">
-                <input type="text" id="chat-input" placeholder="Type your question here...">
-                <button type="submit" class="button">Send</button>
-            </form>
-        </div>
 
         {% if question_data and question_data.questions %}
         <div class="assessment">
@@ -173,17 +165,27 @@
         <p>Ready to execute code...</p>
     </div>
 </div>
+
+{% include 'common/chat_popup.html' %}
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('chapter.static', filename='learn_step.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chat_popup.js') }}"></script>
 <script>
-    initLearnStep({
-        urls: {
-            execute_code: "{{ url_for('chapter.execute_code') }}",
-            generate_audio: "{{ url_for('chapter.generate_audio_route', step_index=step_index) }}",
-            chat: "{{ url_for('chat.chat', topic_name=topic.name, step_index=step_index) }}"
-        }
+    document.addEventListener('DOMContentLoaded', function () {
+        initLearnStep({
+            urls: {
+                execute_code: "{{ url_for('chapter.execute_code') }}",
+                generate_audio: "{{ url_for('chapter.generate_audio_route', step_index=step_index) }}"
+            }
+        });
+
+        initChatPopup({
+            urls: {
+                chat: "{{ url_for('chat.chat', topic_name=topic.name, step_index=step_index) }}"
+            }
+        });
     });
 </script>
 {% endblock %}
