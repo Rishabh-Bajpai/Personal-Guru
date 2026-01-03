@@ -19,7 +19,6 @@ INSTRUCTIONS:
 4. **No Artifacts**: Do not output internal thought processes, pig tags, or <think> tags. Output ONLY the answer.
 5. **Formatting**: You can use bullet points for lists, but keep them compact.
 6. **No Code**: Do not output code.
-7. **Follow-up**: If the user asks a question that is not directly related to the learning material, answer it concisely and directly. And suggest a question that is related to the learning material.
 """
     return base_prompt
 
@@ -36,8 +35,9 @@ FULL STUDY PLAN CONTEXT:
 INSTRUCTIONS:
 1. Based on the topic, the full study plan, and the user's incorrect answers (if any), generate detailed teaching material for the current topic.
 2. Avoid generating content that is covered in other steps of the study plan.
-3. The material should be comprehensive and include code examples or real-world analogies where appropriate.
-4. The output should be a single string of markdown-formatted text, bullet points, and code blocks for readability.
+3. The material should be comprehensive and include code examples where appropriate and real-world analogies for complex topics.
+4. Don't ask any questions to the user or repeat the content.
+5. The output should be a single string of markdown-formatted text, bullet points, and code blocks for readability.
 """
     if incorrect_questions:
         prompt += f"""
