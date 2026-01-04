@@ -11,7 +11,6 @@ function initChatPopup(config) {
     const chatForm = document.getElementById('chat-form-popup');
     const chatInput = document.getElementById('chat-input-popup');
     const chatHistory = document.getElementById('chat-history-popup');
-    const chatHeader = document.getElementById('chat-header');
     let isMaximized = false;
 
     function openChat() {
