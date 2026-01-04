@@ -1,0 +1,50 @@
+services:
+
+  speaches:
+    image: ghcr.io/speaches-ai/speaches:latest-cpu
+    container_name: speaches
+    ports:
+      - "8969:8000"
+    volumes:
+      - hf-hub-cache:/home/ubuntu/.cache/huggingface/hub
+    restart: unless-stopped
+
+  app:
+    build: .
+    ports:
+      - "5011:5011"
+    restart: always
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/personal_guru
+      - PORT=5011
+      # Use env var if set, otherwise fallback to host.docker.internal
+      - LLM_ENDPOINT=${LLM_ENDPOINT:-http://host.docker.internal:11434/v1}
+      - LLM_MODEL_NAME=${LLM_MODEL_NAME:-llama3}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_NUM_CTX=${LLM_NUM_CTX:-18000}
+      - OPENAI_COMPATIBLE_BASE_URL_TTS=${OPENAI_COMPATIBLE_BASE_URL_TTS:-http://host.docker.internal:8969/v1}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - .:/app
+    command: flask run --host=0.0.0.0 --port=5011
+
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=personal_guru
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+volumes:
+  postgres_data:
+  hf-hub-cache:

@@ -14,6 +14,6 @@ if /i "%run_tts%"=="y" (
 
 echo.
 echo Starting Docker Compose with profiles: %PROFILES%
-docker compose %PROFILES% up --build
+docker compose -f docker-compose.windows.yml %PROFILES% up --build
 
 endlocal
