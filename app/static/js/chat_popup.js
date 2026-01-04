@@ -58,8 +58,13 @@ function initChatPopup(config) {
                 throw new Error(`Chat request failed with status ${response.status}`);
             }
             const data = await response.json();
-            const md = window.markdownit();
-            tutorMessage.innerHTML = `<strong>Tutor:</strong> ${md.render(data.answer)}`;
+            if (window.markdownit && typeof window.markdownit === 'function') {
+                const md = window.markdownit();
+                tutorMessage.innerHTML = `<strong>Tutor:</strong> ${md.render(data.answer)}`;
+            } else {
+                // Fallback: display plain text if markdown-it is not available
+                tutorMessage.textContent = `Tutor: ${data.answer}`;
+            }
             chatHistory.scrollTop = chatHistory.scrollHeight;
         } catch (error) {
             tutorMessage.innerHTML = '<strong>Tutor:</strong> Sorry, something went wrong.';
