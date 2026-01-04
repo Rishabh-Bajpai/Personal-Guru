@@ -192,7 +192,7 @@ def suggest_topics():
     suggestions, error = agent.generate_suggestions(user_profile, past_topics)
     
     if error:
-        return jsonify({'error': error}), 500
+        return jsonify({'error': str(error)}), 500
         
     return jsonify({'suggestions': suggestions})
 

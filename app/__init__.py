@@ -33,12 +33,14 @@ def create_app(config_class=Config):
     from app.modes.flashcard import flashcard_bp
     from app.modes.reel import reel_bp
     from app.modes.chat import chat_bp
+    from app.common import common_bp
     
     app.register_blueprint(chapter_bp, url_prefix='/chapter')
     app.register_blueprint(quiz_bp, url_prefix='/quiz')
     app.register_blueprint(flashcard_bp, url_prefix='/flashcards')
     app.register_blueprint(reel_bp, url_prefix='/reels')
     app.register_blueprint(chat_bp, url_prefix='/chat')
+    app.register_blueprint(common_bp, url_prefix='/common')
     
     # Global Routes (Home, Background, etc.)
     # Global Routes (Home, Background, etc.)
