@@ -37,12 +37,12 @@ C4Context
 
     System_Ext(openai, "LLM Provider", "OpenAI / Ollama / LMStudio")
     System_Ext(youtube, "YouTube", "Provides video content for Reel Mode.")
-    System_Ext(coqui, "Coqui TTS", "Text-to-Speech Engine for audio generation.")
+    System_Ext(speaches, "Speaches (Kokoro)", "OpenAI-compatible TTS server.")
 
     Rel(user, personal_guru, "Uses", "HTTPS")
     Rel(personal_guru, openai, "Generates Content via", "API")
     Rel(personal_guru, youtube, "Search & Embeds", "API")
-    Rel(personal_guru, coqui, "Generates Audio via", "API")
+    Rel(personal_guru, speaches, "Generates Audio via", "API")
 ```
 
 See [docs/architecture.md](docs/architecture.md) for Container, Component, and Sequence diagrams.
@@ -84,7 +84,7 @@ Run the entire stack (App + DB + Optional TTS) in containers.
 1.  **Configure Environment (Optional)**:
     Create a `.env` file if you want to connect to a specific LLM (e.g. LMStudio on another machine).
     ```bash
-    LLM_ENDPOINT=http://192.168.1.50:1234/v1
+    LLM_ENDPOINT=http://localhost:1234/v1
     ```
     *If not set, it defaults to connecting to your local host's Ollama at port 11434.*
 
@@ -121,6 +121,7 @@ If you prefer full control over your environment.
       - **OpenAI**: `https://api.openai.com/v1`
       - **Gemini**: `https://generativelanguage.googleapis.com/v1beta/openai/`
     - `LLM_MODEL_NAME`: e.g., `llama3`, `gpt-4o`.
+    - `OPENAI_COMPATIBLE_BASE_URL_TTS`: `http://localhost:8969/v1`
     
 4.  **Database Setup (Docker)**:
     Start the Postgres database using Docker:
@@ -128,13 +129,35 @@ If you prefer full control over your environment.
     docker compose up -d db
     ```
     *Starts PostgreSQL on `localhost:5433`.*
+5.  **Start the TTS Server**:
+    ```bash
+    docker compose up -d speaches
+    ```
+    *Starts Speaches on `localhost:8969`.*
+    
+    Download the model inside the container. Wait a few seconds for the container to start, then run:
+    ```bash
+    docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
+    ```
+    
+    Test the setup:
+    ```bash
+    curl "http://localhost:8969/v1/audio/speech" -s -H "Content-Type: application/json" \
+      --output test.mp3 \
+      --data '{
+        "input": "Hello! This is a test of local text to speech.",
+        "model": "speaches-ai/Kokoro-82M-v1.0-ONNX",
+        "voice": "af_bella",
+        "speed": 1.0
+      }'
+    ```
 
-5.  **Init Database**:
+6.  **Init Database**:
     ```bash
     python scripts/update_database.py
     ```
 
-6.  **Run**:
+7.  **Run**:
     ```bash
     python run.py
     ```
@@ -149,6 +172,9 @@ The application uses the following PostgreSQL tables:
 - **quizzes**: Quizzes generated for a topic.
 - **flashcards**: Flashcards for vocabulary terms.
 - **chat_sessions**: Stores the conversational history for "Chat Mode" (one-to-one with topics). Note: "Chapter Mode" side-chats are stored directly in `study_steps.chat_history`.
+### Text-to-Speech (Speaches / Kokoro)
+
+To enable high-quality AI narration and podcasts, we use [Speaches](https://github.com/speaches-ai/speaches), an OpenAI-compatible TTS server that runs the Kokoro-82M model.
 
 ## Enabling HTTPS for Microphone Access, reels and other security features
 

@@ -57,18 +57,22 @@ ENV_PYTHON=$(conda run -n Personal-Guru which python)
 $ENV_PYTHON -m pip install -r $req_file
 
 # Optional TTS
+# Docker TTS Setup
 if [[ "$install_tts" =~ ^[Yy]$ ]]; then
-    echo "🎤 Installing TTS dependencies..."
-    # If there was a specific tts file, we'd use it. For now assuming it is mixed in or separate.
-    # User didn't specify a tts requirements file, but I will create a placeholder or just note it.
-    # Actually, let's assume we want to install `coqui-tts` or similar if needed, 
-    # BUT the user repo layout suggests Coqui is in docker. 
-    # If the user wants LOCAL tts, they might need packages.
-    # For now, let's just create a requirements/optional.txt if strictly needed, 
-    # but based on current file structure coqui is a docker service.
-    # Let's just assume we might add it to pip if they want local.
-    # For now, I will warn if it is Docker-only.
-    echo "⚠️  Note: High-quality TTS is best run via Docker (see deployment guide)."
+    if command -v docker &> /dev/null; then
+        echo "🎤 Starting TTS Server (Speaches/Kokoro)..."
+        docker compose up -d speaches
+        
+        echo "⏳ Waiting for TTS Server to start (10s)..."
+        sleep 10
+        
+        echo "⬇️  Downloading Kokoro-82M model..."
+        docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
+        
+        echo "✅ TTS Setup Complete."
+    else
+        echo "❌ Docker not found. Cannot set up TTS server."
+    fi
 fi
 
 # Database Setup

@@ -144,7 +144,7 @@ def validate_quiz_structure(quiz_data):
 
 
 
-def generate_audio(text, step_index, tts_engine="coqui"):
+def generate_audio(text, step_index):
     """
     Generates audio from text using the configured OpenAI-compatible TTS (Kokoro).
     Supports long text by chunking and merging.

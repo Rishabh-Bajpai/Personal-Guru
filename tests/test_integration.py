@@ -221,3 +221,55 @@ def test_quiz_result_persistence(logger, app):
             assert loaded_data['last_quiz_result'] == quiz_result
             
             logger.info("Quiz result persistence verified.")
+
+
+def test_generate_audio(logger):
+    """Test the generate_audio function with chunking logic."""
+    logger.section("test_generate_audio")
+    from app.common.utils import generate_audio
+    import os
+    
+    # Mock OpenAI and subprocess
+    with patch('app.common.utils.OpenAI') as MockOpenAI, \
+         patch('app.common.utils.subprocess.run') as mock_run, \
+         patch('app.common.utils.os.remove') as mock_remove:
+         
+        # Setup OpenAI mock
+        mock_client = MockOpenAI.return_value
+        mock_response = mock_client.audio.speech.create.return_value
+        # stream_to_file is called on the response
+        
+        # Setup subprocess mock
+        mock_run.return_value.returncode = 0
+        
+        # Test Case 1: Short text (no chunking needed)
+        logger.step("Testing short text")
+        filename, error = generate_audio("Short text.", 0)
+        assert error is None
+        assert filename == "step_0.wav"
+        # Should call create once
+        assert mock_client.audio.speech.create.call_count == 1
+        
+        # Reset mocks
+        mock_client.audio.speech.create.reset_mock()
+        
+        # Test Case 2: Long text (needs chunking)
+        # Create a text > 300 chars
+        long_text = "This is a sentence. " * 20 
+        logger.step(f"Testing long text ({len(long_text)} chars)")
+        
+        filename, error = generate_audio(long_text, 1)
+        assert error is None
+        assert filename == "step_1.wav"
+        
+        # Should call create multiple times
+        call_count = mock_client.audio.speech.create.call_count
+        logger.info(f"LLM called {call_count} times for long text.")
+        assert call_count > 1
+        
+        # Should call ffmpeg
+        args, _ = mock_run.call_args
+        command = args[0]
+        assert command[0] == "ffmpeg"
+        assert command[-1].endswith("step_1.wav")
+

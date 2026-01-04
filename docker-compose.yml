@@ -1,14 +1,13 @@
 services:
 
-  coqui-tts:
-    build: ./coqui_tts
-    profiles: [ "tts" ]
+  speaches:
+    image: ghcr.io/speaches-ai/speaches:latest-cpu
+    container_name: speaches
     ports:
-      - "5002:5002"
-    restart: always
-    environment:
-      - USE_CUDA=false
-      # Set to 'true' in docker-compose.override.yml or .env if GPU is available.
+      - "8969:8000"
+    volumes:
+      - hf-hub-cache:/home/ubuntu/.cache/huggingface/hub
+    restart: unless-stopped
 
   app:
     build: .
@@ -25,7 +24,8 @@ services:
       - LLM_MODEL_NAME=${LLM_MODEL_NAME:-llama3}
       - LLM_API_KEY=${LLM_API_KEY:-}
       - LLM_NUM_CTX=${LLM_NUM_CTX:-18000}
-      - TTS_URL=${TTS_URL:-http://coqui-tts:5002/api/tts}
+      - OPENAI_COMPATIBLE_BASE_URL_TTS=${OPENAI_COMPATIBLE_BASE_URL_TTS:-http://host.docker.internal:8969/v1}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -47,3 +47,4 @@ services:
 
 volumes:
   postgres_data:
+  hf-hub-cache:

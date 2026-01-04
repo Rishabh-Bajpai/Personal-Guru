@@ -88,11 +88,21 @@ if %errorlevel% neq 0 (
 )
 
 :: Optional TTS
+:: Docker TTS Setup
 if /i "%install_tts%"=="y" (
     echo.
-    echo [INFO] Installing TTS dependencies...
     echo [WARNING] High-quality TTS is best run via Docker (see deployment guide).
     echo          Local installation of TTS on Windows is experimental.
+    echo [INFO] Starting TTS Server (Speaches/Kokoro)...
+    docker compose up -d speaches
+    
+    echo [INFO] Waiting for TTS Server to start (10s)...
+    timeout /t 10 /nobreak
+    
+    echo [INFO] Downloading Kokoro-82M model...
+    docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
+    
+    echo [SUCCESS] TTS Setup Complete.
 )
 
 :: Install GTK3 for WeasyPrint (required for PDF generation on Windows)

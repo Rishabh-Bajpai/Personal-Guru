@@ -295,7 +295,9 @@ def test_setup_success_mock_fs(setup_client, mocker):
         'llm_model': 'gpt-4',
         'llm_key': 'secret',
         'llm_ctx': '20000',
-        'tts_url': 'http://tts',
+        'llm_ctx': '20000',
+        'tts_url': 'http://kokoro',
+        'openai_key': 'tts-secret',
         'youtube_key': 'yt123'
     })
     
@@ -313,4 +315,6 @@ def test_setup_success_mock_fs(setup_client, mocker):
         
     assert "DATABASE_URL=postgresql://test" in written_content
     assert "LLM_NUM_CTX=20000" in written_content
+    assert "OPENAI_COMPATIBLE_BASE_URL_TTS=http://kokoro" in written_content
+    assert "OPENAI_API_KEY=tts-secret" in written_content
     assert "YOUTUBE_API_KEY=yt123" in written_content
