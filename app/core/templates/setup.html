@@ -157,10 +157,18 @@
 
             <div class="section-title">Optional Services</div>
             <div class="form-group">
-                <label for="tts_url">TTS URL</label>
+                <label for="tts_url">OpenAI-Compatible TTS Endpoint</label>
                 <input type="url" id="tts_url" name="tts_url"
-                    value="{{ defaults.get('TTS_URL', 'http://localhost:5002/api/tts') }}">
-                <div class="hint">URL for Coqui TTS service (if running).</div>
+                    value="{{ defaults.get('OPENAI_COMPATIBLE_BASE_URL_TTS', 'http://localhost:8969/v1') }}">
+                <div class="hint">Endpoint for Speaches/Kokoro or other OpenAI-compatible TTS. Default:
+                    http://localhost:8969/v1</div>
+            </div>
+
+            <div class="form-group">
+                <label for="openai_key">OpenAI API Key (for TTS/LLM)</label>
+                <input type="password" id="openai_key" name="openai_key"
+                    value="{{ defaults.get('OPENAI_API_KEY', '') }}">
+                <div class="hint">Required if using OpenAI models or authenticated TTS.</div>
             </div>
 
             <div class="form-group">

@@ -2,10 +2,10 @@ loaders:
   - type: python
     search_path: [./app]
     modules:
-      - common.models
-      - common.extensions
-      - common.routes
-      - core.agents
+      - common.agents
+      - core.models
+      - core.extensions
+      - core.routes
       - modes.chapter.agent
       - modes.chapter.routes
       - modes.chat.agent
@@ -17,7 +17,6 @@ loaders:
 processors:
   - type: filter
     skip_empty_modules: true
-    skip_empty_classes: true
   - type: crossref
 renderer:
   type: docusaurus

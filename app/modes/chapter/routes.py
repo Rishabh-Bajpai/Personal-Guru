@@ -1,8 +1,9 @@
 from flask import render_template, request, session, redirect, url_for, make_response
+import os
 from . import chapter_bp
 from app.common.storage import load_topic, save_topic
 from app.common.agents import FeedbackAgent, PlannerAgent
-from .agent import ChapterTeachingAgent, AssessorAgent
+from .agent import ChapterTeachingAgent, AssessorAgent, PodcastAgent
 from app.common.utils import generate_audio
 from markdown_it import MarkdownIt
 from weasyprint import HTML
@@ -16,6 +17,7 @@ planner = PlannerAgent()
 assessor = AssessorAgent()
 feedback_agent = FeedbackAgent()
 md = MarkdownIt()
+podcast_agent = PodcastAgent()
 
 @chapter_bp.route('/<topic_name>')
 def mode(topic_name):
@@ -246,6 +248,52 @@ def generate_audio_route(step_index):
 
     # Assuming audio is saved to app/static
     audio_url = url_for('static', filename=audio_filename)
+    return {"audio_url": audio_url}
+
+@chapter_bp.route('/generate-podcast/<topic_name>/<int:step_index>', methods=['POST'])
+def generate_podcast_route(topic_name, step_index):
+    topic_data = load_topic(topic_name)
+    if not topic_data:
+        return {"error": "Topic not found"}, 404
+        
+    if not 0 <= step_index < len(topic_data['steps']):
+        return {"error": "Invalid step index"}, 400
+        
+    current_step_data = topic_data['steps'][step_index]
+    teaching_material = current_step_data.get('teaching_material')
+    
+    if not teaching_material:
+        return {"error": "No teaching material found for this step"}, 400
+
+    from app.common.utils import get_user_context
+    user_background = get_user_context()
+    
+    # Define output path
+    filename = f"podcast_{topic_name}_{step_index}.mp3"
+    # Ensure filename is safe
+    import werkzeug
+    filename = werkzeug.utils.secure_filename(filename)
+    
+    static_dir = os.path.join(os.getcwd(), 'app', 'static')
+    if not os.path.exists(static_dir):
+        os.makedirs(static_dir)
+        
+    output_path = os.path.join(static_dir, filename)
+    
+    # Refactored Logic
+    # 1. Generate Script
+    transcript, error = podcast_agent.generate_script(teaching_material, user_background)
+    if error:
+         return {"error": f"Script generation failed: {error}"}, 500
+         
+    # 2. Generate Audio
+    from app.common.utils import generate_podcast_audio
+    success, error = generate_podcast_audio(transcript, output_path)
+    
+    if not success:
+         return {"error": error}, 500
+         
+    audio_url = url_for('static', filename=filename)
     return {"audio_url": audio_url}
 
 @chapter_bp.route('/complete/<topic_name>')

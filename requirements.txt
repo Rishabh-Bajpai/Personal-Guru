@@ -15,4 +15,5 @@ flask-wtf
 psycopg2-binary
 flask-login
 pydoc-markdown
+openai
 

@@ -44,6 +44,30 @@
     </div>
 
     <div class="learning-content" style="flex-grow: 1; overflow-y: auto; padding-right: 20px;">
+        <div class="podcast-section" style="margin-bottom: 20px;">
+            <div class="podcast-header">
+                <h3>AI Podcast</h3>
+                <button id="generate-podcast-btn" class="generate-podcast-btn">
+                    <span>Generate Podcast</span>
+                </button>
+            </div>
+            <div id="podcast-player-container" class="podcast-player" style="display: none;">
+                <button id="podcast-play-btn" class="podcast-control-btn">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                    </svg>
+                </button>
+                <div class="podcast-progress-container">
+                    <span id="podcast-current-time" class="podcast-time">0:00</span>
+                    <div id="podcast-progress-bar" class="podcast-progress-bar">
+                        <div id="podcast-progress-fill" class="podcast-progress-fill"></div>
+                    </div>
+                    <span id="podcast-duration" class="podcast-time">0:00</span>
+                </div>
+                <audio id="podcast-audio" style="display: none;"></audio>
+            </div>
+        </div>
+
         <h1>Learning: {{ topic.name }}</h1>
         <h2>Step {{ step_index + 1 }} of {{ total_steps }}</h2>
 
@@ -61,6 +85,8 @@
             </label>
             <button id="read-button" class="button">Read</button>
         </div>
+
+
 
         <audio id="audio-player">
             <source src="" type="audio/wav">
@@ -177,7 +203,8 @@
         initLearnStep({
             urls: {
                 execute_code: "{{ url_for('chapter.execute_code') }}",
-                generate_audio: "{{ url_for('chapter.generate_audio_route', step_index=step_index) }}"
+                generate_audio: "{{ url_for('chapter.generate_audio_route', step_index=step_index) }}",
+                generate_podcast: "{{ url_for('chapter.generate_podcast_route', topic_name=topic.name, step_index=step_index) }}"
             }
         });
 
@@ -186,6 +213,5 @@
                 chat: "{{ url_for('chat.chat', topic_name=topic.name, step_index=step_index) }}"
             }
         });
-    });
 </script>
 {% endblock %}

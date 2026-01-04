@@ -20,6 +20,27 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+:: Check FFmpeg
+where ffmpeg >nul 2>nul
+if %errorlevel% neq 0 (
+    echo.
+    echo [WARNING] FFmpeg is not installed. It is required for audio processing.
+    set /p install_ffmpeg="Do you want to install it now using winget? [y/N]: "
+    if /i "%install_ffmpeg%"=="y" (
+        echo [INFO] Attempting to install FFmpeg via winget...
+        winget install ffmpeg
+        if %errorlevel% neq 0 (
+            echo [ERROR] Failed to install FFmpeg via winget. Please install manually from https://ffmpeg.org/download.html
+        ) else (
+            echo [SUCCESS] FFmpeg installed successfully.
+        )
+    ) else (
+        echo [WARNING] Skipping FFmpeg installation. Audio features may not work.
+    )
+) else (
+    echo [INFO] FFmpeg is already installed.
+)
+
 :: Interactive Prompts
 echo.
 echo Select Installation Type:
@@ -88,11 +109,21 @@ if %errorlevel% neq 0 (
 )
 
 :: Optional TTS
+:: Docker TTS Setup
 if /i "%install_tts%"=="y" (
     echo.
-    echo [INFO] Installing TTS dependencies...
     echo [WARNING] High-quality TTS is best run via Docker (see deployment guide).
     echo          Local installation of TTS on Windows is experimental.
+    echo [INFO] Starting TTS Server (Speaches/Kokoro)...
+    docker compose up -d speaches
+    
+    echo [INFO] Waiting for TTS Server to start (15s)...
+    timeout /t 15 /nobreak
+    
+    echo [INFO] Downloading Kokoro-82M model...
+    docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
+    
+    echo [SUCCESS] TTS Setup Complete.
 )
 
 :: Install GTK3 for WeasyPrint (required for PDF generation on Windows)
