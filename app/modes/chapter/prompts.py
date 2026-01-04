@@ -74,3 +74,25 @@ JSON FORMAT:
     ]
 }}
 """
+
+
+def get_podcast_script_prompt(context, user_background):
+    return f"""
+            You are an expert podcast script writer.
+            Your goal is to generate a engaging podcast script between two speakers, Alex and Jamie to teach the audience about current learning material.
+
+            The audience's background is: '{user_background}'.
+            The learning material is:
+            "{context}"
+
+            Rules:
+            1. Keep it concise but highly informative. 
+            2. Use simple and easy to understand language.
+            3. Don't repeat the same point multiple times.
+            4. Use the audience's background to decide the level of difficulty of the content only.
+            5. Format the output exactly as follows:\n
+            "Alex: [text]\n"
+            "Jamie: [text]\n"
+            "Alex: [text]\n"
+            "...and so on." 
+        """

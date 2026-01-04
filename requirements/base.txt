@@ -12,3 +12,5 @@ flask-wtf==1.2.2
 psycopg2-binary==2.9.10
 flask-login==0.6.3
 pydoc-markdown==4.8.2
+openai==2.14.0
+

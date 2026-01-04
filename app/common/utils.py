@@ -3,6 +3,8 @@ import urllib.parse
 import requests
 import json
 import re
+import tempfile
+import subprocess
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,6 +13,9 @@ LLM_ENDPOINT = os.getenv("LLM_ENDPOINT")
 LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME")
 LLM_NUM_CTX = int(os.getenv("LLM_NUM_CTX", 18000))
 LLM_API_KEY = os.getenv("LLM_API_KEY", "dummy")
+TTS_BASE_URL = os.getenv("OPENAI_COMPATIBLE_BASE_URL_TTS", "http://localhost:8969/v1")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "not-required")
+from openai import OpenAI
 
 def call_llm(prompt_or_messages, is_json=False):
     """
@@ -138,49 +143,117 @@ def validate_quiz_structure(quiz_data):
     return None, None
 
 
+
 def generate_audio(text, step_index, tts_engine="coqui"):
     """
-    Generates audio from text using the specified TTS engine.
+    Generates audio from text using the configured OpenAI-compatible TTS (Kokoro).
+    Supports long text by chunking and merging.
     """
-    # Clean up old audio files - path needs to be relative to app/static or we pass full path
-    # 'static' in Flask refers to the static folder.
-    # Note: In new structure, static files might be in app/static or app/modes/chapter/static.
-    # Audio seems ephemeral. Let's store in app/static for simplicity or temp.
-    
-    # We need to know where 'static' is.
-    # Assuming app/static based on new structure.
-    
     static_dir = os.path.join(os.getcwd(), 'app', 'static')
     if not os.path.exists(static_dir):
         os.makedirs(static_dir)
 
-    # Clean up old audio (basic implementation from app.py)
+    # Clean up old audio
     for filename in os.listdir(static_dir):
-        if filename.endswith('.wav'):
+        if filename.endswith('.wav') and f"step_{step_index}.wav" == filename:
              try:
                 os.remove(os.path.join(static_dir, filename))
              except OSError:
                  pass
+    
+    # 1. Chunk Text
+    # Split by simple sentence delimiters to be safe
+    # Kokoro has a limit around 500 tokens (approx 2000 chars maybe, but 510 phonemes is small)
+    # Let's target ~300 chars to be safe.
+    chunks = []
+    
+    # Helper to split text
+    sentences = re.split(r'([.!?]+)', text)
+    current_chunk = ""
+    
+    for i in range(0, len(sentences)-1, 2):
+        sentence = sentences[i] + sentences[i+1]
+        if len(current_chunk) + len(sentence) < 300:
+            current_chunk += sentence
+        else:
+            if current_chunk:
+                chunks.append(current_chunk)
+            current_chunk = sentence
+            
+    # Add trailing sentence/text
+    if len(sentences) % 2 == 1:
+        current_chunk += sentences[-1]
+    
+    if current_chunk:
+        chunks.append(current_chunk)
+        
+    if not chunks:
+        chunks = [text] # Fallback if split failed or empty
 
+    # 2. Generate Segments
+    temp_files = []
     output_filename = os.path.join(static_dir, f"step_{step_index}.wav")
-    server_url = os.getenv("TTS_URL")
-    if not server_url:
-        return None, "Coqui TTS URL not set."
-
-    encoded_text = urllib.parse.quote(text)
-    speaker_id = "p278"
-    url = f"{server_url}?text={encoded_text}&speaker_id={speaker_id}"
-
+    
+    print(f"Connecting to TTS at: {TTS_BASE_URL} for {len(chunks)} chunks")
+    
     try:
-        print(f"DEBUG: Calling TTS for step {step_index}, text length: {len(text)}, url: {server_url}")
-        response = requests.get(url, stream=True, timeout=60)
-        response.raise_for_status()
-        with open(output_filename, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        return f"step_{step_index}.wav", None # Return relative filename for url_for
-    except requests.exceptions.RequestException as e:
-        return None, f"Error calling Coqui TTS: {e}"
+        tts_client = OpenAI(base_url=TTS_BASE_URL, api_key=OPENAI_API_KEY)
+        voice = "af_bella"
+        
+        for i, chunk in enumerate(chunks):
+            if not chunk.strip():
+                continue
+                
+            print(f"DEBUG: Generating chunk {i+1}/{len(chunks)}, len: {len(chunk)}")
+            response = tts_client.audio.speech.create(
+                model="tts-1",
+                voice=voice,
+                input=chunk
+            )
+            
+            # Save segment to temp file
+            fd, temp_path = tempfile.mkstemp(suffix=".mp3")
+            os.close(fd)
+            response.stream_to_file(temp_path)
+            temp_files.append(temp_path)
+
+        if not temp_files:
+             return None, "Failed to generate any audio content"
+
+        # 3. Merge Audio using ffmpeg
+        list_file_fd, list_file_path = tempfile.mkstemp(suffix=".txt")
+        with os.fdopen(list_file_fd, 'w') as f:
+            for tf in temp_files:
+                f.write(f"file '{tf}'\n")
+        
+        print("Merging audio files...")
+        cmd = [
+            "ffmpeg",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", list_file_path,
+            "-c", "copy",
+            "-y",
+            output_filename
+        ]
+        
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        os.remove(list_file_path)
+        
+        if result.returncode != 0:
+            return None, f"ffmpeg merge failed: {result.stderr.decode()}"
+            
+        return f"step_{step_index}.wav", None 
+        
+    except Exception as e:
+        print(f"Error calling TTS: {e}")
+        return None, f"Error calling TTS: {e}"
+    finally:
+        # Cleanup temp segments
+        for tf in temp_files:
+            if os.path.exists(tf):
+                os.remove(tf)
+
 
 def reconcile_plan_steps(current_steps, current_plan, new_plan):
     """
@@ -224,3 +297,101 @@ def get_user_context():
         pass
         
     return os.getenv("USER_BACKGROUND", "a beginner")
+
+def generate_podcast_audio(transcript, output_filename):
+    """
+    Generates a full podcast audio file from a transcript using OpenAI-compatible TTS.
+    """
+    # 1. Parse Transcript
+    lines = []
+    print("Parsing transcript...")
+    for line in transcript.strip().split('\n'):
+        if ':' in line:
+            parts = line.split(':', 1)
+            speaker = parts[0].strip()
+            content = parts[1].strip()
+            if content:
+                lines.append((speaker, content))
+    
+    if not lines:
+        return False, "No dialogue lines found in transcript"
+
+    # 2. Setup TTS
+    print(f"Connecting to TTS at: {TTS_BASE_URL}")
+    try:
+        tts_client = OpenAI(base_url=TTS_BASE_URL, api_key=OPENAI_API_KEY)
+    except Exception as e:
+        return False, f"Failed to initialize TTS client: {e}"
+
+    # 3. Assign Voices
+    unique_speakers = sorted(list(set(s for s, t in lines)))
+    available_voices = ['af_bella', 'am_michael', 'am_puck', 'af_nicole', 'af_heart', 'af_sarah', 'am_adam']
+    
+    voice_map = {speaker: available_voices[i % len(available_voices)] for i, speaker in enumerate(unique_speakers)}
+    
+    # 4. Generate Audio Segments
+    temp_files = []
+    print("--- Synthesizing Audio Segments ---")
+    
+    try:
+        for i, (speaker, text) in enumerate(lines):
+            voice = voice_map.get(speaker, 'alloy')
+            print(f"Generating: {speaker} ({voice}) -> '{text[:20]}...'")
+            
+            response = tts_client.audio.speech.create(
+                model="tts-1",
+                voice=voice,
+                input=text
+            )
+            
+            # Save segment to temp file
+            # Use .wav extension to ensure ffmpeg treats it correctly if headers are weird, though usually .mp3 from OpenAI
+            fd, temp_path = tempfile.mkstemp(suffix=".mp3")
+            os.close(fd)
+            response.stream_to_file(temp_path)
+            temp_files.append(temp_path)
+
+        if not temp_files:
+             return False, "Failed to generate any audio content"
+
+        # 5. Merge Audio using ffmpeg
+        # ffmpeg -i "concat:file1.mp3|file2.mp3" -c copy output.mp3 (concatenation protocol)
+        # OR using a list file for safer handling of many files
+        
+        list_file_fd, list_file_path = tempfile.mkstemp(suffix=".txt")
+        with os.fdopen(list_file_fd, 'w') as f:
+            for tf in temp_files:
+                f.write(f"file '{tf}'\n")
+        
+        print("Merging audio files using ffmpeg...")
+        # ffmpeg -f concat -safe 0 -i list.txt -c copy output.mp3
+        cmd = [
+            "ffmpeg",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", list_file_path,
+            "-c", "copy",
+            "-y", # Overwrite output
+            output_filename
+        ]
+        
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        # Clean up list file
+        os.remove(list_file_path)
+        
+        if result.returncode != 0:
+            print(f"ffmpeg error: {result.stderr.decode()}")
+            return False, f"ffmpeg merge failed: {result.stderr.decode()}"
+            
+        return True, None
+        
+    except Exception as e:
+        print(f"Error in podcast generation: {e}")
+        return False, f"Error: {str(e)}"
+    finally:
+        # Cleanup temp audio files
+        for tf in temp_files:
+            if os.path.exists(tf):
+                os.remove(tf)
+

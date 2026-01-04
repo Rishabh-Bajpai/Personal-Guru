@@ -20,6 +20,7 @@ function initLearnStep(cfg) {
     setupCodeExecution(renderedContent);
     setupReadAloud(markdownContent);
     setupChat();
+    setupPodcast();
 }
 
 function toggleSidebar() {
@@ -258,4 +259,107 @@ function setupChat() {
             hideLoader();
         }
     });
+}
+
+// Podcast Logic
+function setupPodcast() {
+    const generateBtn = document.getElementById('generate-podcast-btn');
+    const playerContainer = document.getElementById('podcast-player-container');
+    const audio = document.getElementById('podcast-audio');
+    const playBtn = document.getElementById('podcast-play-btn');
+    const progressBar = document.getElementById('podcast-progress-bar');
+    const progressFill = document.getElementById('podcast-progress-fill');
+    const currentTimeEl = document.getElementById('podcast-current-time');
+    const durationEl = document.getElementById('podcast-duration');
+
+    if (!generateBtn) return;
+
+    generateBtn.addEventListener('click', async () => {
+        // Show loading state
+        const originalText = generateBtn.innerHTML;
+        generateBtn.disabled = true;
+        generateBtn.innerHTML = '<span class="loader-small"></span> Generating...';
+
+        try {
+            const response = await fetch(config.urls.generate_podcast, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+            const data = await response.json();
+
+            if (data.audio_url) {
+                // Initialize player
+                initPlayer(data.audio_url);
+                generateBtn.style.display = 'none';
+                playerContainer.style.display = 'flex';
+            } else {
+                alert('Error generating podcast: ' + (data.error || 'Unknown error'));
+                generateBtn.disabled = false; // Re-enable if error
+                generateBtn.innerHTML = originalText;
+            }
+        } catch (e) {
+            alert('Network error: ' + e.message);
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = originalText;
+        }
+    });
+
+    function initPlayer(url) {
+        audio.src = url;
+        audio.load();
+
+        playBtn.onclick = togglePlay;
+        progressBar.onclick = seek;
+        audio.ontimeupdate = updateProgress;
+        audio.onloadedmetadata = () => {
+            durationEl.textContent = formatTime(audio.duration);
+        };
+        audio.onended = () => {
+            updatePlayIcon(false);
+            progressFill.style.width = '0%';
+        };
+
+        // Auto-play
+        togglePlay();
+    }
+
+    function togglePlay() {
+        if (audio.paused) {
+            audio.play();
+            updatePlayIcon(true);
+        } else {
+            audio.pause();
+            updatePlayIcon(false);
+        }
+    }
+
+    function updatePlayIcon(isPlaying) {
+        if (isPlaying) {
+            playBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'; // Pause icon
+        } else {
+            playBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>'; // Play icon
+        }
+    }
+
+    function updateProgress() {
+        if (audio.duration) {
+            const percent = (audio.currentTime / audio.duration) * 100;
+            progressFill.style.width = `${percent}%`;
+            currentTimeEl.textContent = formatTime(audio.currentTime);
+        }
+    }
+
+    function seek(e) {
+        const percent = e.offsetX / progressBar.offsetWidth;
+        audio.currentTime = percent * audio.duration;
+    }
+
+    function formatTime(seconds) {
+        const min = Math.floor(seconds / 60);
+        const sec = Math.floor(seconds % 60);
+        return `${min}:${sec < 10 ? '0' + sec : sec}`;
+    }
 }

@@ -70,3 +70,28 @@ class AssessorAgent:
              return "Invalid question format", "Format Error"
              
         return question_data, None
+
+class PodcastAgent:
+    """
+    Agent responsible for generating podcast scripts.
+    """
+    def generate_script(self, context, user_background):
+        """
+        Generates a podcast script for the given context.
+        """
+        from app.modes.chapter.prompts import get_podcast_script_prompt
+        prompt = get_podcast_script_prompt(context, user_background)
+        # Using system prompt from original code if needed, but call_llm handles basic user prompt.
+        # Original code used a system prompt: "You are a professional podcast script writer."
+        # call_llm wrapper usually takes a string prompt as user message.
+        # Let's use call_llm directly.
+        transcript, error = call_llm([
+            {"role": "system", "content": "You are a professional podcast script writer."},
+            {"role": "user", "content": prompt}
+        ])
+        
+        if error:
+            return None, error
+            
+        return transcript, None
+
