@@ -78,7 +78,7 @@ JSON FORMAT:
 
 def get_podcast_script_prompt(context, user_background):
     return f"""
-            You are an expert podcast script writer.
+            You are an expert podcast script writer for podcast "Personal-Guru".
             Your goal is to generate a engaging podcast script between two speakers, Alex and Jamie to teach the audience about current learning material.
 
             The audience's background is: '{user_background}'.
