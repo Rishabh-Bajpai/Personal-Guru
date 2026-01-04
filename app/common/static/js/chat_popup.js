@@ -24,6 +24,22 @@ function initChatPopup(config) {
     const chatHistory = document.getElementById('chat-history-popup');
     let isMaximized = false;
 
+    const missingElements = [];
+    if (!chatLauncher) missingElements.push('chat-launcher');
+    if (!chatPopup) missingElements.push('chat-popup');
+    if (!chatToggleBtn) missingElements.push('chat-toggle-btn');
+    if (!chatMaximizeBtn) missingElements.push('chat-maximize-btn');
+    if (!chatForm) missingElements.push('chat-form-popup');
+    if (!chatInput) missingElements.push('chat-input-popup');
+    if (!chatHistory) missingElements.push('chat-history-popup');
+
+    if (missingElements.length > 0) {
+        console.error(
+            'Chat popup initialization failed. Missing required element(s): ' +
+            missingElements.join(', ')
+        );
+        return;
+    }
     function openChat() {
         chatLauncher.style.display = 'none';
         chatPopup.style.display = 'flex';
