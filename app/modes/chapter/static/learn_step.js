@@ -19,7 +19,6 @@ function initLearnStep(cfg) {
 
     setupCodeExecution(renderedContent);
     setupReadAloud(markdownContent);
-    setupChat();
     setupPodcast();
 }
 
@@ -223,42 +222,6 @@ function setupReadAloud(markdownContent) {
     });
 
     readButton.addEventListener('click', generateAndPlayAudio);
-}
-
-// Chat Logic
-function setupChat() {
-    document.getElementById('chat-form').addEventListener('submit', async function (e) {
-        e.preventDefault();
-        const input = document.getElementById('chat-input');
-        const question = input.value;
-        input.value = '';
-
-        const chatHistory = document.getElementById('chat-history');
-        const userMessage = document.createElement('div');
-        userMessage.className = 'chat-message user-message';
-        userMessage.innerHTML = `<strong>You:</strong> ${question}`;
-        chatHistory.appendChild(userMessage);
-
-        showLoader();
-        try {
-            const response = await fetch(config.urls.chat, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify({ question: question })
-            });
-
-            const data = await response.json();
-            const botMessage = document.createElement('div');
-            botMessage.className = 'chat-message bot-message';
-            botMessage.innerHTML = `<strong>Bot:</strong> ${md.render(data.answer)}`;
-            chatHistory.appendChild(botMessage);
-        } finally {
-            hideLoader();
-        }
-    });
 }
 
 // Podcast Logic
