@@ -8,7 +8,7 @@ services:
       - "8969:8000"
     volumes:
       - hf-hub-cache:/home/ubuntu/.cache/huggingface/hub
-    restart: unless-stopped
+    restart: always
 
   app:
     build: .
@@ -39,10 +39,9 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=personal_guru
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./postgres_data:/var/lib/postgresql/data
     ports:
       - "5433:5432"
 
 volumes:
-  postgres_data:
   hf-hub-cache:
