@@ -54,6 +54,9 @@ function initChatPopup(config) {
                 body: JSON.stringify({ question: question })
             });
 
+            if (!response.ok) {
+                throw new Error(`Chat request failed with status ${response.status}`);
+            }
             const data = await response.json();
             const md = window.markdownit();
             tutorMessage.innerHTML = `<strong>Tutor:</strong> ${md.render(data.answer)}`;
