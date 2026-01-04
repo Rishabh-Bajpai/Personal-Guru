@@ -2,6 +2,17 @@
 
 let chatConfig = {};
 
+/**
+ * Initializes the chat popup UI by wiring up DOM elements and event handlers.
+ *
+ * The configuration object is stored in a module-level variable and is used
+ * by the chat popup to interact with backend services.
+ *
+ * @param {{urls: {chat: string}}} config - Configuration for the chat popup.
+ * @param {Object} config.urls - Collection of endpoint URLs used by the chat.
+ * @param {string} config.urls.chat - URL endpoint used to send chat messages
+ *     or interact with the chat backend.
+ */
 function initChatPopup(config) {
     chatConfig = config;
     const chatLauncher = document.getElementById('chat-launcher');
