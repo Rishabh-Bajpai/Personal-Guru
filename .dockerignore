@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Dependencies
+venv/
+env/
+.env
+.env.local
+.env.*
+
+# Database
+postgres_data/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Certificates
+certs/
+
+# Instance folder
+instance/
+
+# Flask session
+flask_session/

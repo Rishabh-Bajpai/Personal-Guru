@@ -5,12 +5,14 @@
 .env.local
 .env.*.local
 *.wav
+*.mp3
 data/*
 example_api_output/
 cookies.txt
 local_settings.py
 certs/
 flask_session
+postgres_data/
 # ==============================================================================
 # PYTHON CORE (Byte-compiled, C extensions)
 # ==============================================================================
