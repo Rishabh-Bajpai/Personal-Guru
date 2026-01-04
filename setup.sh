@@ -22,7 +22,46 @@ check_env_exists() {
 
 # --- Main Script ---
 
+check_ffmpeg() {
+    if ! command -v ffmpeg &> /dev/null; then
+        echo "⚠️  FFmpeg is not installed. It is required for audio processing."
+        read -p "Do you want to install it now? [y/N]: " install_ffmpeg
+        if [[ "$install_ffmpeg" =~ ^[Yy]$ ]]; then
+            if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+                if command -v apt &> /dev/null; then
+                    echo "📦 Installing FFmpeg via apt..."
+                    sudo apt update && sudo apt install -y ffmpeg
+                elif command -v dnf &> /dev/null; then
+                    echo "📦 Installing FFmpeg via dnf..."
+                    sudo dnf install -y ffmpeg
+                elif command -v pacman &> /dev/null; then
+                    echo "📦 Installing FFmpeg via pacman..."
+                    sudo pacman -S ffmpeg
+                else
+                    echo "❌ Could not detect package manager. Please install FFmpeg manually."
+                fi
+            elif [[ "$OSTYPE" == "darwin"* ]]; then
+                 if command -v brew &> /dev/null; then
+                    echo "📦 Installing FFmpeg via Homebrew..."
+                    brew install ffmpeg
+                 else
+                    echo "❌ Homebrew not found. Please install FFmpeg manually."
+                 fi
+            else
+                echo "❌ OS not supported for auto-install. Please install FFmpeg manually."
+            fi
+        else
+            echo "⚠️  Skipping FFmpeg installation. Audio features may not work."
+        fi
+    else
+        echo "✅ FFmpeg is already installed."
+    fi
+}
+
+# --- Main Script ---
+
 check_conda
+check_ffmpeg
 
 # Interactive Prompts
 echo ""

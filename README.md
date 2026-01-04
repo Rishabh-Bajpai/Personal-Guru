@@ -58,7 +58,11 @@ Before starting, ensure you have the following:
     *   [Download Miniconda](https://docs.conda.io/en/latest/miniconda.html)
 2.  **Docker Desktop** (Required for the Database).
     *   [Download Docker](https://www.docker.com/products/docker-desktop/)
-3.  **LLM Provider** (One of the following):
+3.  **FFmpeg** (Required for Audio Processing).
+    *   **Linux**: `sudo apt install ffmpeg`
+    *   **Mac**: `brew install ffmpeg`
+    *   **Windows**: `winget install ffmpeg` or [Download from ffmpeg.org](https://ffmpeg.org/download.html)
+4.  **LLM Provider** (One of the following):
     *   [Ollama](https://ollama.com/) (Free, Local - Recommended)
     *   [LM Studio](https://lmstudio.ai/) (Free, Local)
     *   **OpenAI / Gemini API Key or any other openai compatible LLM API Key** (Cloud)
@@ -121,7 +125,7 @@ If you prefer full control over your environment.
       - **OpenAI**: `https://api.openai.com/v1`
       - **Gemini**: `https://generativelanguage.googleapis.com/v1beta/openai/`
     - `LLM_MODEL_NAME`: e.g., `llama3`, `gpt-4o`.
-    - `OPENAI_COMPATIBLE_BASE_URL_TTS`: `http://localhost:8969/v1`
+    - `OPENAI_COMPATIBLE_BASE_URL_TTS`: `http://192.168.1.51:8969/v1` (Replace `192.168.1.51` with your machine's actual LAN IP address. `localhost` may not work depending on Docker network configuration).
     
 4.  **Database Setup (Docker)**:
     Start the Postgres database using Docker:
