@@ -99,6 +99,9 @@ function initChatPopup(config) {
                 body: JSON.stringify({ question: question })
             });
 
+            if (!response.ok) {
+                throw new Error(`Chat request failed with status ${response.status} ${response.statusText}`);
+            }
             const data = await response.json();
             const md = window.markdownit({
                 html: false
