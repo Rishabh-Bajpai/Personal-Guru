@@ -13,6 +13,7 @@ local_settings.py
 certs/
 flask_session
 postgres_data/
+backup.sql
 # ==============================================================================
 # PYTHON CORE (Byte-compiled, C extensions)
 # ==============================================================================
