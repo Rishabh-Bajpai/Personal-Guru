@@ -1,11 +1,11 @@
 import os
-import urllib.parse
 import requests
 import json
 import re
 import tempfile
 import subprocess
 from dotenv import load_dotenv
+from openai import OpenAI
 
 load_dotenv()
 
@@ -15,7 +15,6 @@ LLM_NUM_CTX = int(os.getenv("LLM_NUM_CTX", 18000))
 LLM_API_KEY = os.getenv("LLM_API_KEY", "dummy")
 TTS_BASE_URL = os.getenv("OPENAI_COMPATIBLE_BASE_URL_TTS", "http://localhost:8969/v1")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "not-required")
-from openai import OpenAI
 
 def call_llm(prompt_or_messages, is_json=False):
     """

@@ -3,7 +3,7 @@ import os
 from . import chapter_bp
 from app.common.storage import load_topic, save_topic
 from app.common.agents import FeedbackAgent, PlannerAgent
-from .agent import ChapterTeachingAgent, AssessorAgent
+from .agent import ChapterTeachingAgent, AssessorAgent, PodcastAgent
 from app.common.utils import generate_audio
 from markdown_it import MarkdownIt
 from weasyprint import HTML
@@ -17,8 +17,6 @@ planner = PlannerAgent()
 assessor = AssessorAgent()
 feedback_agent = FeedbackAgent()
 md = MarkdownIt()
-
-from .agent import PodcastAgent
 podcast_agent = PodcastAgent()
 
 @chapter_bp.route('/<topic_name>')

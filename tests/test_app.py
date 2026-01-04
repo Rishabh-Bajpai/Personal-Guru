@@ -295,7 +295,6 @@ def test_setup_success_mock_fs(setup_client, mocker):
         'llm_model': 'gpt-4',
         'llm_key': 'secret',
         'llm_ctx': '20000',
-        'llm_ctx': '20000',
         'tts_url': 'http://kokoro',
         'openai_key': 'tts-secret',
         'youtube_key': 'yt123'

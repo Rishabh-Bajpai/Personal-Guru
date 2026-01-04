@@ -227,16 +227,14 @@ def test_generate_audio(logger):
     """Test the generate_audio function with chunking logic."""
     logger.section("test_generate_audio")
     from app.common.utils import generate_audio
-    import os
     
     # Mock OpenAI and subprocess
     with patch('app.common.utils.OpenAI') as MockOpenAI, \
          patch('app.common.utils.subprocess.run') as mock_run, \
-         patch('app.common.utils.os.remove') as mock_remove:
+         patch('app.common.utils.os.remove'):
          
         # Setup OpenAI mock
         mock_client = MockOpenAI.return_value
-        mock_response = mock_client.audio.speech.create.return_value
         # stream_to_file is called on the response
         
         # Setup subprocess mock
