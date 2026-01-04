@@ -42,12 +42,11 @@ if %errorlevel% neq 0 (
 )
 
 :: Interactive Prompts
-echo.
-echo Select Installation Type:
-echo 1) Developer (Tests, Linting, Tools)
-echo 2) User (Standard Usage)
-echo 3) Production (Server Optimization)
-set /p install_type="Enter number [1-3] (Default 1): "
+:: echo Select Installation Type:
+:: echo 1) Developer (Tests, Linting, Tools)
+:: echo 2) User (Standard Usage)
+:: echo 3) Production (Server Optimization)
+:: set /p install_type="Enter number [1-3] (Default 1): "
 
 
 

@@ -64,12 +64,11 @@ check_conda
 check_ffmpeg
 
 # Interactive Prompts
-echo ""
-echo "Select Installation Type:"
-echo "1) Developer (Tests, Linting, Tools)"
-echo "2) User (Standard Usage)"
-echo "3) Production (Server Optimization)"
-read -p "Enter number [1-3]: " install_type
+# echo "Select Installation Type:"
+# echo "1) Developer (Tests, Linting, Tools)"
+# echo "2) User (Standard Usage)"
+# echo "3) Production (Server Optimization)"
+# read -p "Enter number [1-3]: " install_type
 env_opts="python=3.11"
 
 
