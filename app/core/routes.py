@@ -149,7 +149,7 @@ def user_profile():
         
     if request.method == 'POST':
         user.name = request.form.get('name')
-        user.age = request.form.get('age')
+        user.age = request.form.get('age') or None
         user.country = request.form.get('country')
         user.primary_language = request.form.get('primary_language')
         user.education_level = request.form.get('education_level')
@@ -158,7 +158,7 @@ def user_profile():
         user.learning_goals = request.form.get('learning_goals')
         user.prior_knowledge = request.form.get('prior_knowledge')
         user.learning_style = request.form.get('learning_style')
-        user.time_commitment = request.form.get('time_commitment')
+        user.time_commitment = request.form.get('time_commitment') or None
         user.preferred_format = request.form.get('preferred_format')
         
         db.session.commit()
