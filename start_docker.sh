@@ -6,11 +6,22 @@ echo ""
 PROFILES=""
 
 # Check env or ask
-echo "Do you want to run local Coqui TTS? (Large download ~5GB) [y/N]"
+echo "Do you want to run local Speaches/Kokoro TTS? (Large download ~5GB) [y/N]"
 read run_tts
 if [[ "$run_tts" =~ ^[Yy]$ ]]; then
     PROFILES="$PROFILES --profile tts"
     echo "✅ Enabled 'tts' profile."
+    
+    # Start just the TTS service first to download model
+    echo "🎤 Starting Speaches (TTS) container to check/download model..."
+    docker compose $PROFILES up -d speaches
+
+    echo "⏳ Waiting for TTS Server to start (15s)..."
+    sleep 15
+    
+    echo "⬇️  Downloading Kokoro-82M model..."
+    docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
+    echo "✅ TTS Model Ready."
 fi
 
 echo "Do you want to run in detached mode (background)? [Y/n]"
