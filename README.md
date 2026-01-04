@@ -108,7 +108,7 @@ Run the entire stack (App + DB + Optional TTS) in containers.
 If you prefer full control over your environment.
 
 1.  **Create Environment**: `conda create -n Personal-Guru python=3.11 && conda activate Personal-Guru`
-2.  **Install Dependencies**: `pip install -r requirements/base.txt` (or `dev.txt`, `prod.txt`)
+2.  **Install Dependencies**: `pip install -r requirements.txt`
 3.  **Setup Environment Variables**:
     Creating a `.env` file is **optional** as the application has a built-in UI Wizard to help you configure these settings. However, you can configure it manually:
     

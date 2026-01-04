@@ -49,13 +49,7 @@ echo 2) User (Standard Usage)
 echo 3) Production (Server Optimization)
 set /p install_type="Enter number [1-3] (Default 1): "
 
-if "%install_type%"=="2" (
-    set req_file=requirements/base.txt
-) else if "%install_type%"=="3" (
-    set req_file=requirements/prod.txt
-) else (
-    set req_file=requirements/dev.txt
-)
+
 
 echo.
 set /p install_tts="Install TTS dependencies? (Large download) [y/N]: "
@@ -102,8 +96,8 @@ if %errorlevel% neq 0 (
 )
 
 :: Install Dependencies
-echo [INFO] Installing Dependencies from %req_file%...
-pip install -r %req_file%
+echo [INFO] Installing Dependencies from requirements.txt...
+pip install -r requirements.txt
 if %errorlevel% neq 0 (
     echo [WARNING] Some dependencies may have failed to install.
 )
