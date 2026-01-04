@@ -38,10 +38,10 @@ function initChatPopup(config) {
 
 
         // This is a placeholder for a loader
-        const botMessage = document.createElement('div');
-        botMessage.className = 'chat-message bot-message';
-        botMessage.innerHTML = '<strong>Bot:</strong> Thinking...';
-        chatHistory.appendChild(botMessage);
+        const tutorMessage = document.createElement('div');
+        tutorMessage.className = 'chat-message bot-message';
+        tutorMessage.innerHTML = '<strong>Tutor:</strong> Thinking...';
+        chatHistory.appendChild(tutorMessage);
         chatHistory.scrollTop = chatHistory.scrollHeight;
 
         try {
@@ -56,10 +56,10 @@ function initChatPopup(config) {
 
             const data = await response.json();
             const md = window.markdownit();
-            botMessage.innerHTML = `<strong>Bot:</strong> ${md.render(data.answer)}`;
+            tutorMessage.innerHTML = `<strong>Tutor:</strong> ${md.render(data.answer)}`;
             chatHistory.scrollTop = chatHistory.scrollHeight;
         } catch (error) {
-            botMessage.innerHTML = '<strong>Bot:</strong> Sorry, something went wrong.';
+            tutorMessage.innerHTML = '<strong>Tutor:</strong> Sorry, something went wrong.';
             console.error('Chat error:', error);
         }
     });

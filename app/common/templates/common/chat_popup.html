@@ -1,7 +1,15 @@
-<div id="chat-popup" class="chat-popup">
+<div id="chat-launcher" class="chat-launcher">
+    <img src="{{ url_for('common.static', filename='img/PG.svg') }}" alt="Chat Logo">
+    <span class="launcher-text">Ask a question</span>
+</div>
+
+<div id="chat-popup" class="chat-popup" style="display: none;">
     <div id="chat-header" class="chat-header">
         <span>Ask a Question</span>
-        <button id="chat-toggle-btn">-</button>
+        <div class="chat-controls">
+            <button id="chat-maximize-btn" title="Maximize">□</button>
+            <button id="chat-toggle-btn" title="Minimize">−</button>
+        </div>
     </div>
     <div id="chat-window" class="chat-window">
         <div id="chat-history-popup" class="chat-history"></div>

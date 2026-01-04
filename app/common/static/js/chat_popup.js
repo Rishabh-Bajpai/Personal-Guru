@@ -4,24 +4,59 @@ let chatConfig = {};
 
 function initChatPopup(config) {
     chatConfig = config;
+    const chatLauncher = document.getElementById('chat-launcher');
+    const chatPopup = document.getElementById('chat-popup');
     const chatToggleBtn = document.getElementById('chat-toggle-btn');
-    const chatWindow = document.getElementById('chat-window');
+    const chatMaximizeBtn = document.getElementById('chat-maximize-btn');
     const chatForm = document.getElementById('chat-form-popup');
     const chatInput = document.getElementById('chat-input-popup');
     const chatHistory = document.getElementById('chat-history-popup');
     const chatHeader = document.getElementById('chat-header');
+    let isMaximized = false;
 
-    function toggleChatWindow() {
-        if (chatWindow.style.display === 'none' || chatWindow.style.display === '') {
-            chatWindow.style.display = 'flex';
-            chatToggleBtn.textContent = '−'; // Minus sign
+    function openChat() {
+        chatLauncher.style.display = 'none';
+        chatPopup.style.display = 'flex';
+        chatPopup.style.transform = 'scale(1)';
+        chatPopup.style.opacity = '1';
+        chatInput.focus();
+    }
+
+    function closeChat() {
+        chatPopup.style.transform = 'scale(0.8)';
+        chatPopup.style.opacity = '0';
+        setTimeout(() => {
+            chatPopup.style.display = 'none';
+            chatLauncher.style.display = 'flex';
+            // Reset to normal size when closing
+            if (isMaximized) {
+                toggleMaximize();
+            }
+        }, 200);
+    }
+
+    function toggleMaximize() {
+        isMaximized = !isMaximized;
+        if (isMaximized) {
+            chatPopup.classList.add('maximized');
+            chatMaximizeBtn.textContent = '◱';
+            chatMaximizeBtn.title = 'Restore';
         } else {
-            chatWindow.style.display = 'none';
-            chatToggleBtn.textContent = '+';
+            chatPopup.classList.remove('maximized');
+            chatMaximizeBtn.textContent = '□';
+            chatMaximizeBtn.title = 'Maximize';
         }
     }
 
-    chatHeader.addEventListener('click', toggleChatWindow);
+    chatLauncher.addEventListener('click', openChat);
+    chatToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeChat();
+    });
+    chatMaximizeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMaximize();
+    });
 
 
     chatForm.addEventListener('submit', async (e) => {
@@ -38,10 +73,10 @@ function initChatPopup(config) {
 
 
         // This is a placeholder for a loader
-        const botMessage = document.createElement('div');
-        botMessage.className = 'chat-message bot-message';
-        botMessage.innerHTML = '<strong>Bot:</strong> Thinking...';
-        chatHistory.appendChild(botMessage);
+        const tutorMessage = document.createElement('div');
+        tutorMessage.className = 'chat-message bot-message';
+        tutorMessage.innerHTML = '<strong>Tutor:</strong> Thinking...';
+        chatHistory.appendChild(tutorMessage);
         chatHistory.scrollTop = chatHistory.scrollHeight;
 
         try {
@@ -56,15 +91,17 @@ function initChatPopup(config) {
 
             const data = await response.json();
             const md = window.markdownit();
-            botMessage.innerHTML = `<strong>Bot:</strong> ${md.render(data.answer)}`;
+            tutorMessage.innerHTML = `<strong>Tutor:</strong> ${md.render(data.answer)}`;
             chatHistory.scrollTop = chatHistory.scrollHeight;
         } catch (error) {
-            botMessage.innerHTML = '<strong>Bot:</strong> Sorry, something went wrong.';
+            tutorMessage.innerHTML = '<strong>Tutor:</strong> Sorry, something went wrong.';
             console.error('Chat error:', error);
         }
     });
 
-    // Initially hide the chat window
-    chatWindow.style.display = 'none';
-    chatToggleBtn.textContent = '+';
+    // Initially make sure the launcher is visible and popup is hidden
+    chatLauncher.style.display = 'flex';
+    chatPopup.style.display = 'none';
+    chatPopup.style.opacity = '0';
+    chatPopup.style.transform = 'scale(0.8)';
 }

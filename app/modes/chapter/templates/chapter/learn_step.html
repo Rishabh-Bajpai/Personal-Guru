@@ -8,7 +8,7 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('chapter.static', filename='chapter.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/chat_popup.css') }}">
+<link rel="stylesheet" href="{{ url_for('common.static', filename='css/chat_popup.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -171,7 +171,6 @@
 
 {% block scripts %}
 <script src="{{ url_for('chapter.static', filename='learn_step.js') }}"></script>
-<script src="{{ url_for('static', filename='js/chat_popup.js') }}"></script>
 <script src="{{ url_for('common.static', filename='js/chat_popup.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -187,19 +186,6 @@
                 chat: "{{ url_for('chat.chat', topic_name=topic.name, step_index=step_index) }}"
             }
         });
-        document.addEventListener('DOMContentLoaded', function () {
-            initLearnStep({
-                urls: {
-                    execute_code: "{{ url_for('chapter.execute_code') }}",
-                    generate_audio: "{{ url_for('chapter.generate_audio_route', step_index=step_index) }}"
-                }
-            });
-
-            initChatPopup({
-                urls: {
-                    chat: "{{ url_for('chat.chat', topic_name=topic.name, step_index=step_index) }}"
-                }
-            });
-        });
+    });
 </script>
 {% endblock %}
