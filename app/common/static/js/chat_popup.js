@@ -1,6 +1,7 @@
 // app/common/static/js/chat_popup.js
 
 let chatConfig = {};
+let isInitialized = false;
 
 /**
  * Initializes the chat popup UI by wiring up DOM elements and event handlers.
@@ -15,6 +16,12 @@ let chatConfig = {};
  */
 function initChatPopup(config) {
     chatConfig = config;
+    
+    // Prevent multiple initializations to avoid duplicate event listeners
+    if (isInitialized) {
+        console.warn('Chat popup already initialized. Updating configuration only.');
+        return;
+    }
     const chatLauncher = document.getElementById('chat-launcher');
     const chatPopup = document.getElementById('chat-popup');
     const chatToggleBtn = document.getElementById('chat-toggle-btn');
@@ -91,6 +98,11 @@ function initChatPopup(config) {
         if (!question.trim()) return;
         chatInput.value = '';
 
+        // Disable input and submit button during request
+        const submitButton = chatForm.querySelector('button[type="submit"]');
+        chatInput.disabled = true;
+        if (submitButton) submitButton.disabled = true;
+
         const userMessage = document.createElement('div');
         userMessage.className = 'chat-message user-message';
         userMessage.innerHTML = '<strong>You:</strong> ';
@@ -101,7 +113,7 @@ function initChatPopup(config) {
 
         // This is a placeholder for a loader
         const tutorMessage = document.createElement('div');
-        tutorMessage.className = 'chat-message bot-message';
+        tutorMessage.className = 'chat-message tutor-message';
         tutorMessage.innerHTML = '<strong>Tutor:</strong> Thinking...';
         chatHistory.appendChild(tutorMessage);
         chatHistory.scrollTop = chatHistory.scrollHeight;
@@ -132,6 +144,11 @@ function initChatPopup(config) {
         } catch (error) {
             tutorMessage.innerHTML = '<strong>Tutor:</strong> Sorry, something went wrong.';
             console.error('Chat error:', error);
+        } finally {
+            // Re-enable input and submit button after request completes
+            chatInput.disabled = false;
+            if (submitButton) submitButton.disabled = false;
+            chatInput.focus();
         }
     });
 
@@ -140,4 +157,7 @@ function initChatPopup(config) {
     chatPopup.style.display = 'none';
     chatPopup.style.opacity = '0';
     chatPopup.style.transform = 'scale(0.8)';
+    
+    // Mark as initialized to prevent duplicate event listeners
+    isInitialized = true;
 }

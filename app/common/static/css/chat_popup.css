@@ -178,6 +178,23 @@ body.dark-mode {
     transform: scale(0.95);
 }
 
+.chat-form button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(50%);
+}
+
+.chat-form button:disabled:hover {
+    filter: grayscale(50%);
+    transform: none;
+}
+
+.chat-form input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: var(--chat-border);
+}
+
 .chat-message {
     margin-bottom: 12px;
     padding: 10px 14px;
