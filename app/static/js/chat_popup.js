@@ -44,7 +44,8 @@ function initChatPopup(config) {
 
         const userMessage = document.createElement('div');
         userMessage.className = 'chat-message user-message';
-        userMessage.innerHTML = `<strong>You:</strong> ${question}`;
+        userMessage.innerHTML = '<strong>You:</strong> ';
+        userMessage.appendChild(document.createTextNode(question));
         chatHistory.appendChild(userMessage);
         chatHistory.scrollTop = chatHistory.scrollHeight;
 
