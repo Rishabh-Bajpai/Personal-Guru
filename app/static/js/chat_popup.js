@@ -2,6 +2,13 @@
 
 let chatConfig = {};
 
+/**
+ * Initialize the chat popup UI and wire up event handlers for sending messages.
+ *
+ * @param {Object} config - Configuration object for the chat popup.
+ * @param {Object} config.urls - Collection of endpoint URLs used by the chat popup.
+ * @param {string} config.urls.chat - URL endpoint to which chat questions are POSTed.
+ */
 function initChatPopup(config) {
     chatConfig = config;
     const chatToggleBtn = document.getElementById('chat-toggle-btn');
