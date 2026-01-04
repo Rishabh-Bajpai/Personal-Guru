@@ -63,8 +63,8 @@ if [[ "$install_tts" =~ ^[Yy]$ ]]; then
         echo "🎤 Starting TTS Server (Speaches/Kokoro)..."
         docker compose up -d speaches
         
-        echo "⏳ Waiting for TTS Server to start (10s)..."
-        sleep 10
+        echo "⏳ Waiting for TTS Server to start (15s)..."
+        sleep 15
         
         echo "⬇️  Downloading Kokoro-82M model..."
         docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
