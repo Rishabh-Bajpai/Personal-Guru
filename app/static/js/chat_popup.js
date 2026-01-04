@@ -11,6 +11,11 @@ function initChatPopup(config) {
     const chatHistory = document.getElementById('chat-history-popup');
     const chatHeader = document.getElementById('chat-header');
 
+    // Ensure all required DOM elements exist before proceeding
+    if (!chatToggleBtn || !chatWindow || !chatForm || !chatInput || !chatHistory || !chatHeader) {
+        console.error('Chat popup initialization failed: required DOM elements are missing.');
+        return;
+    }
     function toggleChatWindow() {
         if (chatWindow.style.display === 'none' || chatWindow.style.display === '') {
             chatWindow.style.display = 'flex';
