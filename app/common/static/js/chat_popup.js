@@ -100,8 +100,14 @@ function initChatPopup(config) {
             });
 
             const data = await response.json();
-            const md = window.markdownit();
-            tutorMessage.innerHTML = `<strong>Tutor:</strong> ${md.render(data.answer)}`;
+            const md = window.markdownit({
+                html: false
+            });
+            const renderedAnswer = md.render(data.answer || '');
+            const safeAnswer = window.DOMPurify
+                ? window.DOMPurify.sanitize(renderedAnswer)
+                : renderedAnswer;
+            tutorMessage.innerHTML = `<strong>Tutor:</strong> ${safeAnswer}`;
             chatHistory.scrollTop = chatHistory.scrollHeight;
         } catch (error) {
             tutorMessage.innerHTML = '<strong>Tutor:</strong> Sorry, something went wrong.';
