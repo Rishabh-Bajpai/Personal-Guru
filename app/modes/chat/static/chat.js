@@ -144,6 +144,9 @@ document.addEventListener('DOMContentLoaded', function () {
                             const data = await response.json();
                             if (data.transcript) {
                                 chatInput.value += (chatInput.value ? " " : "") + data.transcript;
+                                // Auto-submit: Input must be enabled for it to be included in the form submission
+                                chatInput.disabled = false;
+                                document.getElementById('chat-form').requestSubmit();
                             } else if (data.error) {
                                 console.error("Transcription error:", data.error);
                                 alert("Transcription failed: " + data.error);
@@ -162,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     });
 
                     mediaRecorder.start();
-                    micButton.textContent = "🟥"; // Stop icon
+                    micButton.textContent = "⏹️"; // Stop icon
                     micButton.classList.add("recording");
 
                 } catch (err) {
@@ -172,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 // Stop Recording
                 mediaRecorder.stop();
-                micButton.textContent = "🎤";
+                micButton.textContent = "🎙️";
                 micButton.classList.remove("recording");
             }
         });

@@ -208,6 +208,8 @@ function initChatPopup(config) {
                             const data = await response.json();
                             if (data.transcript) {
                                 chatInput.value += (chatInput.value ? " " : "") + data.transcript;
+                                // Auto-submit
+                                chatForm.requestSubmit();
                             } else if (data.error) {
                                 console.error("Transcription error:", data.error);
                                 alert("Transcription failed: " + data.error);
@@ -226,7 +228,7 @@ function initChatPopup(config) {
                     });
 
                     mediaRecorder.start();
-                    micButton.textContent = "🟥"; // Stop icon
+                    micButton.textContent = "⏹️"; // Stop icon
                     micButton.classList.add("recording");
 
                 } catch (err) {
@@ -236,7 +238,7 @@ function initChatPopup(config) {
             } else {
                 // Stop Recording
                 mediaRecorder.stop();
-                micButton.textContent = "🎤";
+                micButton.textContent = "🎙️";
                 micButton.classList.remove("recording");
             }
         });
