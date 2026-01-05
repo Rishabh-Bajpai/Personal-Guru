@@ -316,4 +316,39 @@ def test_setup_success_mock_fs(setup_client, mocker):
     assert "LLM_NUM_CTX=20000" in written_content
     assert "OPENAI_COMPATIBLE_BASE_URL_TTS=http://kokoro" in written_content
     assert "OPENAI_API_KEY=tts-secret" in written_content
+    assert "OPENAI_API_KEY=tts-secret" in written_content
     assert "YOUTUBE_API_KEY=yt123" in written_content
+
+
+def test_transcribe_api(auth_client, mocker, logger):
+    """Test the /api/transcribe endpoint."""
+    logger.section("test_transcribe_api")
+    
+    # Mock transcribe_audio utility
+    mocker.patch('app.common.utils.transcribe_audio', return_value=("Hello world", None))
+    
+    # Create a dummy audio file
+    from io import BytesIO
+    data = {
+        'audio': (BytesIO(b"fake audio data"), 'test.wav')
+    }
+    
+    response = auth_client.post('/api/transcribe', data=data, content_type='multipart/form-data')
+    
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert 'transcript' in json_data
+    assert json_data['transcript'] == "Hello world"
+    
+    # Test error case
+    mocker.patch('app.common.utils.transcribe_audio', return_value=(None, "Transcribe failed"))
+    data_err = {
+        'audio': (BytesIO(b"fake audio data"), 'test.wav')
+    }
+    response = auth_client.post('/api/transcribe', data=data_err, content_type='multipart/form-data')
+    
+    assert response.status_code == 500
+    json_data = response.get_json()
+    assert 'error' in json_data
+    assert json_data['error'] == "Transcribe failed"
+
