@@ -92,7 +92,7 @@ Run the entire stack (App + DB + Optional TTS) in containers.
 1.  **Configure Environment (Optional)**:
     Create a `.env` file if you want to connect to a specific LLM (e.g. LMStudio on another machine).
     ```bash
-    LLM_ENDPOINT=http://localhost:1234/v1
+    LLM_BASE_URL=http://localhost:1234/v1
     ```
     *If not set, it defaults to connecting to your local host's Ollama at port 11434.*
 
@@ -123,14 +123,14 @@ If you prefer full control over your environment.
     **Key Variables:**
     - `DATABASE_URL`: Connection string (e.g., `postgresql://postgres:postgres@localhost:5433/personal_guru`).
     - `PORT`: Default `5011`.
-    - `LLM_ENDPOINT`:
+    - `LLM_BASE_URL`:
       - **Ollama**: `http://localhost:11434/v1`
       - **LMStudio**: `http://localhost:1234/v1`
       - **OpenAI**: `https://api.openai.com/v1`
       - **Gemini**: `https://generativelanguage.googleapis.com/v1beta/openai/`
     - `LLM_MODEL_NAME`: e.g., `llama3`, `gpt-4o`.
-    - `OPENAI_COMPATIBLE_BASE_URL_TTS`: `http://localhost:8969/v1` (Replace `localhost` with your machine's actual LAN IP address if running on another machine).
-    - `OPENAI_COMPATIBLE_BASE_URL_STT`: `http://localhost:8969/v1` (Same as TTS if using Speaches).
+    - `TTS_BASE_URL`: `http://localhost:8969/v1` (Replace `localhost` with your machine's actual LAN IP address if running on another machine).
+    - `STT_BASE_URL`: `http://localhost:8969/v1` (Same as TTS if using Speaches).
     
 4.  **Database Setup (Docker)**:
     Start the Postgres database using Docker:

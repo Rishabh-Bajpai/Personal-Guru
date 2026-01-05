@@ -24,17 +24,17 @@ def create_setup_app():
             config = {
                 'DATABASE_URL': request.form.get('database_url'),
                 'PORT': request.form.get('port', '5011'),
-                'LLM_ENDPOINT': request.form.get('llm_endpoint'),
+                'LLM_BASE_URL': request.form.get('LLM_BASE_URL'),
                 'LLM_MODEL_NAME': request.form.get('llm_model'),
                 'LLM_API_KEY': request.form.get('llm_key', ''),
                 'LLM_NUM_CTX': request.form.get('llm_ctx', '18000'),
-                'OPENAI_COMPATIBLE_BASE_URL_TTS': request.form.get('tts_url', ''),
+                'TTS_BASE_URL': request.form.get('tts_url', ''),
                 'OPENAI_API_KEY': request.form.get('openai_key', ''),
                 'YOUTUBE_API_KEY': request.form.get('youtube_key', '')
             }
             
             # Simple validation
-            if not config['DATABASE_URL'] or not config['LLM_ENDPOINT']:
+            if not config['DATABASE_URL'] or not config['LLM_BASE_URL']:
                 return "Missing required fields", 400
             
             # Write to .env

@@ -20,11 +20,11 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@localhost:5433/personal_guru
       - PORT=5011
       # Use env var if set, otherwise fallback to localhost (since we are on host network)
-      - LLM_ENDPOINT=${LLM_ENDPOINT:-http://localhost:11434/v1}
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://localhost:11434/v1}
       - LLM_MODEL_NAME=${LLM_MODEL_NAME:-llama3}
       - LLM_API_KEY=${LLM_API_KEY:-}
       - LLM_NUM_CTX=${LLM_NUM_CTX:-18000}
-      - OPENAI_COMPATIBLE_BASE_URL_TTS=${OPENAI_COMPATIBLE_BASE_URL_TTS:-http://localhost:8969/v1}
+      - TTS_BASE_URL=${TTS_BASE_URL:-http://localhost:8969/v1}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
     volumes:

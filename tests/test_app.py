@@ -238,7 +238,7 @@ def test_suggestions_agent_error(auth_client, mocker, logger):
 
 def test_validate_config_all_present(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "postgresql://localhost:5432/db")
-    monkeypatch.setenv("LLM_ENDPOINT", "http://localhost:11434")
+    monkeypatch.setenv("LLM_BASE_URL", "http://localhost:11434")
     monkeypatch.setenv("LLM_MODEL_NAME", "llama3")
     
     missing = validate_config()
@@ -247,21 +247,21 @@ def test_validate_config_all_present(monkeypatch):
 def test_validate_config_missing_vars(monkeypatch):
     # Ensure they are unset
     monkeypatch.delenv("DATABASE_URL", raising=False)
-    monkeypatch.delenv("LLM_ENDPOINT", raising=False)
+    monkeypatch.delenv("LLM_BASE_URL", raising=False)
     monkeypatch.delenv("LLM_MODEL_NAME", raising=False)
     
     missing = validate_config()
     assert "DATABASE_URL" in missing
-    assert "LLM_ENDPOINT" in missing
+    assert "LLM_BASE_URL" in missing
     assert "LLM_MODEL_NAME" in missing
 
 def test_validate_config_partial_missing(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "postgresql://localhost:5432/db")
-    monkeypatch.delenv("LLM_ENDPOINT", raising=False)
+    monkeypatch.delenv("LLM_BASE_URL", raising=False)
     monkeypatch.setenv("LLM_MODEL_NAME", "llama3")
     
     missing = validate_config()
-    assert "LLM_ENDPOINT" in missing
+    assert "LLM_BASE_URL" in missing
     assert "DATABASE_URL" not in missing
 
 @pytest.fixture
@@ -279,7 +279,7 @@ def test_setup_page_loads(setup_client):
 def test_setup_submission(setup_client):
     rv = setup_client.post('/', data={
         'database_url': '',
-        'llm_endpoint': ''
+        'LLM_BASE_URL': ''
     })
     assert rv.status_code == 400
     assert b"Missing required fields" in rv.data
@@ -291,7 +291,7 @@ def test_setup_success_mock_fs(setup_client, mocker):
     rv = setup_client.post('/', data={
         'database_url': 'postgresql://test',
         'port': '5011',
-        'llm_endpoint': 'http://test',
+        'LLM_BASE_URL': 'http://test',
         'llm_model': 'gpt-4',
         'llm_key': 'secret',
         'llm_ctx': '20000',
@@ -314,7 +314,7 @@ def test_setup_success_mock_fs(setup_client, mocker):
         
     assert "DATABASE_URL=postgresql://test" in written_content
     assert "LLM_NUM_CTX=20000" in written_content
-    assert "OPENAI_COMPATIBLE_BASE_URL_TTS=http://kokoro" in written_content
+    assert "TTS_BASE_URL=http://kokoro" in written_content
     assert "OPENAI_API_KEY=tts-secret" in written_content
     assert "OPENAI_API_KEY=tts-secret" in written_content
     assert "YOUTUBE_API_KEY=yt123" in written_content

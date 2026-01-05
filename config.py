@@ -14,9 +14,9 @@ class Config:
     
     # External APIs
     LLM_API_KEY = os.environ.get('LLM_API_KEY')
-    LLM_ENDPOINT = os.environ.get('LLM_ENDPOINT')
-    OPENAI_COMPATIBLE_BASE_URL_TTS = os.environ.get('OPENAI_COMPATIBLE_BASE_URL_TTS')
-    OPENAI_COMPATIBLE_BASE_URL_STT = os.environ.get('OPENAI_COMPATIBLE_BASE_URL_STT')
+    LLM_BASE_URL = os.environ.get('LLM_BASE_URL')
+    TTS_BASE_URL = os.environ.get('TTS_BASE_URL')
+    STT_BASE_URL = os.environ.get('STT_BASE_URL')
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
     
     # App Settings
