@@ -14,6 +14,7 @@ LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME")
 LLM_NUM_CTX = int(os.getenv("LLM_NUM_CTX", 18000))
 LLM_API_KEY = os.getenv("LLM_API_KEY", "dummy")
 TTS_BASE_URL = os.getenv("OPENAI_COMPATIBLE_BASE_URL_TTS", "http://localhost:8969/v1")
+STT_BASE_URL = os.getenv("OPENAI_COMPATIBLE_BASE_URL_STT", "http://localhost:8969/v1")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "not-required")
 
 def call_llm(prompt_or_messages, is_json=False):
@@ -394,3 +395,26 @@ def generate_podcast_audio(transcript, output_filename):
             if os.path.exists(tf):
                 os.remove(tf)
 
+
+def transcribe_audio(audio_file_path):
+    """
+    Transcribes audio using an OpenAI-compatible STT service (e.g., speaches).
+    """
+    if not STT_BASE_URL:
+        return None, "STT service not configured"
+
+    try:
+        print(f"Connecting to STT at: {STT_BASE_URL}")
+        client = OpenAI(base_url=STT_BASE_URL, api_key=OPENAI_API_KEY)
+
+        with open(audio_file_path, "rb") as audio_file:
+            transcript = client.audio.transcriptions.create(
+                model="Systran/faster-whisper-medium.en", 
+                file=audio_file,
+                response_format="text"
+            )
+        
+        return transcript, None
+    except Exception as e:
+        print(f"Error calling STT: {e}")
+        return None, f"Error calling STT: {e}"

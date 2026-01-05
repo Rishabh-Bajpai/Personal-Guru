@@ -16,7 +16,7 @@ let isInitialized = false;
  */
 function initChatPopup(config) {
     chatConfig = config;
-    
+
     // Prevent multiple initializations to avoid duplicate event listeners
     if (isInitialized) {
         console.warn('Chat popup already initialized. Updating configuration only.');
@@ -157,7 +157,91 @@ function initChatPopup(config) {
     chatPopup.style.display = 'none';
     chatPopup.style.opacity = '0';
     chatPopup.style.transform = 'scale(0.8)';
-    
+
+
+    // Voice Input Logic
+    const micButton = document.getElementById('mic-button-popup');
+    let mediaRecorder;
+    let audioChunks = [];
+
+    if (micButton) {
+        micButton.addEventListener('click', async (e) => {
+            e.preventDefault(); // Prevent form submission if inside form
+            if (!mediaRecorder || mediaRecorder.state === "inactive") {
+                // Start Recording
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+
+                    mediaRecorder.addEventListener("dataavailable", event => {
+                        audioChunks.push(event.data);
+                    });
+
+                    mediaRecorder.addEventListener("stop", async () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const formData = new FormData();
+                        formData.append("audio", audioBlob, "recording.wav");
+
+                        // Show some loading state on input
+                        const chatInput = document.getElementById('chat-input-popup');
+                        const originalPlaceholder = chatInput.placeholder;
+                        chatInput.placeholder = "Transcribing...";
+                        chatInput.disabled = true;
+
+                        try {
+                            // Use X-CSRFToken from meta tag
+                            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+                            const response = await fetch("/api/transcribe", {
+                                method: "POST",
+                                headers: {
+                                    'X-CSRFToken': csrfToken
+                                },
+                                body: formData
+                            });
+
+                            if (!response.ok) {
+                                throw new Error("Transcription failed");
+                            }
+
+                            const data = await response.json();
+                            if (data.transcript) {
+                                chatInput.value += (chatInput.value ? " " : "") + data.transcript;
+                            } else if (data.error) {
+                                console.error("Transcription error:", data.error);
+                                alert("Transcription failed: " + data.error);
+                            }
+
+                        } catch (err) {
+                            console.error("Error sending audio:", err);
+                            alert("Error sending audio: " + err);
+                        } finally {
+                            chatInput.disabled = false;
+                            chatInput.placeholder = originalPlaceholder;
+                            chatInput.focus();
+                            // Stop all tracks to release microphone
+                            stream.getTracks().forEach(track => track.stop());
+                        }
+                    });
+
+                    mediaRecorder.start();
+                    micButton.textContent = "🟥"; // Stop icon
+                    micButton.classList.add("recording");
+
+                } catch (err) {
+                    console.error("Error accessing microphone:", err);
+                    alert("Could not access microphone.");
+                }
+            } else {
+                // Stop Recording
+                mediaRecorder.stop();
+                micButton.textContent = "🎤";
+                micButton.classList.remove("recording");
+            }
+        });
+    }
+
     // Mark as initialized to prevent duplicate event listeners
     isInitialized = true;
 }

@@ -241,3 +241,34 @@ def settings():
         return render_template('setup.html', defaults=config, success="Settings saved! Restart app to apply.")
     
     return render_template('setup.html', defaults=defaults)
+
+@main_bp.route('/api/transcribe', methods=['POST'])
+@login_required
+def transcribe():
+    from flask import jsonify
+    from app.common.utils import transcribe_audio
+    import tempfile
+    
+    if 'audio' not in request.files:
+        return jsonify({'error': 'No audio file provided'}), 400
+        
+    audio_file = request.files['audio']
+    if audio_file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+        
+    # Save to temp file
+    fd, temp_path = tempfile.mkstemp(suffix=".wav") # or .webm depending on what we record
+    os.close(fd)
+    
+    try:
+        audio_file.save(temp_path)
+        transcript, error = transcribe_audio(temp_path)
+        
+        if error:
+            return jsonify({'error': error}), 500
+            
+        return jsonify({'transcript': transcript})
+        
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
