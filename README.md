@@ -10,6 +10,10 @@ This is a Flask-based web application that serves as a proof-of-concept for a pe
 - **Detailed Study Content:** Each step in the study plan now includes detailed content.
 - **Interactive Learning:** Progress through the plan one step at a time.
 - **Text-to-Speech:** Listen to each learning step with integrated TTS audio.
+- **Podcast Generation:** transform any topic into a dialogue-based audio podcast for on-the-go learning.
+- **Voice Input (STT):** Use your microphone to interact with the AI assistant and navigation.
+- **Flashcards:** Review vocabulary and key concepts with interactive flashcards.
+- **Code Sandbox:** Execute Python code securely within the application for interactive learning.
 - **Knowledge Assessment:** Answer multiple-choice questions after each step to test your understanding.
 - **Personalized Background:** Set your own background (e.g., "I am a beginner") to tailor the learning content to your level.
 - **Adaptive Learning:** The study plan adapts to your performance on the "Check Your Understanding" questions.
