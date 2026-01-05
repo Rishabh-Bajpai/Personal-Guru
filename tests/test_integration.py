@@ -90,13 +90,21 @@ def test_chapter_teaching_agent(logger):
     logger.section("test_chapter_teaching_agent")
     agent = ChapterTeachingAgent()
     
-    material, error = retry_agent_call(agent.generate_teaching_material, "Science", ["Introduction"], "beginner")
+    # Mock call_llm to avoid network timeout and dependency on local LLM
+    with patch('app.modes.chapter.agent.call_llm') as mock_call:
+        mock_call.return_value = ("Mocked Teaching Material", None)
+        
+        # We don't need retry_agent_call if we are sure it returns success immediately via mock
+        # But keeping it consistent with other tests is fine, or just call directly.
+        # Direct call is simpler since mapped.
+        material, error = agent.generate_teaching_material("Science", ["Introduction"], "beginner")
     
     logger.response("Teaching Material", material)
     assert error is None
     assert material is not None
     assert isinstance(material, str)
     assert len(material) > 0
+    assert material == "Mocked Teaching Material"
 
 
 def test_flashcard_teaching_agent(logger):
