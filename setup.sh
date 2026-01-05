@@ -64,17 +64,13 @@ check_conda
 check_ffmpeg
 
 # Interactive Prompts
-# echo "Select Installation Type:"
-# echo "1) Developer (Tests, Linting, Tools)"
-# echo "2) User (Standard Usage)"
-# echo "3) Production (Server Optimization)"
-# read -p "Enter number [1-3]: " install_type
+
 env_opts="python=3.11"
 
 
 
 echo ""
-read -p "Install TTS (Text-to-Speech) dependencies? (Large download) [y/N]: " install_tts
+read -p "Install Speech Services (TTS/STT) dependencies? (Large download) [y/N]: " install_tts
 
 # Environment Creation
 if check_env_exists; then
@@ -103,6 +99,9 @@ if [[ "$install_tts" =~ ^[Yy]$ ]]; then
         
         echo "⬇️  Downloading Kokoro-82M model..."
         docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
+
+        echo "⬇️  Downloading Faster Whisper Medium model (STT)..."
+        docker compose exec speaches uv tool run speaches-cli model download Systran/faster-whisper-medium.en
         
         echo "✅ TTS Setup Complete."
     else

@@ -125,7 +125,8 @@ If you prefer full control over your environment.
       - **OpenAI**: `https://api.openai.com/v1`
       - **Gemini**: `https://generativelanguage.googleapis.com/v1beta/openai/`
     - `LLM_MODEL_NAME`: e.g., `llama3`, `gpt-4o`.
-    - `OPENAI_COMPATIBLE_BASE_URL_TTS`: `http://192.168.1.51:8969/v1` (Replace `192.168.1.51` with your machine's actual LAN IP address. `localhost` may not work depending on Docker network configuration).
+    - `OPENAI_COMPATIBLE_BASE_URL_TTS`: `http://localhost:8969/v1` (Replace `localhost` with your machine's actual LAN IP address if running on another machine).
+    - `OPENAI_COMPATIBLE_BASE_URL_STT`: `http://localhost:8969/v1` (Same as TTS if using Speaches).
     
 4.  **Database Setup (Docker)**:
     Start the Postgres database using Docker:
@@ -133,18 +134,22 @@ If you prefer full control over your environment.
     docker compose up -d db
     ```
     *Starts PostgreSQL on `localhost:5433`.*
-5.  **Start the TTS Server**:
+5.  **Start the Speech Server (TTS & STT)**:
     ```bash
     docker compose up -d speaches
     ```
     *Starts Speaches on `localhost:8969`.*
     
-    Download the model inside the container. Wait a few seconds for the container to start, then run:
+    Download the models inside the container (Wait a few seconds for the container to start):
     ```bash
+    # TTS Model
     docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
+
+    # STT Model
+    docker compose exec speaches uv tool run speaches-cli model download Systran/faster-whisper-medium.en
     ```
     
-    Test the setup:
+    **Test TTS:**
     ```bash
     curl "http://localhost:8969/v1/audio/speech" -s -H "Content-Type: application/json" \
       --output test.mp3 \
@@ -154,6 +159,15 @@ If you prefer full control over your environment.
         "voice": "af_bella",
         "speed": 1.0
       }'
+    ```
+
+    **Test STT:**
+    ```bash
+    curl "http://localhost:8969/v1/audio/transcriptions" \
+      -F "file=@test.mp3" \
+      -F "model=Systran/faster-whisper-medium.en" \
+      -F "vad_filter=true" \
+      -F "temperature=0"
     ```
 
 6.  **Init Database**:
@@ -197,9 +211,7 @@ If you plan to move data between different types of computers (e.g., your Linux 
    # Restore
    docker compose exec db psql -U postgres -d personal_guru -f /backup.sql
    ```
-### Text-to-Speech (Speaches / Kokoro)
 
-To enable high-quality AI narration and podcasts, we use [Speaches](https://github.com/speaches-ai/speaches), an OpenAI-compatible TTS server that runs the Kokoro-82M model.
 
 ## Enabling HTTPS for Microphone Access, reels and other security features
 
