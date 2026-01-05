@@ -125,9 +125,9 @@
 
             <div class="section-title">LLM Settings</div>
             <div class="form-group">
-                <label for="llm_endpoint">LLM Endpoint</label>
-                <input type="url" id="llm_endpoint" name="llm_endpoint" required
-                    value="{{ defaults.get('LLM_ENDPOINT', 'http://localhost:11434/v1') }}">
+                <label for="LLM_BASE_URL">LLM Endpoint</label>
+                <input type="url" id="LLM_BASE_URL" name="LLM_BASE_URL" required
+                    value="{{ defaults.get('LLM_BASE_URL', 'http://localhost:11434/v1') }}">
                 <div class="hint">
                     Ollama: http://localhost:11434/v1<br>
                     LMStudio: http://localhost:1234/v1<br>
@@ -159,7 +159,7 @@
             <div class="form-group">
                 <label for="tts_url">OpenAI-Compatible TTS Endpoint</label>
                 <input type="url" id="tts_url" name="tts_url"
-                    value="{{ defaults.get('OPENAI_COMPATIBLE_BASE_URL_TTS', 'http://localhost:8969/v1') }}">
+                    value="{{ defaults.get('TTS_BASE_URL', 'http://localhost:8969/v1') }}">
                 <div class="hint">Endpoint for Speaches/Kokoro or other OpenAI-compatible TTS. Default:
                     http://localhost:8969/v1</div>
             </div>

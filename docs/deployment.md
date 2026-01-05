@@ -8,7 +8,7 @@ The easiest way to self-host is using the provided `setup.sh` script or Docker C
 This is best for development or if you want to use local hardware (GPU) natively for the LLM.
 
 1.  Run `./setup.sh`
-2.  Updates/Dev: `pip install -r requirements/dev.txt`
+2.  Updates/Dev: `pip install -r requirements.txt`
 
 ### Option 2: Full Docker
 Run `docker compose up -d`. This runs the Web App and the Database in containers.
@@ -27,7 +27,7 @@ You can configure the LLM provider in the `.env` file or via the Setup Wizard.
 For production, we recommend using a reverse proxy for HTTPS.
 
 1.  **Export Dependencies**:
-    The production dependencies are in `requirements/prod.txt`.
+    The production dependencies are in `requirements.txt`.
 
 2.  **WSGI Server**:
     Use `gunicorn` to run the application:

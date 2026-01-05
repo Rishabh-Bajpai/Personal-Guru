@@ -64,21 +64,13 @@ check_conda
 check_ffmpeg
 
 # Interactive Prompts
-echo ""
-echo "Select Installation Type:"
-echo "1) Developer (Tests, Linting, Tools)"
-echo "2) User (Standard Usage)"
-echo "3) Production (Server Optimization)"
-read -p "Enter number [1-3]: " install_type
 
-case $install_type in
-    1) req_file="requirements/dev.txt"; env_opts="python=3.11";;
-    3) req_file="requirements/prod.txt"; env_opts="python=3.11";;
-    *) req_file="requirements/base.txt"; env_opts="python=3.11";;
-esac
+env_opts="python=3.11"
+
+
 
 echo ""
-read -p "Install TTS (Text-to-Speech) dependencies? (Large download) [y/N]: " install_tts
+read -p "Install Speech Services (TTS/STT) dependencies? (Large download) [y/N]: " install_tts
 
 # Environment Creation
 if check_env_exists; then
@@ -89,11 +81,11 @@ else
 fi
 
 # Install Dependencies
-echo "📦 Installing Dependencies from $req_file..."
+echo "📦 Installing Dependencies from requirements.txt..."
 ENV_PYTHON=$(conda run -n Personal-Guru which python)
 
 # Core Install
-$ENV_PYTHON -m pip install -r $req_file
+$ENV_PYTHON -m pip install -r requirements.txt
 
 # Optional TTS
 # Docker TTS Setup
@@ -107,6 +99,9 @@ if [[ "$install_tts" =~ ^[Yy]$ ]]; then
         
         echo "⬇️  Downloading Kokoro-82M model..."
         docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
+
+        echo "⬇️  Downloading Faster Whisper Medium model (STT)..."
+        docker compose exec speaches uv tool run speaches-cli model download Systran/faster-whisper-medium.en
         
         echo "✅ TTS Setup Complete."
     else

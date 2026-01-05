@@ -10,6 +10,10 @@ This is a Flask-based web application that serves as a proof-of-concept for a pe
 - **Detailed Study Content:** Each step in the study plan now includes detailed content.
 - **Interactive Learning:** Progress through the plan one step at a time.
 - **Text-to-Speech:** Listen to each learning step with integrated TTS audio.
+- **Podcast Generation:** transform any topic into a dialogue-based audio podcast for on-the-go learning.
+- **Voice Input (STT):** Use your microphone to interact with the AI assistant and navigation.
+- **Flashcards:** Review vocabulary and key concepts with interactive flashcards.
+- **Code Sandbox:** Execute Python code securely within the application for interactive learning.
 - **Knowledge Assessment:** Answer multiple-choice questions after each step to test your understanding.
 - **Personalized Background:** Set your own background (e.g., "I am a beginner") to tailor the learning content to your level.
 - **Adaptive Learning:** The study plan adapts to your performance on the "Check Your Understanding" questions.
@@ -88,7 +92,7 @@ Run the entire stack (App + DB + Optional TTS) in containers.
 1.  **Configure Environment (Optional)**:
     Create a `.env` file if you want to connect to a specific LLM (e.g. LMStudio on another machine).
     ```bash
-    LLM_ENDPOINT=http://localhost:1234/v1
+    LLM_BASE_URL=http://localhost:1234/v1
     ```
     *If not set, it defaults to connecting to your local host's Ollama at port 11434.*
 
@@ -108,7 +112,7 @@ Run the entire stack (App + DB + Optional TTS) in containers.
 If you prefer full control over your environment.
 
 1.  **Create Environment**: `conda create -n Personal-Guru python=3.11 && conda activate Personal-Guru`
-2.  **Install Dependencies**: `pip install -r requirements/base.txt` (or `dev.txt`, `prod.txt`)
+2.  **Install Dependencies**: `pip install -r requirements.txt`
 3.  **Setup Environment Variables**:
     Creating a `.env` file is **optional** as the application has a built-in UI Wizard to help you configure these settings. However, you can configure it manually:
     
@@ -119,13 +123,14 @@ If you prefer full control over your environment.
     **Key Variables:**
     - `DATABASE_URL`: Connection string (e.g., `postgresql://postgres:postgres@localhost:5433/personal_guru`).
     - `PORT`: Default `5011`.
-    - `LLM_ENDPOINT`:
+    - `LLM_BASE_URL`:
       - **Ollama**: `http://localhost:11434/v1`
       - **LMStudio**: `http://localhost:1234/v1`
       - **OpenAI**: `https://api.openai.com/v1`
       - **Gemini**: `https://generativelanguage.googleapis.com/v1beta/openai/`
     - `LLM_MODEL_NAME`: e.g., `llama3`, `gpt-4o`.
-    - `OPENAI_COMPATIBLE_BASE_URL_TTS`: `http://192.168.1.51:8969/v1` (Replace `192.168.1.51` with your machine's actual LAN IP address. `localhost` may not work depending on Docker network configuration).
+    - `TTS_BASE_URL`: `http://localhost:8969/v1` (Replace `localhost` with your machine's actual LAN IP address if running on another machine).
+    - `STT_BASE_URL`: `http://localhost:8969/v1` (Same as TTS if using Speaches).
     
 4.  **Database Setup (Docker)**:
     Start the Postgres database using Docker:
@@ -133,18 +138,22 @@ If you prefer full control over your environment.
     docker compose up -d db
     ```
     *Starts PostgreSQL on `localhost:5433`.*
-5.  **Start the TTS Server**:
+5.  **Start the Speech Server (TTS & STT)**:
     ```bash
     docker compose up -d speaches
     ```
     *Starts Speaches on `localhost:8969`.*
     
-    Download the model inside the container. Wait a few seconds for the container to start, then run:
+    Download the models inside the container (Wait a few seconds for the container to start):
     ```bash
+    # TTS Model
     docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
+
+    # STT Model
+    docker compose exec speaches uv tool run speaches-cli model download Systran/faster-whisper-medium.en
     ```
     
-    Test the setup:
+    **Test TTS:**
     ```bash
     curl "http://localhost:8969/v1/audio/speech" -s -H "Content-Type: application/json" \
       --output test.mp3 \
@@ -154,6 +163,15 @@ If you prefer full control over your environment.
         "voice": "af_bella",
         "speed": 1.0
       }'
+    ```
+
+    **Test STT:**
+    ```bash
+    curl "http://localhost:8969/v1/audio/transcriptions" \
+      -F "file=@test.mp3" \
+      -F "model=Systran/faster-whisper-medium.en" \
+      -F "vad_filter=true" \
+      -F "temperature=0"
     ```
 
 6.  **Init Database**:
@@ -197,9 +215,7 @@ If you plan to move data between different types of computers (e.g., your Linux 
    # Restore
    docker compose exec db psql -U postgres -d personal_guru -f /backup.sql
    ```
-### Text-to-Speech (Speaches / Kokoro)
 
-To enable high-quality AI narration and podcasts, we use [Speaches](https://github.com/speaches-ai/speaches), an OpenAI-compatible TTS server that runs the Kokoro-82M model.
 
 ## Enabling HTTPS for Microphone Access, reels and other security features
 

@@ -90,13 +90,21 @@ def test_chapter_teaching_agent(logger):
     logger.section("test_chapter_teaching_agent")
     agent = ChapterTeachingAgent()
     
-    material, error = retry_agent_call(agent.generate_teaching_material, "Science", ["Introduction"], "beginner")
+    # Mock call_llm to avoid network timeout and dependency on local LLM
+    with patch('app.modes.chapter.agent.call_llm') as mock_call:
+        mock_call.return_value = ("Mocked Teaching Material", None)
+        
+        # We don't need retry_agent_call if we are sure it returns success immediately via mock
+        # But keeping it consistent with other tests is fine, or just call directly.
+        # Direct call is simpler since mapped.
+        material, error = agent.generate_teaching_material("Science", ["Introduction"], "beginner")
     
     logger.response("Teaching Material", material)
     assert error is None
     assert material is not None
     assert isinstance(material, str)
     assert len(material) > 0
+    assert material == "Mocked Teaching Material"
 
 
 def test_flashcard_teaching_agent(logger):
@@ -270,4 +278,58 @@ def test_generate_audio(logger):
         command = args[0]
         assert command[0] == "ffmpeg"
         assert command[-1].endswith("step_1.wav")
+
+
+def test_transcribe_audio(logger):
+    """Test the transcribe_audio function."""
+    logger.section("test_transcribe_audio")
+    from app.common.utils import transcribe_audio
+    
+    # Mock OpenAI
+    with patch('app.common.utils.OpenAI') as MockOpenAI:
+        mock_client = MockOpenAI.return_value
+        
+        # Mock successful transcription
+        mock_client.audio.transcriptions.create.return_value = "Hello world"
+        
+        # Create a dummy file
+        with patch('builtins.open', list=True): # Just to allow open() to work if needed, or better use real temp file
+             # utils.transcribe_audio opens the file. We should probably use a real temp file for robustness 
+             # or mock the open call inside utils.
+             # Given utils.py does: with open(audio_file_path, "rb") as audio_file:
+             # It acts on a path.
+             
+             import tempfile
+             import os
+             
+             # Create a real dummy file
+             fd, path = tempfile.mkstemp()
+             os.write(fd, b"fake audio data")
+             os.close(fd)
+             
+             try:
+                 transcript, error = transcribe_audio(path)
+                 
+                 assert error is None
+                 assert transcript == "Hello world"
+                 mock_client.audio.transcriptions.create.assert_called_once()
+                 
+             finally:
+                 if os.path.exists(path):
+                     os.remove(path)
+                     
+        # Test Error handling
+        mock_client.audio.transcriptions.create.side_effect = Exception("STT Error")
+        
+        # Create another dummy file
+        fd, path = tempfile.mkstemp()
+        os.close(fd)
+        try:
+             transcript, error = transcribe_audio(path)
+             assert transcript is None
+             assert "STT Error" in error
+        finally:
+             if os.path.exists(path):
+                 os.remove(path)
+
 

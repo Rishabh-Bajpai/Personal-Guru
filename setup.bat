@@ -42,23 +42,12 @@ if %errorlevel% neq 0 (
 )
 
 :: Interactive Prompts
-echo.
-echo Select Installation Type:
-echo 1) Developer (Tests, Linting, Tools)
-echo 2) User (Standard Usage)
-echo 3) Production (Server Optimization)
-set /p install_type="Enter number [1-3] (Default 1): "
 
-if "%install_type%"=="2" (
-    set req_file=requirements/base.txt
-) else if "%install_type%"=="3" (
-    set req_file=requirements/prod.txt
-) else (
-    set req_file=requirements/dev.txt
-)
+
+
 
 echo.
-set /p install_tts="Install TTS dependencies? (Large download) [y/N]: "
+set /p install_tts="Install Speech Services (TTS/STT) dependencies? (Large download) [y/N]: "
 
 :: Check if environment already exists
 call conda info --envs | findstr /B /C:"Personal-Guru " >nul 2>nul
@@ -102,8 +91,8 @@ if %errorlevel% neq 0 (
 )
 
 :: Install Dependencies
-echo [INFO] Installing Dependencies from %req_file%...
-pip install -r %req_file%
+echo [INFO] Installing Dependencies from requirements.txt...
+pip install -r requirements.txt
 if %errorlevel% neq 0 (
     echo [WARNING] Some dependencies may have failed to install.
 )
@@ -122,6 +111,9 @@ if /i "%install_tts%"=="y" (
     
     echo [INFO] Downloading Kokoro-82M model...
     docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
+    
+    echo [INFO] Downloading Faster Whisper Medium model (STT)...
+    docker compose exec speaches uv tool run speaches-cli model download Systran/faster-whisper-medium.en
     
     echo [SUCCESS] TTS Setup Complete.
 )
