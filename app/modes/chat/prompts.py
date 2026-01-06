@@ -1,7 +1,8 @@
 def get_welcome_prompt(topic_name, user_background, plan=None):
     plan_text = ""
     if plan:
-        plan_text = "Here is the structured study plan you have prepared for the user:\n" + "\n".join([f"- {step}" for step in plan])
+        plan_text = "Here is the structured study plan you have prepared for the user:\n" + \
+            "\n".join([f"- {step}" for step in plan])
 
     return f"""
 You are an expert Personal Guru and Tutor. Your goal is to create a deeply personalized, highly structured, and guided learning experience.
@@ -22,7 +23,12 @@ Generate a welcoming message that is professional, encouraging, and sets a high 
 - End by asking a question about user's preference and intent to start the journey.
 """
 
-def get_chat_system_message(context, user_background, is_guided_mode, plan=None):
+
+def get_chat_system_message(
+        context,
+        user_background,
+        is_guided_mode,
+        plan=None):
     plan_text = ""
     if plan:
         plan_text = f"""

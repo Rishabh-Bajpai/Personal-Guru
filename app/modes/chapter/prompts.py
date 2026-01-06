@@ -1,9 +1,13 @@
-def get_chapter_system_message(context, user_background, is_guided_mode, plan=None):
+def get_chapter_system_message(
+        context,
+        user_background,
+        is_guided_mode,
+        plan=None):
     """
     Returns a system message for the Chapter Mode side-chat.
     Focuses on concise, direct answers based on the teaching material.
     """
-    
+
     base_prompt = f"""
 You are an expert Tutor assisting a student with a specific learning module.
 Your goal is to answer questions about the current content concisely and directly.
@@ -23,8 +27,11 @@ INSTRUCTIONS:
     return base_prompt
 
 
-
-def get_teaching_material_prompt(topic, full_plan, user_background, incorrect_questions=None):
+def get_teaching_material_prompt(
+        topic,
+        full_plan,
+        user_background,
+        incorrect_questions=None):
     prompt = f"""
 You are an expert tutor. Your role is to teach a topic in detail.
 The current topic is: "{topic}"
@@ -45,6 +52,7 @@ IMPORTANT: The user previously struggled with the following questions. Please pa
 {chr(10).join([f"- {q.get('question')}" for q in incorrect_questions])}
 """
     return prompt
+
 
 def get_assessment_prompt(teaching_material, user_background):
     return f"""
@@ -86,7 +94,7 @@ def get_podcast_script_prompt(context, user_background):
             "{context}"
 
             Rules:
-            1. Keep it concise but highly informative. 
+            1. Keep it concise but highly informative.
             2. Use simple and easy to understand language.
             3. Don't repeat the same point multiple times.
             4. Use the audience's background to decide the level of difficulty of the content only.
@@ -94,5 +102,5 @@ def get_podcast_script_prompt(context, user_background):
             "Alex: [text]\n"
             "Jamie: [text]\n"
             "Alex: [text]\n"
-            "...and so on." 
+            "...and so on."
         """

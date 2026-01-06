@@ -11,6 +11,7 @@ Please provide a concise, helpful explanation for why the user's answer is incor
 The explanation should be friendly and encouraging. Limit it to 2-4 sentences.
 """
 
+
 def get_study_plan_prompt(topic, user_background):
     return f"""
 You are an expert in creating personalized study plans. For the topic '{topic}', create a high-level learning plan with 2-7 manageable steps, depending on the complexity of the topic.
@@ -33,6 +34,7 @@ More Advanced Topics (Optional): User authentication, sessions, and scaling."
 Now, generate a similar plan for the topic: '{topic}'.
 """
 
+
 def get_plan_update_prompt(topic_name, user_background, current_plan, comment):
     return f"""
 You are an expert curriculum designer. Your task is to revise a study plan based on user feedback. ***ONLY*** change the parts of the plan that the user has requested to change.
@@ -53,6 +55,7 @@ Based on the user's feedback, generate a revised study plan as a Python list of 
 - The number of steps in the plan should be between 2 and 7.
 - The revised plan should be same as the current plan, except for the parts that the user has requested to change.
 """
+
 
 def get_code_execution_prompt(code):
     return f"""
@@ -78,6 +81,7 @@ Return a strictly valid JSON object with the following structure:
     "dependencies": ["list", "of", "pip", "packages"]
 }}
 """
+
 
 def get_topic_suggestions_prompt(user_profile, past_topics):
     return f"""

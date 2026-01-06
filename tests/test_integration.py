@@ -14,21 +14,23 @@ def retry_agent_call(func, *args, max_retries=3, **kwargs):
     """Helper to retry agent calls that might fail due to LLM flakiness."""
     last_error = None
     for i in range(max_retries):
-        result, error = func(*args, **kwargs)
-        if error is None:
+        try:
+            result = func(*args, **kwargs)
             return result, None
-        print(f"Attempt {i+1} failed with error: {error}. Retrying...")
-        last_error = error
-        time.sleep(1) # Brief pause
+        except Exception as e:
+            print(f"Attempt {i+1} failed with error: {e}. Retrying...")
+            last_error = e
+            time.sleep(1) # Brief pause
     return None, last_error
 
 def test_call_llm(logger):
     """Test that the LLM call function is working."""
     logger.section("test_call_llm")
     prompt = "Hello, LLM! Please respond with a short message."
-    response, error = call_llm(prompt)
+    prompt = "Hello, LLM! Please respond with a short message."
+    response = call_llm(prompt)
     logger.response("LLM Response", response)
-    assert error is None
+    # assert error is None  <-- removed checking of non-existent variable
     assert response is not None
     assert isinstance(response, str)
     assert len(response) > 0
@@ -76,7 +78,13 @@ def test_feedback_agent(logger):
     agent = FeedbackAgent()
     question = {"question": "What is 2+2?", "options": ["3", "4", "5"], "correct_answer": "B"}
     
-    feedback, error = retry_agent_call(agent.evaluate_answer, question, "A")
+    # FeedbackAgent returns (result, error) tuple directly
+    # retry_agent_call is designed for single-value returns usually, or we need to handle it manually.
+    # Since we are essentially testing the agent logic here (which includes LLM call), 
+    # and FeedbackAgent handles its own retries/logic internally or relies on call_llm retries,
+    # let's call it directly.
+    feedback_tuple = agent.evaluate_answer(question, "A")
+    feedback, error = feedback_tuple
     
     logger.response("Feedback", feedback)
     assert error is None
@@ -92,12 +100,13 @@ def test_chapter_teaching_agent(logger):
     
     # Mock call_llm to avoid network timeout and dependency on local LLM
     with patch('app.modes.chapter.agent.call_llm') as mock_call:
-        mock_call.return_value = ("Mocked Teaching Material", None)
+        mock_call.return_value = "Mocked Teaching Material"
         
         # We don't need retry_agent_call if we are sure it returns success immediately via mock
         # But keeping it consistent with other tests is fine, or just call directly.
         # Direct call is simpler since mapped.
-        material, error = agent.generate_teaching_material("Science", ["Introduction"], "beginner")
+        material = agent.generate_teaching_material("Science", ["Introduction"], "beginner")
+        error = None
     
     logger.response("Teaching Material", material)
     assert error is None
@@ -308,7 +317,8 @@ def test_transcribe_audio(logger):
              os.close(fd)
              
              try:
-                 transcript, error = transcribe_audio(path)
+                 transcript = transcribe_audio(path)
+                 error = None
                  
                  assert error is None
                  assert transcript == "Hello world"
@@ -325,11 +335,17 @@ def test_transcribe_audio(logger):
         fd, path = tempfile.mkstemp()
         os.close(fd)
         try:
-             transcript, error = transcribe_audio(path)
-             assert transcript is None
-             assert "STT Error" in error
+            try:
+                transcript = transcribe_audio(path)
+                error = None
+            except Exception as e:
+                transcript = None
+                error = str(e)
         finally:
-             if os.path.exists(path):
-                 os.remove(path)
+            if os.path.exists(path):
+                os.remove(path)
+
+        assert transcript is None
+        assert "STT Error" in str(error)
 
 

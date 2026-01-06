@@ -1,4 +1,11 @@
 import pytest
+import sys
+from unittest.mock import MagicMock
+
+# Mock weasyprint to avoid GTK dependency issues during tests
+sys.modules['weasyprint'] = MagicMock()
+sys.modules['weasyprint.HTML'] = MagicMock()
+
 from app import create_app
 from app.core.models import db
 
