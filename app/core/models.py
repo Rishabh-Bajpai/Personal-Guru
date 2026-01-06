@@ -86,6 +86,7 @@ class User(UserMixin, db.Model):
     learning_style = db.Column(db.String(100))
     time_commitment = db.Column(db.String(100))
     preferred_format = db.Column(db.String(100))
+    installation_id = db.Column(db.String(36), db.ForeignKey('installations.installation_id'))
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -135,3 +136,65 @@ class User(UserMixin, db.Model):
 #     content = db.Column(db.Text, nullable=False)
 #     embedding = db.Column(Vector(1536)) # Assuming OpenAI Ada-002 dimension
 #     metadata_json = db.Column(JSONB)
+
+class Installation(db.Model):
+    __tablename__ = 'installations'
+
+    installation_id = db.Column(db.String(36), primary_key=True)  # UUID
+    cpu_cores = db.Column(db.Integer)
+    ram_gb = db.Column(db.Float)
+    gpu_model = db.Column(db.String(255))
+    os_version = db.Column(db.String(255))
+    install_method = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+    users = db.relationship('User', backref='installation', lazy=True)
+    telemetry_logs = db.relationship('TelemetryLog', backref='installation', lazy=True)
+
+
+class TelemetryLog(db.Model):
+    __tablename__ = 'telemetry_logs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    installation_id = db.Column(db.String(36), db.ForeignKey('installations.installation_id'), nullable=False)
+    session_id = db.Column(db.String(36))  # UUID
+    event_type = db.Column(db.String(100), nullable=False)
+    payload = db.Column(JSON)  # Stores latency, error logs, quiz scores, etc.
+    timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+
+class Feedback(db.Model):
+    __tablename__ = 'feedback'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), db.ForeignKey('users.username'), nullable=False)
+    feedback_type = db.Column(db.String(50), nullable=False)  # 'form', 'in_place'
+    content_reference = db.Column(db.String(255))  # ID of the generated content
+    rating = db.Column(db.Integer)
+    comment = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+
+class LLMPerformance(db.Model):
+    __tablename__ = 'llm_performance'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), db.ForeignKey('users.username'), nullable=False)
+    feature = db.Column(db.String(100))
+    model_name = db.Column(db.String(100))
+    latency_ms = db.Column(db.Integer)
+    input_tokens = db.Column(db.Integer)
+    output_tokens = db.Column(db.Integer)
+    timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+
+class PlanRevision(db.Model):
+    __tablename__ = 'plan_revisions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
+    user_id = db.Column(db.String(100), db.ForeignKey('users.username'), nullable=False)
+    reason = db.Column(db.Text)
+    old_plan_json = db.Column(JSON)
+    new_plan_json = db.Column(JSON)
+    timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)

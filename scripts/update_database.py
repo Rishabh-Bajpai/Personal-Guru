@@ -28,7 +28,12 @@ TARGET_MODELS = [
     models.Quiz,
     models.Flashcard,
     models.ChatSession,
-    models.User
+    models.User,
+    models.Installation,
+    models.TelemetryLog,
+    models.Feedback,
+    models.LLMPerformance,
+    models.PlanRevision
 ]
 
 def get_column_type(column):
@@ -86,6 +91,19 @@ def update_database():
                         except Exception as e:
                             logger.error(f"      -> FAILED to drop column: {e}")
                             db.session.rollback()
+
+            # Special check for 'installation_id' removal in Feedback (refactor to user-centric)
+            if table_name == 'feedback':
+                if 'installation_id' in existing_col_map:
+                     logger.info("  [-] Dropping deprecated column: installation_id (moved to User-Centric schema)")
+                     try:
+                         sql = text('ALTER TABLE "feedback" DROP COLUMN "installation_id"')
+                         db.session.execute(sql)
+                         db.session.commit()
+                         logger.info("      -> Dropped successfully.")
+                     except Exception as e:
+                         logger.error(f"      -> FAILED to drop column: {e}")
+                         db.session.rollback()
             
             # Get model columns
             model_columns = model.__table__.columns

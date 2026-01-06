@@ -32,7 +32,12 @@ MODELS = {
     'Quiz': models.Quiz,
     'Flashcard': models.Flashcard,
     'ChatSession': models.ChatSession,
-    'User': models.User
+    'User': models.User,
+    'Installation': models.Installation,
+    'TelemetryLog': models.TelemetryLog,
+    'Feedback': models.Feedback,
+    'LLMPerformance': models.LLMPerformance,
+    'PlanRevision': models.PlanRevision
 }
 
 VIEWER_HTML = """
