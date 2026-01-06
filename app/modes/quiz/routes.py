@@ -1,7 +1,7 @@
 from flask import render_template, request, session, make_response
 from . import quiz_bp
-from app.core.storage import load_topic, save_topic
-from app.core.agents import FeedbackAgent
+from app.common.storage import load_topic, save_topic
+from app.common.agents import FeedbackAgent
 from .agent import QuizAgent
 from weasyprint import HTML
 import datetime
@@ -12,7 +12,7 @@ feedback_agent = FeedbackAgent()
 @quiz_bp.route('/generate/<topic_name>/<count>', methods=['GET', 'POST'])
 def generate_quiz(topic_name, count):
     """Generate a quiz with the specified number of questions and save it."""
-    from app.core.utils import get_user_context
+    from app.common.utils import get_user_context
     user_background = get_user_context()
     
     # Handle 'auto' or numeric count

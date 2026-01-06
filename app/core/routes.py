@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for
-from app.core.storage import get_all_topics, load_topic
+from app.common.storage import get_all_topics, load_topic
 from flask_login import login_user, logout_user, login_required, current_user
+import os
 
 
 main_bp = Blueprint('main', __name__)
@@ -15,7 +16,7 @@ def index():
     sandbox_id = session.get('sandbox_id')
     if sandbox_id:
         try:
-            from app.core.sandbox import Sandbox
+            from app.common.sandbox import Sandbox
             sb = Sandbox(sandbox_id=sandbox_id)
             sb.cleanup()
         except Exception:
@@ -97,7 +98,7 @@ def login():
         username = request.form['username']
         password = request.form['password']
         
-        from app.common.models import User
+        from app.core.models import User
         user = User.query.filter_by(username=username).first()
         
         if user is None or not user.check_password(password):
@@ -117,8 +118,8 @@ def signup():
         username = request.form['username']
         password = request.form['password']
         
-        from app.common.models import User
-        from app.common.extensions import db
+        from app.core.models import User
+        from app.core.extensions import db
         
         user = User.query.filter_by(username=username).first()
         if user:
@@ -142,13 +143,13 @@ def logout():
 @main_bp.route('/user_profile', methods=['GET', 'POST'])
 @login_required
 def user_profile():
-    from app.common.extensions import db
+    from app.core.extensions import db
     
     user = current_user
         
     if request.method == 'POST':
         user.name = request.form.get('name')
-        user.age = request.form.get('age')
+        user.age = request.form.get('age') or None
         user.country = request.form.get('country')
         user.primary_language = request.form.get('primary_language')
         user.education_level = request.form.get('education_level')
@@ -157,7 +158,7 @@ def user_profile():
         user.learning_goals = request.form.get('learning_goals')
         user.prior_knowledge = request.form.get('prior_knowledge')
         user.learning_style = request.form.get('learning_style')
-        user.time_commitment = request.form.get('time_commitment')
+        user.time_commitment = request.form.get('time_commitment') or None
         user.preferred_format = request.form.get('preferred_format')
         
         db.session.commit()
@@ -167,15 +168,15 @@ def user_profile():
 
 @main_bp.route('/delete/<topic_name>')
 def delete_topic_route(topic_name):
-    from app.core.storage import delete_topic
+    from app.common.storage import delete_topic
     delete_topic(topic_name)
     return redirect(url_for('main.index'))
 
 @main_bp.route('/api/suggest-topics', methods=['GET', 'POST'])
 @login_required
 def suggest_topics():
-    from app.core.agents import SuggestionAgent
-    from app.core.storage import get_all_topics
+    from app.common.agents import SuggestionAgent
+    from app.common.storage import get_all_topics
     from flask import jsonify
     
     user = current_user
@@ -191,6 +192,83 @@ def suggest_topics():
     suggestions, error = agent.generate_suggestions(user_profile, past_topics)
     
     if error:
-        return jsonify({'error': error}), 500
+        return jsonify({'error': str(error)}), 500
         
     return jsonify({'suggestions': suggestions})
+
+@main_bp.route('/settings', methods=['GET', 'POST'])
+def settings():
+    # Load defaults
+    defaults = {}
+    
+    # Try loading from .env first, then .env.example
+    env_path = '.env' if os.path.exists('.env') else '.env.example'
+    if os.path.exists(env_path):
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    defaults[key] = value
+
+    if request.method == 'POST':
+        # Gather form data
+        config = {
+            'DATABASE_URL': request.form.get('database_url'),
+            'PORT': request.form.get('port', '5011'),
+            'LLM_BASE_URL': request.form.get('LLM_BASE_URL'),
+            'LLM_MODEL_NAME': request.form.get('llm_model'),
+            'LLM_API_KEY': request.form.get('llm_key', ''),
+            'LLM_NUM_CTX': request.form.get('llm_ctx', '18000'),
+            'TTS_BASE_URL': request.form.get('tts_url', ''),
+            'OPENAI_API_KEY': request.form.get('openai_key', ''),
+            'YOUTUBE_API_KEY': request.form.get('youtube_key', '')
+        }
+        
+        # Simple validation
+        if not config['DATABASE_URL'] or not config['LLM_BASE_URL']:
+            return render_template('setup.html', defaults=defaults, error="Missing required fields")
+        
+        # Write to .env
+        with open('.env', 'w') as f:
+            for key, value in config.items():
+                f.write(f"{key}={value}\n")
+            
+        # flash("Settings saved! Please restart the application to apply changes.") ? 
+        # Flask flash needs secret key. Base template might not display it?
+        # Setup app returned "Setup Complete" string. 
+        # Here we should probably redirect or render success.
+        return render_template('setup.html', defaults=config, success="Settings saved! Restart app to apply.")
+    
+    return render_template('setup.html', defaults=defaults)
+
+@main_bp.route('/api/transcribe', methods=['POST'])
+@login_required
+def transcribe():
+    from flask import jsonify
+    from app.common.utils import transcribe_audio
+    import tempfile
+    
+    if 'audio' not in request.files:
+        return jsonify({'error': 'No audio file provided'}), 400
+        
+    audio_file = request.files['audio']
+    if audio_file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+        
+    # Save to temp file
+    fd, temp_path = tempfile.mkstemp(suffix=".wav") # or .webm depending on what we record
+    os.close(fd)
+    
+    try:
+        audio_file.save(temp_path)
+        transcript, error = transcribe_audio(temp_path)
+        
+        if error:
+            return jsonify({'error': error}), 500
+            
+        return jsonify({'transcript': transcript})
+        
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)

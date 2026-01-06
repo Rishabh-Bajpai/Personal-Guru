@@ -1,10 +1,14 @@
-from app.core.utils import call_llm
-from app.core.prompts import get_code_execution_prompt
+from app.common.utils import call_llm
+from app.common.prompts import get_code_execution_prompt
 import re
 import json
 
 class CodeExecutionAgent:
+    """
+    Agent responsible for preparing code snippets for execution.
+    """
     def __init__(self):
+        """Initializes the CodeExecutionAgent."""
         pass
 
     def enhance_code(self, original_code):
@@ -43,7 +47,21 @@ class CodeExecutionAgent:
             return {"code": original_code, "dependencies": []}
 
 class FeedbackAgent:
+    """
+    Agent responsible for evaluating user answers and providing feedback.
+    """
     def evaluate_answer(self, question_obj, user_answer, answer_is_index=False):
+        """
+        Evaluates a user's answer against a question object.
+
+        Args:
+            question_obj (dict or str): The question object or string.
+            user_answer (str or int): The user's answer.
+            answer_is_index (bool): Whether the user_answer is an index (for multiple choice).
+
+        Returns:
+            tuple: A dictionary with 'is_correct' (bool) and 'feedback' (str), and an error object (or None).
+        """
         # Handle free-form questions from the assessment feature
         if isinstance(question_obj, str):
             is_correct = str(user_answer).strip().upper() == str(question_obj).strip().upper()
@@ -85,7 +103,7 @@ class FeedbackAgent:
             feedback = "That's correct! Great job."
             return {"is_correct": True, "feedback": feedback}, None
 
-        from app.core.prompts import get_feedback_prompt
+        from app.common.prompts import get_feedback_prompt
         prompt = get_feedback_prompt(question_text, correct_answer_text, user_answer_text)
         feedback, error = call_llm(prompt)
         if error:
@@ -97,6 +115,9 @@ class FeedbackAgent:
 
 
 class TopicTeachingAgent:
+    """
+    Base agent for generating teaching materials for a topic.
+    """
     def generate_teaching_material(self, topic, **kwargs):
         """
         Base method for generating teaching material.
@@ -106,9 +127,22 @@ class TopicTeachingAgent:
 
 
 class PlannerAgent:
+    """
+    Agent responsible for generating and updating study plans.
+    """
     def generate_study_plan(self, topic, user_background):
+        """
+        Generates a study plan for a given topic and user background.
+
+        Args:
+            topic (str): The topic to study.
+            user_background (str): The user's background information.
+
+        Returns:
+            tuple: A list of study steps (strings) and an error object (or None).
+        """
         print(f"DEBUG: Generating study plan for user with background: {user_background}")
-        from app.core.prompts import get_study_plan_prompt
+        from app.common.prompts import get_study_plan_prompt
         prompt = get_study_plan_prompt(topic, user_background)
         plan_data, error = call_llm(prompt, is_json=True)
         if error:
@@ -124,7 +158,19 @@ class PlannerAgent:
         return plan_steps, None
 
     def update_study_plan(self, topic_name, user_background, current_plan, comment):
-        from app.core.prompts import get_plan_update_prompt
+        """
+        Updates an existing study plan based on user feedback.
+
+        Args:
+            topic_name (str): The name of the topic.
+            user_background (str): The user's background.
+            current_plan (list): The current list of study steps.
+            comment (str): The user's feedback or request for change.
+
+        Returns:
+            tuple: The updated list of steps and an error object (or None).
+        """
+        from app.common.prompts import get_plan_update_prompt
         import ast
 
         prompt = get_plan_update_prompt(topic_name, user_background, current_plan, comment)
@@ -152,7 +198,16 @@ class PlannerAgent:
             return None, f"Could not parse the new plan from LLM response: {response}"
 
 class ChatAgent:
+    """
+    Agent responsible for handling chat interactions.
+    """
     def __init__(self, system_message_generator):
+        """
+        Initializes the ChatAgent.
+
+        Args:
+            system_message_generator (callable): A function that generates the system message.
+        """
         self.system_message_generator = system_message_generator
 
     def get_welcome_message(self, topic_name, user_background, plan=None):
@@ -170,6 +225,19 @@ class ChatAgent:
         pass
 
     def get_answer(self, question, conversation_history, context, user_background, plan=None):
+        """
+        Generates an answer to a user's question.
+
+        Args:
+            question (str): The user's question.
+            conversation_history (list): List of previous messages.
+            context (str): Context for the conversation.
+            user_background (str): User's background info.
+            plan (list, optional): The study plan.
+
+        Returns:
+            tuple: The generated answer string and an error object (or None).
+        """
         # Determine if this is guided mode
         is_guided_mode = len(conversation_history) > 0
 
@@ -198,8 +266,21 @@ class ChatAgent:
         return answer, None
 
 class SuggestionAgent:
+    """
+    Agent responsible for suggesting new topics.
+    """
     def generate_suggestions(self, user_profile, past_topics):
-        from app.core.prompts import get_topic_suggestions_prompt
+        """
+        Generates a list of suggested topics based on user profile and history.
+
+        Args:
+            user_profile (str): The user's profile description.
+            past_topics (list): List of topics the user has already studied.
+
+        Returns:
+            tuple: A list of suggested topic strings and an error object (or None).
+        """
+        from app.common.prompts import get_topic_suggestions_prompt
         prompt = get_topic_suggestions_prompt(user_profile, past_topics)
         
         response, error = call_llm(prompt, is_json=True)

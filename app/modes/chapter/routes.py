@@ -1,14 +1,15 @@
 from flask import render_template, request, session, redirect, url_for, make_response
+import os
 from . import chapter_bp
-from app.core.storage import load_topic, save_topic
-from app.core.agents import FeedbackAgent, PlannerAgent
-from .agent import ChapterTeachingAgent, AssessorAgent
-from app.core.utils import generate_audio
+from app.common.storage import load_topic, save_topic
+from app.common.agents import FeedbackAgent, PlannerAgent
+from .agent import ChapterTeachingAgent, AssessorAgent, PodcastAgent
+from app.common.utils import generate_audio
 from markdown_it import MarkdownIt
 from weasyprint import HTML
 import datetime
-from app.core.agents import CodeExecutionAgent
-from app.core.sandbox import Sandbox
+from app.common.agents import CodeExecutionAgent
+from app.common.sandbox import Sandbox
 
 # Instantiate agents
 teacher = ChapterTeachingAgent()
@@ -16,6 +17,7 @@ planner = PlannerAgent()
 assessor = AssessorAgent()
 feedback_agent = FeedbackAgent()
 md = MarkdownIt()
+podcast_agent = PodcastAgent()
 
 @chapter_bp.route('/<topic_name>')
 def mode(topic_name):
@@ -42,7 +44,7 @@ def mode(topic_name):
         return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=resume_step_index))
     
     # No plan exists - generate one automatically
-    from app.core.utils import get_user_context
+    from app.common.utils import get_user_context
     user_background = get_user_context()
     plan_steps, error = planner.generate_study_plan(topic_name, user_background)
     
@@ -65,7 +67,7 @@ def generate_plan():
     if not topic_name:
         return {"error": "Topic name required"}, 400
         
-    from app.core.utils import get_user_context
+    from app.common.utils import get_user_context
     user_background = get_user_context()
     plan_steps, error = planner.generate_study_plan(topic_name, user_background)
     
@@ -94,7 +96,7 @@ def update_plan(topic_name):
         return "Topic not found", 404
 
     current_plan = topic_data.get('plan', [])
-    from app.core.utils import get_user_context
+    from app.common.utils import get_user_context
     user_background = get_user_context()
 
     # Use the unified PlannerAgent
@@ -102,7 +104,7 @@ def update_plan(topic_name):
 
     if not error:
         # Smart Update: Preserve content for unchanged steps
-        from app.core.utils import reconcile_plan_steps
+        from app.common.utils import reconcile_plan_steps
 
         # Smart Update using helper
         topic_data['plan'] = new_plan
@@ -142,13 +144,13 @@ def learn_topic(topic_name, step_index):
 
     if not current_step_data.get('teaching_material'):
         incorrect_questions = session.get('incorrect_questions')
-        from app.core.utils import get_user_context
+        from app.common.utils import get_user_context
         current_background = get_user_context()
         teaching_material, error = teacher.generate_teaching_material(plan_steps[step_index], plan_steps, current_background, incorrect_questions)
         if error:
             return f"<h1>Error Generating Teaching Material</h1><p>{teaching_material}</p>"
         current_step_data['teaching_material'] = teaching_material
-        from app.core.utils import get_user_context
+        from app.common.utils import get_user_context
         current_background = get_user_context()
         question_data, error = assessor.generate_question(teaching_material, current_background)
         if not error:
@@ -246,6 +248,52 @@ def generate_audio_route(step_index):
 
     # Assuming audio is saved to app/static
     audio_url = url_for('static', filename=audio_filename)
+    return {"audio_url": audio_url}
+
+@chapter_bp.route('/generate-podcast/<topic_name>/<int:step_index>', methods=['POST'])
+def generate_podcast_route(topic_name, step_index):
+    topic_data = load_topic(topic_name)
+    if not topic_data:
+        return {"error": "Topic not found"}, 404
+        
+    if not 0 <= step_index < len(topic_data['steps']):
+        return {"error": "Invalid step index"}, 400
+        
+    current_step_data = topic_data['steps'][step_index]
+    teaching_material = current_step_data.get('teaching_material')
+    
+    if not teaching_material:
+        return {"error": "No teaching material found for this step"}, 400
+
+    from app.common.utils import get_user_context
+    user_background = get_user_context()
+    
+    # Define output path
+    filename = f"podcast_{topic_name}_{step_index}.mp3"
+    # Ensure filename is safe
+    import werkzeug
+    filename = werkzeug.utils.secure_filename(filename)
+    
+    static_dir = os.path.join(os.getcwd(), 'app', 'static')
+    if not os.path.exists(static_dir):
+        os.makedirs(static_dir)
+        
+    output_path = os.path.join(static_dir, filename)
+    
+    # Refactored Logic
+    # 1. Generate Script
+    transcript, error = podcast_agent.generate_script(teaching_material, user_background)
+    if error:
+         return {"error": f"Script generation failed: {error}"}, 500
+         
+    # 2. Generate Audio
+    from app.common.utils import generate_podcast_audio
+    success, error = generate_podcast_audio(transcript, output_path)
+    
+    if not success:
+         return {"error": error}, 500
+         
+    audio_url = url_for('static', filename=filename)
     return {"audio_url": audio_url}
 
 @chapter_bp.route('/complete/<topic_name>')

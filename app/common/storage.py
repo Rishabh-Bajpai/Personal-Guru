@@ -1,5 +1,5 @@
-from app.common.extensions import db
-from app.common.models import Topic, StudyStep, Quiz, Flashcard
+from app.core.extensions import db
+from app.core.models import Topic, StudyStep, Quiz, Flashcard
 import logging
 
 from flask_login import current_user
@@ -102,7 +102,7 @@ def save_chat_history(topic_name, history):
             db.session.add(topic)
             db.session.flush() # Ensure ID exists
 
-        from app.common.models import ChatSession
+        from app.core.models import ChatSession
 
         if not topic.chat_session:
             chat_session = ChatSession(topic=topic, history=[])

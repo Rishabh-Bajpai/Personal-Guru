@@ -1,4 +1,4 @@
-from app.common.extensions import db
+from app.core.extensions import db
 # from pgvector.sqlalchemy import Vector
 import datetime
 from sqlalchemy import JSON

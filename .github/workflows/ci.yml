@@ -54,7 +54,7 @@ jobs:
       - name: Run Integration Tests
         env:
           RUN_INTEGRATION_TESTS: "1"
-          LLM_ENDPOINT: "http://localhost:11434/v1"
+          LLM_BASE_URL: "http://localhost:11434/v1"
           LLM_MODEL_NAME: "qwen3-vl:8b-instruct"
         run: |
           mkdir -p data

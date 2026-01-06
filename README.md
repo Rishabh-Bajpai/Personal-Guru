@@ -10,6 +10,10 @@ This is a Flask-based web application that serves as a proof-of-concept for a pe
 - **Detailed Study Content:** Each step in the study plan now includes detailed content.
 - **Interactive Learning:** Progress through the plan one step at a time.
 - **Text-to-Speech:** Listen to each learning step with integrated TTS audio.
+- **Podcast Generation:** transform any topic into a dialogue-based audio podcast for on-the-go learning.
+- **Voice Input (STT):** Use your microphone to interact with the AI assistant and navigation.
+- **Flashcards:** Review vocabulary and key concepts with interactive flashcards.
+- **Code Sandbox:** Execute Python code securely within the application for interactive learning.
 - **Knowledge Assessment:** Answer multiple-choice questions after each step to test your understanding.
 - **Personalized Background:** Set your own background (e.g., "I am a beginner") to tailor the learning content to your level.
 - **Adaptive Learning:** The study plan adapts to your performance on the "Check Your Understanding" questions.
@@ -37,15 +41,181 @@ C4Context
 
     System_Ext(openai, "LLM Provider", "OpenAI / Ollama / LMStudio")
     System_Ext(youtube, "YouTube", "Provides video content for Reel Mode.")
-    System_Ext(coqui, "Coqui TTS", "Text-to-Speech Engine for audio generation.")
+    System_Ext(speaches, "Speaches (Kokoro)", "OpenAI-compatible TTS server.")
 
     Rel(user, personal_guru, "Uses", "HTTPS")
     Rel(personal_guru, openai, "Generates Content via", "API")
     Rel(personal_guru, youtube, "Search & Embeds", "API")
-    Rel(personal_guru, coqui, "Generates Audio via", "API")
+    Rel(personal_guru, speaches, "Generates Audio via", "API")
 ```
 
 See [docs/architecture.md](docs/architecture.md) for Container, Component, and Sequence diagrams.
+
+## Installation & Setup
+
+We offer three ways to install Personal Guru, depending on your needs.
+
+### Global Prerequisites (All Methods)
+
+Before starting, ensure you have the following:
+1. **Conda** (Required for the Application).
+    *   [Download Miniconda](https://docs.conda.io/en/latest/miniconda.html)
+2.  **Docker Desktop** (Required for the Database).
+    *   [Download Docker](https://www.docker.com/products/docker-desktop/)
+3.  **FFmpeg** (Required for Audio Processing).
+    *   **Linux**: `sudo apt install ffmpeg`
+    *   **Mac**: `brew install ffmpeg`
+    *   **Windows**: `winget install ffmpeg` or [Download from ffmpeg.org](https://ffmpeg.org/download.html)
+4.  **LLM Provider** (One of the following):
+    *   [Ollama](https://ollama.com/) (Free, Local - Recommended)
+    *   [LM Studio](https://lmstudio.ai/) (Free, Local)
+    *   **OpenAI / Gemini API Key or any other openai compatible LLM API Key** (Cloud)
+
+### Getting Started
+
+First, clone the repository and navigate to the project directory:
+
+```bash
+git clone https://github.com/Rishabh-Bajpai/Personal-Guru.git
+cd Personal-Guru
+```
+
+### Method 1: Automatic Setup (Recommended)
+Best for most users. An interactive script guides you through the process, setting up the environment and dependencies for you.
+
+- **Linux/Mac**: `./setup.sh`
+- **Windows**: `setup.bat`
+
+### Method 2: Docker
+Run the entire stack (App + DB + Optional TTS) in containers.
+
+1.  **Configure Environment (Optional)**:
+    Create a `.env` file if you want to connect to a specific LLM (e.g. LMStudio on another machine).
+    ```bash
+    LLM_BASE_URL=http://localhost:1234/v1
+    ```
+    *If not set, it defaults to connecting to your local host's Ollama at port 11434.*
+
+2.  **Run**:
+    - **Linux/Mac**: `./start_docker.sh`
+    - **Windows**: `start_docker.bat`
+
+    *Note: The script will ask if you want to run in detached mode (background).*
+
+3.  **Access the App**:
+    Open your browser and go to:
+    - **http://localhost:5011** (or the port defined in your `.env`)
+    
+    *Tip: You can change the configuration (LLM, Keys, etc.) directly from the UI by clicking "⚙️ Setup Environment" on the home page.*
+
+### Method 3: Manual Installation (For Developers)
+If you prefer full control over your environment.
+
+1.  **Create Environment**: `conda create -n Personal-Guru python=3.11 && conda activate Personal-Guru`
+2.  **Install Dependencies**: `pip install -r requirements.txt`
+3.  **Setup Environment Variables**:
+    Creating a `.env` file is **optional** as the application has a built-in UI Wizard to help you configure these settings. However, you can configure it manually:
+    
+    ```bash
+    cp .env.example .env
+    ```
+    
+    **Key Variables:**
+    - `DATABASE_URL`: Connection string (e.g., `postgresql://postgres:postgres@localhost:5433/personal_guru`).
+    - `PORT`: Default `5011`.
+    - `LLM_BASE_URL`:
+      - **Ollama**: `http://localhost:11434/v1`
+      - **LMStudio**: `http://localhost:1234/v1`
+      - **OpenAI**: `https://api.openai.com/v1`
+      - **Gemini**: `https://generativelanguage.googleapis.com/v1beta/openai/`
+    - `LLM_MODEL_NAME`: e.g., `llama3`, `gpt-4o`.
+    - `TTS_BASE_URL`: `http://localhost:8969/v1` (Replace `localhost` with your machine's actual LAN IP address if running on another machine).
+    - `STT_BASE_URL`: `http://localhost:8969/v1` (Same as TTS if using Speaches).
+    
+4.  **Database Setup (Docker)**:
+    Start the Postgres database using Docker:
+    ```bash
+    docker compose up -d db
+    ```
+    *Starts PostgreSQL on `localhost:5433`.*
+5.  **Start the Speech Server (TTS & STT)**:
+    ```bash
+    docker compose up -d speaches
+    ```
+    *Starts Speaches on `localhost:8969`.*
+    
+    Download the models inside the container (Wait a few seconds for the container to start):
+    ```bash
+    # TTS Model
+    docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
+
+    # STT Model
+    docker compose exec speaches uv tool run speaches-cli model download Systran/faster-whisper-medium.en
+    ```
+    
+    **Test TTS:**
+    ```bash
+    curl "http://localhost:8969/v1/audio/speech" -s -H "Content-Type: application/json" \
+      --output test.mp3 \
+      --data '{
+        "input": "Hello! This is a test of local text to speech.",
+        "model": "speaches-ai/Kokoro-82M-v1.0-ONNX",
+        "voice": "af_bella",
+        "speed": 1.0
+      }'
+    ```
+
+    **Test STT:**
+    ```bash
+    curl "http://localhost:8969/v1/audio/transcriptions" \
+      -F "file=@test.mp3" \
+      -F "model=Systran/faster-whisper-medium.en" \
+      -F "vad_filter=true" \
+      -F "temperature=0"
+    ```
+
+6.  **Init Database**:
+    ```bash
+    python scripts/update_database.py
+    ```
+
+7.  **Run**:
+    ```bash
+    python run.py
+    ```
+
+## Database Schema
+
+The application uses the following PostgreSQL tables:
+
+- **users**: Stores user accounts and profiles.
+- **topics**: Main table for each subject the user is learning.
+- **study_steps**: Steps within a study plan (one-to-many from topics).
+- **quizzes**: Quizzes generated for a topic.
+- **flashcards**: Flashcards for vocabulary terms.
+- **chat_sessions**: Stores the conversational history for "Chat Mode" (one-to-one with topics). Note: "Chapter Mode" side-chats are stored directly in `study_steps.chat_history`.
+
+## Database Migration (Recommended Safe Method)
+
+If you plan to move data between different types of computers (e.g., your Linux server to a Windows laptop), it is safer to use the built-in backup tools:
+
+1. **Export (on old machine):**
+
+   ```bash
+   docker compose exec db pg_dump -U postgres personal_guru > backup.sql
+   ```
+
+2. **Import (on new machine):** 
+   Move the `backup.sql` file to the new machine, start the fresh empty container, and run:
+
+   ```bash
+   # Copy file into container
+   docker cp backup.sql personal-guru-db-1:/backup.sql
+   
+   # Restore
+   docker compose exec db psql -U postgres -d personal_guru -f /backup.sql
+   ```
+
 
 ## Enabling HTTPS for Microphone Access, reels and other security features
 
@@ -89,149 +259,6 @@ Using a reverse proxy like Nginx or Caddy is the standard way to handle HTTPS in
     - Enable "Force SSL" and "HTTP/2 Support".
 
 After saving, you can access Personal-Guru securely at your public domain.
-
-## Setup and Installation
-
-Follow these instructions to get the application running on your local machine.
-
-### 1. Clone the Repository
-
-First, clone this repository to your local machine:
-
-```bash
-git clone https://github.com/Rishabh-Bajpai/Personal-Guru.git
-cd Personal-Guru
-```
-
-### 2. Create a Conda Environment
-
-We recommend using Conda to manage your Python environment. Create and activate a new environment with Python 3.9:
-
-```bash
-conda create -n Personal-Guru python=3.9
-conda activate Personal-Guru
-```
-
-### 3. Install Dependencies
-
-Install the required Python packages using pip:
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Setup Environment Variables
-
-The application is configured using a `.env` file. Copy the example file and edit it with the URLs and models for your local AI services.
-
-```bash
-cp .env.example .env
-```
-
-Now, open the `.env` file and customize the settings.
-
-**Key Variables:**
-
-- `DATABASE_URL`: Connection string for the PostgreSQL database (e.g., `postgresql://postgres:postgres@localhost:5433/personal_guru`).
-- `PORT`: The port the application will run on (default `5011`).
-- `LLM_ENDPOINT`: The base URL of your LLM provider.
-  - For **Ollama**: `http://localhost:11434/v1`
-  - For **LMStudio**: `http://localhost:1234/v1`
-  - For **OpenAI**: `https://api.openai.com/v1`
-  - For **Gemini**: `https://generativelanguage.googleapis.com/v1beta/openai/`
-- `LLM_MODEL_NAME`: The name of the model to use (e.g., `llama3`, `gpt-4o`).
-- `LLM_API_KEY`: API Key (optional for local providers like Ollama).
-- `LLM_NUM_CTX`: Context window size (recommended: `18000` or higher if your hardware supports it).
-
-- `LLM_NUM_CTX`: Context window size (recommended: `18000` or higher if your hardware supports it).
-
-## Database Schema
-
-The application uses the following PostgreSQL tables:
-
-- **users**: Stores user accounts and profiles.
-- **topics**: Main table for each subject the user is learning.
-- **study_steps**: Steps within a study plan (one-to-many from topics).
-- **quizzes**: Quizzes generated for a topic.
-- **flashcards**: Flashcards for vocabulary terms.
-- **chat_sessions**: Stores the conversational history for "Chat Mode" (one-to-one with topics). Note: "Chapter Mode" side-chats are stored directly in `study_steps.chat_history`.
-
-## Database Setup (Docker)
-
-This application uses a PostgreSQL database running in a Docker container.
-
-### 1. Start the Database
-Run the following command to start the database service:
-
-```bash
-docker compose up -d db
-```
-
-This starts a PostgreSQL instance on `localhost:5433`.
-
-### 2. Initialize the Database
-Run the following script to create the necessary tables in the database. This is necessary when setting up the project for the first time, or if you have reset your Docker database volume.
-
-```bash
-python scripts/create_tables.py
-```
-
-### 3. Inspecting the Database (Optional)
-To manually inspect the database content:
-
-```bash
-docker compose exec db psql -U postgres -d personal_guru
-```
-
-## Running the Application
-
-To run the application, ensure the database is running, then start the Flask server locally.
-
-### 1. Start the Server
-
-```bash
-python run.py
-```
-
-The application will be available at `http://localhost:5011` (or the port defined in your `.env`).
-
-### 2. Data Migration (Optional)
-If you need to migrate legacy JSON data to the new database, run:
-
-```bash
-python migrate_data.py
-```
-
-### 3. External Services
-Ensure your LLM server (Ollama/LMStudio) and optional TTS server are running as described below.
-
-#### LLM Server (Ollama / LMStudio / etc.)
-Ensure your LLM server is running and accessible. The application uses the OpenAI API protocol for all LLM providers (including Ollama).
-
-**If using Ollama:**
-```bash
-docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
-```
-
-#### Coqui TTS Server (TTS) (Optional: also experimental)
-
-This service provides high-quality, human-like text-to-speech. The repository includes a `Dockerfile` for Coqui TTS in the `coqui_tts` directory.
-
-First, build the Docker image:
-
-```bash
-cd coqui_tts
-sudo docker build -t coqui-chanakya-tts .
-cd ..
-```
-
-Then, run the Docker container:
-
-```bash
-sudo docker run -d -p 5001:5002 --gpus all --restart unless-stopped --name coqui-tts-server coqui-chanakya-tts
-```
-
-This will start the TTS server on port 5001 of your host machine, connected to port 5002 inside the container.
 
 ## For Developers: Running Tests
 

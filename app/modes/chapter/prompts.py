@@ -13,11 +13,12 @@ The current learning material is:
 "{context}"
 
 INSTRUCTIONS:
-1. **Be Concise**: The user is looking at a side-panel chat. Keep answers short and to the point. Avoid long paragraphs.
+1. **Be Concise**: Keep answers short and to the point. Avoid long paragraphs.
 2. **Context First**: Answer based primarily on the provided learning material content.
 3. **Directness**: Do not use "Certainly!" or "Here is the answer". Just answer.
-4. **No Artifacts**: Do not output internal thought processes, <tool_call> tags, or <think> tags. Output ONLY the answer.
+4. **No Artifacts**: Do not output internal thought processes, pig tags, or <think> tags. Output ONLY the answer.
 5. **Formatting**: You can use bullet points for lists, but keep them compact.
+6. **No Code**: Do not output code.
 """
     return base_prompt
 
@@ -25,18 +26,18 @@ INSTRUCTIONS:
 
 def get_teaching_material_prompt(topic, full_plan, user_background, incorrect_questions=None):
     prompt = f"""
-You are an expert tutor. Create detailed teaching material for the topic: "{topic}".
+You are an expert tutor. Your role is to teach a topic in detail.
+The current topic is: "{topic}"
 The user's background is: "{user_background}".
-
 FULL STUDY PLAN CONTEXT:
 {chr(10).join([f"- {s}" for s in full_plan])}
 
 INSTRUCTIONS:
-1. **Explain the Topic**: Provide a clear, comprehensive explanation of the concept "{topic}".
-2. **Relevance**: Explain why this is important in the context of the overall study plan.
-3. **Examples**: Provide concrete code examples or real-world analogies.
-4. **Formatting**: Use Markdown headers, bullet points, and code blocks for readability.
-5. **Interactive Encouragement**: Encourage the user to try the code examples.
+1. Based on the topic, the full study plan, and the user's incorrect answers (if any), generate detailed teaching material for the current topic.
+2. Avoid generating content that is covered in other steps of the study plan.
+3. The material should be comprehensive and include code examples where appropriate and real-world analogies for complex topics.
+4. Don't ask any questions to the user or repeat the content.
+5. The output should be a single string of markdown-formatted text, bullet points, and code blocks for readability.
 """
     if incorrect_questions:
         prompt += f"""
@@ -47,7 +48,7 @@ IMPORTANT: The user previously struggled with the following questions. Please pa
 
 def get_assessment_prompt(teaching_material, user_background):
     return f"""
-You are an expert examiner. Based on the teaching material provided below, generate a set of 3 multiple-choice assessment questions to test the user's understanding.
+You are an expert examiner. Based on the teaching material provided below, generate a set of 3 multiple-choice assessment questions to test the user's understanding of the topic.
 
 TEACHING MATERIAL:
 {teaching_material}
@@ -73,3 +74,25 @@ JSON FORMAT:
     ]
 }}
 """
+
+
+def get_podcast_script_prompt(context, user_background):
+    return f"""
+            You are an expert podcast script writer for podcast "Personal-Guru".
+            Your goal is to generate a engaging podcast script between two speakers, Alex and Jamie to teach the audience about current learning material.
+
+            The audience's background is: '{user_background}'.
+            The learning material is:
+            "{context}"
+
+            Rules:
+            1. Keep it concise but highly informative. 
+            2. Use simple and easy to understand language.
+            3. Don't repeat the same point multiple times.
+            4. Use the audience's background to decide the level of difficulty of the content only.
+            5. Format the output exactly as follows:\n
+            "Alex: [text]\n"
+            "Jamie: [text]\n"
+            "Alex: [text]\n"
+            "...and so on." 
+        """

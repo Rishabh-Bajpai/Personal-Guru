@@ -1,12 +1,22 @@
 import json
 from datetime import datetime
-from app.core.utils import call_llm, validate_quiz_structure
+from app.common.utils import call_llm, validate_quiz_structure
 
 class QuizAgent:
+    """
+    Agent responsible for generating and determining the scope of quizzes.
+    """
     def generate_quiz(self, topic, user_background, count=10):
         """
-        Generate a quiz with the specified number of questions.
-        count can be 'auto' (default 10), 25, or 50.
+        Generates a quiz with a specific number of questions.
+
+        Args:
+            topic (str): The subject of the quiz.
+            user_background (str): The user's background information.
+            count (int or str): Number of questions to generate (default 10, or 'auto').
+
+        Returns:
+            tuple: A dictionary containing the quiz data and an error object (or None).
         """
         if isinstance(count, str) and count.lower() == 'auto':
             count, error = self.get_quiz_count_for_topic(topic, user_background)
@@ -78,7 +88,7 @@ class QuizAgent:
         Returns (count, None) on success or (default_count, error) on failure.
         """
         if user_background is None:
-            from app.core.utils import get_user_context
+            from app.common.utils import get_user_context
             user_background = get_user_context()
 
         from app.modes.quiz.prompts import get_quiz_count_prompt
