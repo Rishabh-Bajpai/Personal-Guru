@@ -26,7 +26,7 @@ def generate_quiz(topic_name, count):
     try:
         quiz_data = quiz_agent.generate_quiz(
             topic_name, user_background, count=count)
-    except Exception as error:
+    except Exception:
         # Error will be caught by global handler
         raise
 

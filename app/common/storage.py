@@ -7,8 +7,8 @@ from app.core.exceptions import (
     AuthenticationError,
     DatabaseOperationError,
     DatabaseConnectionError,
+    DatabaseConnectionError,
     DatabaseIntegrityError,
-    TopicNotFoundError,
     ModelValidationError
 )
 

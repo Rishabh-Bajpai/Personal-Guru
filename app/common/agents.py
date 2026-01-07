@@ -2,6 +2,7 @@ from app.common.utils import call_llm
 from app.common.prompts import get_code_execution_prompt
 import re
 import json
+from app.core.exceptions import LLMResponseError
 
 
 class CodeExecutionAgent:
@@ -260,7 +261,7 @@ class PlannerAgent:
             logger.error(
                 f"Could not parse the new plan from LLM response: {response}")
             raise LLMResponseError(
-                f"Could not parse the new plan from LLM response",
+                "Could not parse the new plan from LLM response",
                 error_code="LLM023",
                 debug_info={"response_preview": response[:200], "parse_error": str(e)}
             )

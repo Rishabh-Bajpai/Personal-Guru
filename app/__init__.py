@@ -69,16 +69,11 @@ def create_app(config_class=Config):
 
     from app.core.exceptions import (
         PersonalGuruException,
-        ClientError,
         ValidationError,
         AuthenticationError,
-        AuthorizationError,
         ResourceNotFoundError,
-        ServerError,
         DatabaseError,
-        ExternalServiceError,
-        LLMError,
-        ConfigurationError
+        LLMError
     )
 
     logger = logging.getLogger(__name__)

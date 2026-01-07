@@ -54,7 +54,7 @@ def mode(topic_name):
     user_background = get_user_context()
     try:
         plan_steps = planner.generate_study_plan(topic_name, user_background)
-    except Exception as error:
+    except Exception:
         # Error will be caught by global handler
         raise
 
@@ -83,7 +83,7 @@ def generate_plan():
     user_background = get_user_context()
     try:
         plan_steps = planner.generate_study_plan(topic_name, user_background)
-    except Exception as error:
+    except Exception:
         # Error will be caught by global handler
         raise
 
@@ -121,25 +121,24 @@ def update_plan(topic_name):
     try:
         new_plan = planner.update_study_plan(
             topic_name, user_background, current_plan, comment)
-    except Exception as error:
+    except Exception:
         # Error will be caught by global handler
         raise
 
-    if not error:
-        # Smart Update: Preserve content for unchanged steps
-        from app.common.utils import reconcile_plan_steps
+    # Smart Update: Preserve content for unchanged steps
+    from app.common.utils import reconcile_plan_steps
 
-        # Smart Update using helper
-        topic_data['plan'] = new_plan
-        topic_data['steps'] = reconcile_plan_steps(
-            topic_data.get('steps', []),
-            current_plan,  # Original plan strings! We need them.
-            new_plan
-        )
-        # Wait, reconcile_plan_steps signature: (current_steps, current_plan, new_plan)
-        # I have current_plan already (line 94).
+    # Smart Update using helper
+    topic_data['plan'] = new_plan
+    topic_data['steps'] = reconcile_plan_steps(
+        topic_data.get('steps', []),
+        current_plan,  # Original plan strings! We need them.
+        new_plan
+    )
+    # Wait, reconcile_plan_steps signature: (current_steps, current_plan, new_plan)
+    # I have current_plan already (line 94).
 
-        save_topic(topic_name, topic_data)
+    save_topic(topic_name, topic_data)
 
     return redirect(
         url_for(
@@ -188,7 +187,7 @@ def learn_topic(topic_name, step_index):
             question_data = assessor.generate_question(
                 teaching_material, current_background)
             current_step_data['questions'] = question_data
-        except Exception as error:
+        except Exception:
             # If question generation fails, continue without questions
             current_step_data['questions'] = None
 

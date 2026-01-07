@@ -31,20 +31,20 @@ def mode(topic_name):
             try:
                 plan_steps = planner.generate_study_plan(
                     topic_name, user_background)
-            except Exception as error:
+            except Exception:
                 # Error will be caught by global handler
                 raise
-            if not error:
-                # Save plan
-                if not topic_data:
-                    topic_data = {"name": topic_name}
-                topic_data['plan'] = plan_steps
-                # Initialize empty steps list to match plan length (required by
-                # storage logic)
-                topic_data['steps'] = [{} for _ in plan_steps]
-                save_topic(topic_name, topic_data)
-                # Reload to ensure consistency
-                topic_data = load_topic(topic_name)
+
+            # Save plan
+            if not topic_data:
+                topic_data = {"name": topic_name}
+            topic_data['plan'] = plan_steps
+            # Initialize empty steps list to match plan length (required by
+            # storage logic)
+            topic_data['steps'] = [{} for _ in plan_steps]
+            save_topic(topic_name, topic_data)
+            # Reload to ensure consistency
+            topic_data = load_topic(topic_name)
 
         plan = topic_data.get('plan', []) if topic_data else []
         try:
@@ -90,34 +90,33 @@ def update_plan(topic_name):
     try:
         new_plan = planner.update_study_plan(
             topic_name, user_background, current_plan, comment)
-    except Exception as error:
+    except Exception:
         # Error will be caught by global handler
         raise
 
     from app.common.utils import reconcile_plan_steps
 
-    if not error:
-        # Save the new plan
-        topic_data['plan'] = new_plan
+    # Save the new plan
+    topic_data['plan'] = new_plan
 
-        # Sync steps with new plan
-        current_steps = topic_data.get('steps', [])
-        # Note: Chat mode might not have loaded 'steps' if it wasn't accessed via load_topic deeply?
-        # load_topic DOES load steps.
+    # Sync steps with new plan
+    current_steps = topic_data.get('steps', [])
+    # Note: Chat mode might not have loaded 'steps' if it wasn't accessed via load_topic deeply?
+    # load_topic DOES load steps.
 
-        topic_data['steps'] = reconcile_plan_steps(
-            current_steps, current_plan, new_plan)
+    topic_data['steps'] = reconcile_plan_steps(
+        current_steps, current_plan, new_plan)
 
-        save_topic(topic_name, topic_data)
+    save_topic(topic_name, topic_data)
 
-        # Add a system message to the chat
-        # Reload history from DB to be safe
-        topic_data = load_topic(topic_name)
-        chat_history = topic_data.get('chat_history', [])
+    # Add a system message to the chat
+    # Reload history from DB to be safe
+    topic_data = load_topic(topic_name)
+    chat_history = topic_data.get('chat_history', [])
 
-        system_message = f"Based on your feedback, I've updated the study plan. The new focus will be on: {', '.join(new_plan)}. Let's proceed with the new direction."
-        chat_history.append({"role": "assistant", "content": system_message})
-        save_chat_history(topic_name, chat_history)
+    system_message = f"Based on your feedback, I've updated the study plan. The new focus will be on: {', '.join(new_plan)}. Let's proceed with the new direction."
+    chat_history.append({"role": "assistant", "content": system_message})
+    save_chat_history(topic_name, chat_history)
 
     # Redirect back to the chat interface
     return redirect(url_for('chat.mode', topic_name=topic_name))

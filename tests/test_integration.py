@@ -162,7 +162,7 @@ def test_chat_session_persistence(logger, app):
     with app.app_context():
         # Ensure user exists (created in conftest auth_client logic or manually here)
         # Since we use app_context, creating fresh.
-        if not User.query.get('testuser'):
+        if not db.session.get(User, 'testuser'):
             u = User(username='testuser')
             u.set_password('password')
             db.session.add(u)
@@ -198,7 +198,7 @@ def test_quiz_result_persistence(logger, app):
     
     with app.app_context():
         # Ensure user exists
-        if not User.query.get('testuser'):
+        if not db.session.get(User, 'testuser'):
             u = User(username='testuser')
             u.set_password('password')
             db.session.add(u)

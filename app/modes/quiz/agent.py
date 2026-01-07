@@ -1,5 +1,3 @@
-import json
-from datetime import datetime
 from app.common.utils import call_llm, validate_quiz_structure
 
 

@@ -12,8 +12,8 @@ from app.core.exceptions import (
     LLMConnectionError,
     LLMResponseError,
     LLMTimeoutError,
+    LLMTimeoutError,
     QuizValidationError,
-    TTSError,
     STTError
 )
 
@@ -148,7 +148,7 @@ def call_llm(prompt_or_messages, is_json=False):
     except requests.exceptions.Timeout as e:
         logger.error(f"LLM request timed out: {e}")
         raise LLMTimeoutError(
-            f"Request to LLM timed out after 300 seconds",
+            "Request to LLM timed out after 300 seconds",
             timeout=300,
             error_code="LLM011",
             debug_info={"endpoint": api_url}
@@ -156,7 +156,7 @@ def call_llm(prompt_or_messages, is_json=False):
     except requests.exceptions.ConnectionError as e:
         logger.error(f"Cannot connect to LLM: {e}")
         raise LLMConnectionError(
-            f"Unable to connect to LLM service",
+            "Unable to connect to LLM service",
             endpoint=api_url,
             error_code="LLM012",
             debug_info={"original_error": str(e)}
