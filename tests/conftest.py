@@ -1,6 +1,13 @@
 import pytest
-from app import create_app
-from app.core.models import db
+import sys
+from unittest.mock import MagicMock
+
+# Mock weasyprint to avoid GTK dependency issues during tests
+sys.modules['weasyprint'] = MagicMock()
+sys.modules['weasyprint.HTML'] = MagicMock()
+
+from app import create_app  # noqa: E402
+from app.core.models import db  # noqa: E402
 
 def pytest_addoption(parser):
     parser.addoption(

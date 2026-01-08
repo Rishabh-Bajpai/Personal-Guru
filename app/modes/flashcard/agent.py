@@ -1,8 +1,14 @@
 from app.common.utils import call_llm
 from app.common.agents import TopicTeachingAgent
 
+
 class FlashcardTeachingAgent(TopicTeachingAgent):
-    def generate_teaching_material(self, topic, count=50, user_background=None, **kwargs):
+    def generate_teaching_material(
+            self,
+            topic,
+            count=50,
+            user_background=None,
+            **kwargs):
         """
         Generate `count` concise flashcards (term + short definition) for `topic`.
         Returns (list_of_flashcards, None) on success or (error_message, error) on failure.
@@ -14,12 +20,15 @@ class FlashcardTeachingAgent(TopicTeachingAgent):
 
         from app.modes.flashcard.prompts import get_flashcard_generation_prompt
         prompt = get_flashcard_generation_prompt(topic, count, user_background)
-        data, error = call_llm(prompt, is_json=True)
-        if error:
-            return data, error
+        data = call_llm(prompt, is_json=True)
 
-        if not isinstance(data, dict) or 'flashcards' not in data or not isinstance(data['flashcards'], list):
-            return "Error: Invalid flashcards format from LLM.", "Invalid format"
+        if not isinstance(
+                data,
+                dict) or 'flashcards' not in data or not isinstance(
+                data['flashcards'],
+                list):
+            from app.core.exceptions import LLMResponseError
+            raise LLMResponseError("Invalid flashcards format from LLM.", error_code="LLM041")
 
         # Defensive parsing and validation
         cards = []
@@ -28,11 +37,17 @@ class FlashcardTeachingAgent(TopicTeachingAgent):
                 if isinstance(c, dict):
                     term = c.get('term')
                     definition = c.get('definition')
-                    if term and definition and isinstance(term, str) and isinstance(definition, str):
-                        cards.append({'term': term.strip(), 'definition': definition.strip()})
+                    if term and definition and isinstance(
+                            term,
+                            str) and isinstance(
+                            definition,
+                            str):
+                        cards.append(
+                            {'term': term.strip(), 'definition': definition.strip()})
 
         if not cards:
-            return "Error: LLM returned no valid flashcards.", "Invalid format"
+            from app.core.exceptions import LLMResponseError
+            raise LLMResponseError("LLM returned no valid flashcards.", error_code="LLM042")
 
         # If LLM returned fewer cards than requested, attempt to generate the remainder
         # by asking for additional cards (avoid duplicates). Retry a few times.
@@ -42,9 +57,11 @@ class FlashcardTeachingAgent(TopicTeachingAgent):
             remaining = count - len(cards)
             try_count += 1
             from app.modes.flashcard.prompts import get_additional_flashcards_prompt
-            extra_prompt = get_additional_flashcards_prompt(topic, remaining, user_background, seen_terms)
-            extra_data, extra_err = call_llm(extra_prompt, is_json=True)
-            if extra_err or not isinstance(extra_data, dict) or 'flashcards' not in extra_data:
+            extra_prompt = get_additional_flashcards_prompt(
+                topic, remaining, user_background, seen_terms)
+            extra_data = call_llm(extra_prompt, is_json=True)
+            if not isinstance(
+                    extra_data, dict) or 'flashcards' not in extra_data:
                 break
 
             added = 0
@@ -69,7 +86,7 @@ class FlashcardTeachingAgent(TopicTeachingAgent):
         if len(cards) > count:
             cards = cards[:count]
 
-        return cards, None
+        return cards
 
     def get_flashcard_count_for_topic(self, topic, user_background=None):
         """
@@ -83,12 +100,14 @@ class FlashcardTeachingAgent(TopicTeachingAgent):
         from app.modes.flashcard.prompts import get_flashcard_count_prompt
         prompt = get_flashcard_count_prompt(topic, user_background)
         data, error = call_llm(prompt, is_json=True)
-        if error:
-            return 25, error  # Default on error
 
-        if isinstance(data, dict) and 'count' in data and isinstance(data['count'], int):
+        if isinstance(
+                data,
+                dict) and 'count' in data and isinstance(
+                data['count'],
+                int):
             count = data['count']
             # Clamp the value to a reasonable range
-            return max(10, min(50, count)), None
+            return max(10, min(50, count))
 
-        return 25, "Invalid format from LLM"
+        return 25
