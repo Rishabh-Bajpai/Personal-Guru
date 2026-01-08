@@ -31,7 +31,7 @@
                 action="{{ url_for('chat.update_plan', topic_name=topic_name) }}">
                 <h3>Modify the Plan</h3>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <textarea id="plan-modification-input" name="comment"
+                <textarea id="plan-modification-input" name="comment" maxlength="255"
                     placeholder="Suggest changes to the plan..."></textarea>
                 <button id="plan-modification-button" type="submit" class="button is-small">Update Plan</button>
             </form>
