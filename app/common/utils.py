@@ -12,7 +12,6 @@ from app.core.exceptions import (
     LLMConnectionError,
     LLMResponseError,
     LLMTimeoutError,
-    LLMTimeoutError,
     QuizValidationError,
     STTError
 )

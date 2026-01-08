@@ -1,8 +1,7 @@
 
 import pytest
 from unittest.mock import patch, MagicMock
-from app.core.exceptions import LLMResponseError, TopicNotFoundError, DatabaseError, ValidationError
-import json
+from app.core.exceptions import LLMResponseError, TopicNotFoundError, ValidationError
 
 def test_404_not_found(client):
     """Test that non-existent routes return 404 with correct error format."""
