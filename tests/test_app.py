@@ -20,15 +20,15 @@ def test_full_learning_flow(auth_client, mocker, logger):
     topic_name = "testing"
 
     # Mock PlannerAgent
-    mocker.patch('app.common.agents.PlannerAgent.generate_study_plan', return_value=(['Step 1', 'Step 2'], None))
+    mocker.patch('app.common.agents.PlannerAgent.generate_study_plan', return_value=['Step 1', 'Step 2'])
 
     # Mock TopicTeachingAgent (ChapterTeachingAgent)
-    mocker.patch('app.modes.chapter.routes.ChapterTeachingAgent.generate_teaching_material', return_value=("## Step Content", None))
+    mocker.patch('app.modes.chapter.routes.ChapterTeachingAgent.generate_teaching_material', return_value="## Step Content")
 
     # Mock AssessorAgent
-    mocker.patch('app.modes.chapter.routes.AssessorAgent.generate_question', return_value=({
+    mocker.patch('app.modes.chapter.routes.AssessorAgent.generate_question', return_value={
         "questions": [{"question": "Q1?", "options": ["A", "B"], "correct_answer": "A"}]
-    }, None))
+    })
 
     # Mock storage functions
     mocker.patch('app.core.routes.load_topic', return_value=None)
@@ -161,8 +161,8 @@ def test_chat_route(auth_client, mocker, logger):
         "plan": ["Introduction"]
     }
     mocker.patch('app.modes.chat.routes.load_topic', return_value=topic_data)
-    mocker.patch('app.modes.chat.agent.ChatModeMainChatAgent.get_welcome_message', return_value=("Welcome to the chat!", None))
-    mocker.patch('app.common.agents.ChatAgent.get_answer', return_value=("This is the answer.", None))
+    mocker.patch('app.modes.chat.agent.ChatModeMainChatAgent.get_welcome_message', return_value="Welcome to the chat!")
+    mocker.patch('app.common.agents.ChatAgent.get_answer', return_value="This is the answer.")
     mocker.patch('app.modes.chat.routes.save_chat_history')
 
     # Test initial GET request to establish the session and get welcome message
@@ -325,7 +325,7 @@ def test_transcribe_api(auth_client, mocker, logger):
     logger.section("test_transcribe_api")
     
     # Mock transcribe_audio utility
-    mocker.patch('app.common.utils.transcribe_audio', return_value=("Hello world", None))
+    mocker.patch('app.common.utils.transcribe_audio', return_value="Hello world")
     
     # Create a dummy audio file
     from io import BytesIO
@@ -341,7 +341,7 @@ def test_transcribe_api(auth_client, mocker, logger):
     assert json_data['transcript'] == "Hello world"
     
     # Test error case
-    mocker.patch('app.common.utils.transcribe_audio', return_value=(None, "Transcribe failed"))
+    mocker.patch('app.common.utils.transcribe_audio', side_effect=Exception("Transcribe failed"))
     data_err = {
         'audio': (BytesIO(b"fake audio data"), 'test.wav')
     }

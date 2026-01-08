@@ -6,12 +6,18 @@ Each definition should be one to two sentences maximum and focused on the most i
 Don't include any extra commentary outside the JSON.
 """
 
-def get_additional_flashcards_prompt(topic, remaining, user_background, seen_terms):
+
+def get_additional_flashcards_prompt(
+        topic,
+        remaining,
+        user_background,
+        seen_terms):
     return f"""
 Generate {remaining} additional concise flashcards for the topic '{topic}', tailored to a user with background: '{user_background}'.
 Do NOT repeat any of these terms: {', '.join(sorted(seen_terms))}.
 Return a JSON object with key "flashcards" which is an array of objects with keys "term" and "definition".
 """
+
 
 def get_flashcard_count_prompt(topic, user_background):
     return f"""

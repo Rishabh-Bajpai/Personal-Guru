@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Error {{ http_status }}{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <h1>Oops! Something Went Wrong</h1>
+    
+    <div class="error-details">
+        <p class="error-code">Error Code: {{ error_code }}</p>
+        <p class="error-message">{{ error_message }}</p>
+    </div>
+    
+    {% if can_retry %}
+    <div class="retry-message">
+        <p>This appears to be a temporary issue. Please try again in a moment.</p>
+        <button onclick="window.location.reload();" class="btn-retry">Try Again</button>
+    </div>
+    {% endif %}
+    
+    <div class="action-buttons">
+        <a href="{{ url_for('main.index') }}" class="btn-home">Go to Homepage</a>
+    </div>
+</div>
+
+<style>
+.error-container {
+    max-width: 600px;
+    margin: 50px auto;
+    padding: 40px;
+    text-align: center;
+    background: #f8f9fa;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.error-container h1 {
+    color: #dc3545;
+    margin-bottom: 20px;
+}
+
+.error-details {
+    margin: 30px 0;
+    padding: 20px;
+    background: white;
+    border-radius: 5px;
+}
+
+.error-code {
+    font-family: monospace;
+    font-size: 14px;
+    color: #6c757d;
+    margin-bottom: 10px;
+}
+
+.error-message {
+    font-size: 16px;
+    color: #495057;
+    line-height: 1.5;
+}
+
+.retry-message {
+    margin: 20px 0;
+    padding: 15px;
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    border-radius: 4px;
+}
+
+.btn-retry, .btn-home {
+    display: inline-block;
+    padding: 10px 30px;
+    margin: 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.3s;
+}
+
+.btn-retry {
+    background: #28a745;
+    color: white;
+}
+
+.btn-retry:hover {
+    background: #218838;
+}
+
+.btn-home {
+    background: #007bff;
+    color: white;
+}
+
+.btn-home:hover {
+    background: #0056b3;
+}
+</style>
+{% endblock %}
