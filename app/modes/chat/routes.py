@@ -2,6 +2,7 @@ from flask import render_template, request, redirect, url_for
 from . import chat_bp
 from app.common.storage import load_topic, save_chat_history, save_topic
 from app.common.agents import PlannerAgent
+from app.common.utils import summarize_text
 from app.modes.chat.agent import ChatModeMainChatAgent, ChatModeChatPopupAgent
 from app.modes.chapter.agent import ChapterModeChatAgent
 
@@ -144,24 +145,61 @@ def send_message(topic_name):
 
     # Load history from DB
     chat_history = topic_data.get('chat_history', []) if topic_data else []
+    chat_history_summary = topic_data.get('chat_history_summary', []) if topic_data else []
+
+    # Initialize summary if missing (for backward compatibility)
+    if chat_history and not chat_history_summary:
+        chat_history_summary = list(chat_history)
+
+    # Add user message to both
     chat_history.append({"role": "user", "content": user_message.strip()})
+    chat_history_summary.append({"role": "user", "content": user_message.strip()})
+
+    # Construct context for LLM
+    # We want last 2 interactions (4 messages) + current message from full history
+    # And everything older from summary history.
+    # Total recent messages = 4 (prev interactions) + 1 (current) = 5
+    KEEP_FULL_COUNT = 5
+
+    if len(chat_history) <= KEEP_FULL_COUNT:
+        messages_for_llm = chat_history
+    else:
+        # Slicing:
+        # Older = Summary[:-5]
+        # Recent = Full[-5:]
+        older_part = chat_history_summary[:-KEEP_FULL_COUNT]
+        recent_part = chat_history[-KEEP_FULL_COUNT:]
+        messages_for_llm = older_part + recent_part
 
     # Get answer from agent
     try:
         answer = chat_agent.get_answer(
-            user_message,
-            chat_history,
+            user_message, # passed for logic, but agent should use full history from msg
+            messages_for_llm, # Passing constructed history
             context,
             user_background,
             plan)
+        
+        # Append full answer to full history
         chat_history.append({"role": "assistant", "content": answer})
+
+        # Generate summary for the answer
+        try:
+            summary = summarize_text(answer)
+            chat_history_summary.append({"role": "assistant", "content": summary})
+        except Exception as e:
+            # Fallback: just use full answer
+            print(f"Failed to summarize answer: {e}")
+            chat_history_summary.append({"role": "assistant", "content": answer})
+
     except Exception as error:
         # Add an error message to the chat instead of crashing
-        chat_history.append(
-            {"role": "assistant", "content": f"Sorry, I encountered an error: {error}"})
+        error_msg = f"Sorry, I encountered an error: {error}"
+        chat_history.append({"role": "assistant", "content": error_msg})
+        chat_history_summary.append({"role": "assistant", "content": error_msg})
 
     # Save to DB
-    save_chat_history(topic_name, chat_history)
+    save_chat_history(topic_name, chat_history, chat_history_summary)
 
     return redirect(url_for('chat.mode', topic_name=topic_name))
 

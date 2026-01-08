@@ -552,3 +552,31 @@ def transcribe_audio(audio_file_path):
     except Exception as e:
         print(f"Error calling STT: {e}")
         raise STTError(f"Error calling STT: {e}")
+
+
+def summarize_text(text, max_lines=4):
+    """
+    Summarizes the given text into a dense, concise summary of 1-4 lines.
+    """
+    if not text or not text.strip():
+        return ""
+
+    prompt = f"""
+You are an expert summarizer. Your task is to condense the following text into a very dense summary.
+Requirements:
+1. Minimum 1 line, maximum {max_lines} lines.
+2. Maintain all essential core information and context.
+3. Remove conversational filler, pleasantries, and redundancy.
+4. Output ONLY the summary.
+
+Text to summarize:
+{text}
+"""
+    try:
+        summary = call_llm(prompt)
+        return summary.strip()
+    except Exception as e:
+        # Fallback if summarization fails: truncate or return original
+        print(f"Summarization failed: {e}")
+        # Return first 300 chars as backup
+        return text[:300] + "..." if len(text) > 300 else text

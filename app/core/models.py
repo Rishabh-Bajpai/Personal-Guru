@@ -52,6 +52,7 @@ class ChatSession(db.Model):
         nullable=False,
         unique=True)
     history = db.Column(JSON)
+    history_summary = db.Column(JSON)
     chat_history = db.Column(JSON)
     updated_at = db.Column(
         db.DateTime,

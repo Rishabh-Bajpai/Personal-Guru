@@ -155,9 +155,9 @@ def save_topic(topic_name, data):
         )
 
 
-def save_chat_history(topic_name, history):
+def save_chat_history(topic_name, history, history_summary=None):
     """
-    Save chat history for a topic.
+    Save chat history and optional summary for a topic.
     """
     logger = logging.getLogger(__name__)
 
@@ -189,6 +189,11 @@ def save_chat_history(topic_name, history):
         from sqlalchemy.orm.attributes import flag_modified
         chat_session.history = list(history)
         flag_modified(chat_session, 'history')
+
+        if history_summary is not None:
+             chat_session.history_summary = list(history_summary)
+             flag_modified(chat_session, 'history_summary')
+
         db.session.add(chat_session)
 
         db.session.commit()
@@ -240,6 +245,7 @@ def load_topic(topic_name):
             "plan": topic.study_plan or [],  # Map model 'study_plan' back to app 'plan'
             "last_quiz_result": None,  # Will populate from Quiz
             "chat_history": topic.chat_session.history if topic.chat_session else [],
+            "chat_history_summary": (topic.chat_session.history_summary if topic.chat_session else []) or [],
             "popup_chat_history": (topic.chat_session.chat_history if topic.chat_session else []) or [],
             "steps": [],
             "quiz": None,
