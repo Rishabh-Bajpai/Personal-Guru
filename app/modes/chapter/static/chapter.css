@@ -420,3 +420,40 @@ body.dark-mode .podcast-progress-bar {
         transform: rotate(360deg);
     }
 }
+
+/* Ask Personal Guru Floating Button */
+.guru-ask-btn {
+    position: fixed;
+    /* Fixed to keep it relative to viewport */
+    z-index: 1000;
+    background: linear-gradient(135deg, #6e8efb, #a777e3);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    /* Initial state for animation */
+    margin-top: 10px;
+    opacity: 0;
+    transition: opacity 0.2s ease, margin-top 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+}
+
+.guru-ask-btn.visible {
+    opacity: 1;
+    margin-top: 0;
+    pointer-events: auto;
+}
+
+.guru-ask-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.guru-ask-btn::before {
+    content: "✨";
+    margin-right: 6px;
+}
