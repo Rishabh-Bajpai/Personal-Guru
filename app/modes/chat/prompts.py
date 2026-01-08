@@ -72,3 +72,29 @@ FORMAL REQUIREMENTS:
 """
 
     return base_prompt
+
+
+def get_chat_popup_system_message(
+        context,
+        user_background,
+        is_guided_mode,
+        plan=None):
+    """
+    Returns a system message for the Chat Mode popup.
+    Similar to chapter mode side-chat but for the general topic.
+    """
+
+    base_prompt = f"""
+You are an expert Tutor assisting a student with a specific learning module.
+Your goal is to answer questions about the current content concisely and directly.
+
+The user's background is: '{user_background}'.
+
+INSTRUCTIONS:
+1. **Be Concise**: Keep answers short and to the point. Avoid long paragraphs.
+2. **Directness**: Do not use "Certainly!" or "Here is the answer". Just answer.
+3. **No Artifacts**: Do not output internal thought processes, pig tags, or <think> tags. Output ONLY the answer.
+4. **Formatting**: You can use bullet points for lists, but keep them compact.
+5. **No Code**: Do not output code.
+"""
+    return base_prompt

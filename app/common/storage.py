@@ -42,6 +42,22 @@ def save_topic(topic_name, data):
         # topic.last_quiz_result = data.get('last_quiz_result') # MOVED to Quiz
         # table
 
+        # Handle ChatSession (Main Topic Chat + Popup Chat)
+        if not topic.chat_session:
+            from app.core.models import ChatSession
+            topic.chat_session = ChatSession(topic=topic, history=[], chat_history=[])
+            db.session.add(topic.chat_session)
+        
+        # We generally expect main chat history to be managed by save_chat_history,
+        # but popup history is part of the topic context in this mode.
+        if 'popup_chat_history' in data:
+             # Ensure we update the mutable JSON
+             # We use a temporary variable to modify and then reassign or flag modified
+             topic.chat_session.chat_history = data['popup_chat_history']
+             from sqlalchemy.orm.attributes import flag_modified
+             flag_modified(topic.chat_session, 'chat_history')
+             db.session.add(topic.chat_session)
+
         # Clear existing children to rebuild (simple strategy for full replace)
         # For efficiency, could compare, but this ensures consistency with "overwrite" behavior of JSON
         # However, deleting and re-creating might change IDs.
@@ -224,6 +240,7 @@ def load_topic(topic_name):
             "plan": topic.study_plan or [],  # Map model 'study_plan' back to app 'plan'
             "last_quiz_result": None,  # Will populate from Quiz
             "chat_history": topic.chat_session.history if topic.chat_session else [],
+            "popup_chat_history": (topic.chat_session.chat_history if topic.chat_session else []) or [],
             "steps": [],
             "quiz": None,
             "flashcards": []

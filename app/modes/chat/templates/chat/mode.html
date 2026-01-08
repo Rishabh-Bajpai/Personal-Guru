@@ -9,6 +9,7 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('chat.static', filename='chat.css') }}">
+<link rel="stylesheet" href="{{ url_for('common.static', filename='css/chat_popup.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -71,5 +72,17 @@
     </div>
 </div>
 
+{% include 'common/chat_popup.html' %}
+
 <script src="{{ url_for('chat.static', filename='chat.js') }}"></script>
+<script src="{{ url_for('common.static', filename='js/chat_popup.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        initChatPopup({
+            urls: {
+                chat: "{{ url_for('chat.chat', topic_name=topic_name, step_index=9999) }}"
+            }
+        });
+    });
+</script>
 {% endblock %}

@@ -2,11 +2,12 @@ from flask import render_template, request, redirect, url_for
 from . import chat_bp
 from app.common.storage import load_topic, save_chat_history, save_topic
 from app.common.agents import PlannerAgent
-from app.modes.chat.agent import ChatModeMainChatAgent
+from app.modes.chat.agent import ChatModeMainChatAgent, ChatModeChatPopupAgent
 from app.modes.chapter.agent import ChapterModeChatAgent
 
 chat_agent = ChatModeMainChatAgent()
 chapter_agent = ChapterModeChatAgent()
+popup_agent = ChatModeChatPopupAgent()
 
 
 @chat_bp.route('/<topic_name>')
@@ -175,6 +176,34 @@ def chat(topic_name, step_index):
 
     if not topic_data:
         return {"error": "Topic not found"}, 400
+
+    if step_index == 9999:
+        # Chat Mode Popup Logic
+        popup_history = topic_data.get('popup_chat_history', [])
+        popup_history.append({"role": "user", "content": user_question})
+
+        from app.common.utils import get_user_context
+        user_background = get_user_context()
+
+        # Context for Chat Mode popup is general topic context
+        context = topic_data.get('description', f'The topic is {topic_name}')
+        plan = topic_data.get('plan', [])
+
+        try:
+            answer = popup_agent.get_answer(
+                user_question,
+                popup_history,
+                context,
+                user_background,
+                plan
+            )
+        except Exception as error:
+            return {"error": str(error)}, 500
+
+        popup_history.append({"role": "assistant", "content": answer})
+        topic_data['popup_chat_history'] = popup_history
+        save_topic(topic_name, topic_data)
+        return {"answer": answer}
 
     if 'steps' not in topic_data:
         return {"error": "Topic has no steps defined"}, 400
