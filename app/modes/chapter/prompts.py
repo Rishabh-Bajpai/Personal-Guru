@@ -1,4 +1,4 @@
-def get_chapter_system_message(
+def get_chapter_popup_system_message(
         context,
         user_background,
         is_guided_mode,
