@@ -260,6 +260,37 @@ Using a reverse proxy like Nginx or Caddy is the standard way to handle HTTPS in
 
 After saving, you can access Personal-Guru securely at your public domain.
 
+## Utility Scripts for Developers
+
+The `scripts/` folder contains several utility scripts to assist with development, database management, and visualization.
+
+### Database Tools
+
+- **`scripts/generate_dbml.py`**
+    - **Purpose:** Generates a DBML (Database Markup Language) file from your SQLAlchemy models.
+    - **Usage:** `python scripts/generate_dbml.py > schema.dbml`
+    - **Use Case:** Copy the output to [dbdiagram.io](https://dbdiagram.io) to visualize and interactively edit your schema.
+
+- **`scripts/visualize_db.py`**
+    - **Purpose:** Generates a Mermaid.js Entity Relationship Diagram (ERD).
+    - **Usage:** `python scripts/visualize_db.py`
+    - **Use Case:** Copy the output into a Markdown file (like `docs/schema.md`) to view the diagram directly in GitHub or compatible editors.
+
+- **`scripts/db_viewer.py`**
+    - **Purpose:** Launches a visual web interface (Flask-Admin) to browse and manage database records.
+    - **Usage:** `python scripts/db_viewer.py`
+    - **URL:** Open `http://localhost:5012` to view tables.
+
+- **`scripts/update_database.py`**
+    - **Purpose:** Initializes tables and performs safe migrations (adding new columns/tables).
+    - **Usage:** `python scripts/update_database.py`
+
+### Other Utilities
+
+- **`scripts/generate_cert.py`**
+    - **Purpose:** Generates self-signed SSL certificates (`cert.pem`, `key.pem`) for local HTTPS development (required for microphone access).
+    - **Usage:** `python scripts/generate_cert.py`
+
 ## For Developers: Running Tests
 
 This project includes a comprehensive test suite.
