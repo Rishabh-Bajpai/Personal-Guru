@@ -2,7 +2,7 @@ import pytest
 import time
 from unittest.mock import patch
 from unittest.mock import MagicMock
-from app.core.models import Topic, ChatSession
+from app.core.models import Topic
 from app.core.exceptions import LLMResponseError
 from app.common.utils import call_llm
 from app.modes.quiz.agent import QuizAgent
@@ -386,7 +386,7 @@ def test_chat_summary_integration(auth_client, app):
         
         # Setup mocks
         # mock_llm_utils is called by summarize_text
-        mock_llm_utils.side_effect = lambda prompt, **kwargs: f"SUMMARY_OF_ANSWER"
+        mock_llm_utils.side_effect = lambda prompt, **kwargs: "SUMMARY_OF_ANSWER"
         
         # mock_llm_agents is called by chat_agent.get_answer
         mock_llm_agents.return_value = "FULL_ANSWER_CONTENT"
