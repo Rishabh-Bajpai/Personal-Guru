@@ -1,9 +1,6 @@
 import os
 import sys
-from sqlalchemy import create_mock_engine
-from sqlalchemy.schema import CreateTable
-from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.sql.expression import ClauseElement
+
 
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
