@@ -207,8 +207,7 @@ body.dark-mode {
     position: relative;
     font-size: 1.05rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    white-space: pre-wrap;
-    /* Preserve newlines */
+    /* white-space removed to prevent template whitespace from rendering */
 }
 
 /* User messages: purple gradient, compact, right-aligned */
@@ -218,6 +217,10 @@ body.dark-mode {
     border-bottom-right-radius: 4px;
     max-width: 70%;
     font-weight: 500;
+    min-height: 0;
+    /* Ensure no inherited min-height */
+    padding: 12px 18px;
+    /* Slightly reduced padding for better fit */
 }
 
 /* AI messages: light/dark background, wider, left-aligned */
@@ -299,6 +302,14 @@ body.dark-mode .message-content hr {
     padding-left: 25px;
 }
 
+.user-message .message-content {
+    white-space: pre-wrap;
+}
+
+.assistant-message .message-content {
+    white-space: normal;
+}
+
 .message-content li {
     margin-bottom: 8px;
 }
@@ -368,6 +379,8 @@ body.dark-mode .message-content pre {
     overflow-y: auto;
     font-family: inherit;
     line-height: 1.5;
+    box-sizing: border-box;
+    /* Crucial for correct scrollHeight calculation */
 }
 
 #chat-input:focus {

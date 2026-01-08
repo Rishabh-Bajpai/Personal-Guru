@@ -60,7 +60,6 @@
                     if message.role == 'user' else 'AI Tutor' }}</div>
                 <div class="message {{ 'user-message' if message.role == 'user' else 'assistant-message' }}">
                     <div class="message-content"></div>
-                    <!-- Hidden div stores raw content; | safe prevents HTML escaping -->
                     <div class="raw-markdown" style="display: none;">{{ message.content | safe }}</div>
                 </div>
             </div>

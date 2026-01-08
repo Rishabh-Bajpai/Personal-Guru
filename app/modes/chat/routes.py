@@ -144,7 +144,7 @@ def send_message(topic_name):
 
     # Load history from DB
     chat_history = topic_data.get('chat_history', []) if topic_data else []
-    chat_history.append({"role": "user", "content": user_message})
+    chat_history.append({"role": "user", "content": user_message.strip()})
 
     # Get answer from agent
     try:
