@@ -16,6 +16,14 @@
 <div id="main-container">
     <!-- Left Column: Study Plan -->
     <div id="plan-sidebar">
+        <script>
+            // Apply collapsed state immediately to prevent flicker
+            if (localStorage.getItem('chatSidebarCollapsed') === 'true') {
+                const sidebar = document.getElementById('plan-sidebar');
+                sidebar.classList.add('collapsed');
+                sidebar.classList.add('no-transition');
+            }
+        </script>
         <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">
             ☰
         </button>

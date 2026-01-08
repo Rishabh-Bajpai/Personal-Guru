@@ -37,6 +37,10 @@ body.dark-mode {
     position: relative;
 }
 
+.no-transition {
+    transition: none !important;
+}
+
 #plan-sidebar.collapsed {
     flex: 0 0 60px !important;
     padding: 25px 10px;

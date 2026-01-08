@@ -9,7 +9,22 @@ const md = window.markdownit({
 function toggleSidebar() {
     const sidebar = document.getElementById('plan-sidebar');
     sidebar.classList.toggle('collapsed');
+    localStorage.setItem('chatSidebarCollapsed', sidebar.classList.contains('collapsed'));
 }
+
+// Restoration handled by inline script in template to prevent flicker
+
+// Re-enable transitions after initial render
+document.addEventListener('DOMContentLoaded', () => {
+    // Small timeout to ensure paint has happened
+    setTimeout(() => {
+        const sidebar = document.getElementById('plan-sidebar');
+        if (sidebar) {
+            sidebar.classList.remove('no-transition');
+        }
+    }, 100);
+});
+
 
 // Extract raw content and render markdown for AI messages
 function renderMarkdown() {
