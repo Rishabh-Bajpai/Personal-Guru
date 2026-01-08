@@ -143,7 +143,8 @@ body.dark-mode {
     border-top: 1px solid var(--chat-border);
 }
 
-.chat-form input {
+.chat-form input,
+.chat-form textarea {
     flex-grow: 1;
     padding: 10px 14px;
     border: 1px solid var(--chat-border);
@@ -153,9 +154,17 @@ body.dark-mode {
     font-size: 0.9rem;
     outline: none;
     transition: border-color 0.2s;
+    font-family: inherit;
+    /* Ensure textarea inherits font */
+    line-height: 1.4;
+    max-height: 150px;
+    /* Limit height */
+    overflow-y: auto;
+    /* Scroll if too tall */
 }
 
-.chat-form input:focus {
+.chat-form input:focus,
+.chat-form textarea:focus {
     border-color: #3d5afe;
 }
 
@@ -189,7 +198,8 @@ body.dark-mode {
     transform: none;
 }
 
-.chat-form input:disabled {
+.chat-form input:disabled,
+.chat-form textarea:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     background-color: var(--chat-border);
@@ -205,6 +215,8 @@ body.dark-mode {
     word-wrap: break-word;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     animation: messageIn 0.3s ease-out;
+    white-space: pre-wrap;
+    /* Preserve newlines */
 }
 
 @keyframes messageIn {

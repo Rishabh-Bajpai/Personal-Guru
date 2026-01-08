@@ -194,6 +194,8 @@ body.dark-mode {
     position: relative;
     font-size: 1.05rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    white-space: pre-wrap;
+    /* Preserve newlines */
 }
 
 /* User messages: purple gradient, compact, right-aligned */
@@ -347,6 +349,12 @@ body.dark-mode .message-content pre {
     outline: none;
     background: var(--input-bg);
     color: var(--assistant-text);
+    resize: none;
+    /* Controlled by JS */
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: inherit;
+    line-height: 1.5;
 }
 
 #chat-input:focus {

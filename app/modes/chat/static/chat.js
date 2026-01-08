@@ -78,6 +78,26 @@ document.addEventListener('DOMContentLoaded', function () {
         textarea.readOnly = true;
     });
 
+    // Auto-resize and Keydown logic for main chat input
+    const chatInput = document.getElementById('chat-input');
+
+    function resizeInput() {
+        chatInput.style.height = 'auto';
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + 'px';
+    }
+
+    chatInput.addEventListener('input', resizeInput);
+
+    chatInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            // Only submit if not empty
+            if (this.value.trim()) {
+                document.getElementById('chat-form').requestSubmit();
+            }
+        }
+    });
+
     // Prevent empty submissions and disable input while loading
     document.getElementById('chat-form').addEventListener('submit', function (e) {
         const input = document.getElementById('chat-input');
