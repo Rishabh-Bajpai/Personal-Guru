@@ -27,6 +27,30 @@ function toggleSidebar() {
     sidebar.classList.toggle('collapsed');
 }
 
+// Plan Modification Logic (Chapter Mode)
+document.addEventListener('DOMContentLoaded', () => {
+    const planInput = document.getElementById('plan-modification-input');
+    const planForm = document.getElementById('plan-modification-form');
+
+    if (planInput && planForm) {
+        // Keydown for Shift+Enter
+        planInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (this.value.trim()) {
+                    planForm.requestSubmit();
+                }
+            }
+        });
+
+        // Auto-resize
+        planInput.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+        });
+    }
+});
+
 // Code Execution Logic
 function setupCodeExecution(renderedContent) {
     const codeBlocks = renderedContent.querySelectorAll('pre code');

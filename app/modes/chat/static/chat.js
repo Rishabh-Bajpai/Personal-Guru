@@ -98,6 +98,23 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Plan Modification Input Keydown Logic
+    const planInput = document.getElementById('plan-modification-input');
+    planInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (this.value.trim()) {
+                document.getElementById('plan-modification-form').requestSubmit();
+            }
+        }
+    });
+
+    // Auto-resize for plan modification input (optional, but consistent)
+    planInput.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+    });
+
     // Prevent empty submissions and disable input while loading
     document.getElementById('chat-form').addEventListener('submit', function (e) {
         const input = document.getElementById('chat-input');

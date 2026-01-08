@@ -117,8 +117,15 @@ body.dark-mode {
     border: 1px solid rgba(0, 0, 0, 0.1);
     font-size: 0.95rem;
     margin-bottom: 10px;
-    resize: vertical;
+    resize: none;
     transition: opacity 0.3s ease, background-color 0.3s ease;
+    background: var(--input-bg);
+    color: var(--assistant-text);
+    box-sizing: border-box;
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: inherit;
+    line-height: 1.4;
 }
 
 #plan-modification-input:read-only {
@@ -128,6 +135,8 @@ body.dark-mode {
 }
 
 #plan-modification-button {
+    width: 100%;
+    margin-top: 10px;
     transition: opacity 0.3s ease, cursor 0.3s ease;
 }
 
