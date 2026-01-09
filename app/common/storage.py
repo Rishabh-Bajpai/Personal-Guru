@@ -109,7 +109,8 @@ def save_topic(topic_name, data):
         
         for card_data in incoming_cards:
             term = card_data.get('term')
-            if not term: continue
+            if not term: 
+                continue
             seen_terms.add(term)
             
             if term in existing_cards_map:

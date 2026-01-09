@@ -37,7 +37,8 @@ MODELS = {
     'TelemetryLog': models.TelemetryLog,
     'Feedback': models.Feedback,
     'LLMPerformance': models.LLMPerformance,
-    'PlanRevision': models.PlanRevision
+    'PlanRevision': models.PlanRevision,
+    'Login': models.Login
 }
 
 VIEWER_HTML = """

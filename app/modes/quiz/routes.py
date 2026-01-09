@@ -107,8 +107,6 @@ def submit_quiz(topic_name):
             'topic_name': topic_name,
             'score': score,
             'feedback_results': feedback_results,
-            'score': score,
-            'feedback_results': feedback_results,
             'date': datetime.date.today().isoformat(),
             'time_spent': time_spent
         }

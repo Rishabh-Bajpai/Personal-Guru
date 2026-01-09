@@ -26,6 +26,7 @@ class Topic(TimestampMixin, db.Model):
     quizzes = db.relationship('QuizMode', backref='topic', cascade='all, delete-orphan')
     flashcards = db.relationship('FlashcardMode', backref='topic', cascade='all, delete-orphan')
     chat_mode = db.relationship('ChatMode', backref='topic', uselist=False, cascade='all, delete-orphan')
+    plan_revisions = db.relationship('PlanRevision', backref='topic', lazy=True)
 
 class ChatMode(TimestampMixin, db.Model):
     __tablename__ = 'chat_mode'
@@ -77,6 +78,7 @@ class User(UserMixin, TimestampMixin, db.Model):
     __tablename__ = 'users'
     
     username = db.Column(db.String(100), primary_key=True)
+    login = db.relationship('Login', backref='user_profile', uselist=False)
     password_hash = db.Column(db.String(255))
     name = db.Column(db.String(100))
     age = db.Column(db.Integer)
@@ -156,7 +158,8 @@ class TelemetryLog(TimestampMixin, db.Model):
     installation_id = db.Column(db.String(36), db.ForeignKey('installations.installation_id'), nullable=False)
     session_id = db.Column(db.String(36))  # UUID
     event_type = db.Column(db.String(100), nullable=False)
-    payload = db.Column(JSON)  # Stores latency, error logs, quiz scores, etc.
+    triggers = db.Column(JSON) # events, number of lines
+    payload = db.Column(JSON)  # TODO: Define content structure. Stores latency, error logs, quiz scores, etc.
     timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
@@ -204,3 +207,10 @@ class Login(TimestampMixin, db.Model):
     name = db.Column(db.String(100))
     password = db.Column(db.String(255))
     installation_id = db.Column(db.String(36), db.ForeignKey('installations.installation_id'))
+
+    # Relationships
+    topics = db.relationship('Topic', backref='user_login', lazy=True)
+    feedbacks = db.relationship('Feedback', backref='user_login', lazy=True)
+    telemetry_logs = db.relationship('TelemetryLog', backref='user_login', lazy=True)
+    llm_performances = db.relationship('LLMPerformance', backref='user_login', lazy=True)
+    plan_revisions = db.relationship('PlanRevision', backref='user_login', lazy=True)
