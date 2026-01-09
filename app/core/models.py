@@ -133,14 +133,6 @@ class User(UserMixin, TimestampMixin, db.Model):
         
         return "\n".join(parts)
 
-# class VectorEmbedding(db.Model):
-#     __tablename__ = 'vector_embeddings'
-#     
-#     id = db.Column(db.Integer, primary_key=True)
-#     content = db.Column(db.Text, nullable=False)
-#     embedding = db.Column(Vector(1536)) # Assuming OpenAI Ada-002 dimension
-#     metadata_json = db.Column(JSONB)
-
 class Installation(TimestampMixin, db.Model):
     __tablename__ = 'installations'
 

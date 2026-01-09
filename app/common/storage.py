@@ -1,6 +1,7 @@
 from app.core.extensions import db
 from app.core.models import Topic, ChapterMode, QuizMode, FlashcardMode
 import logging
+import datetime
 
 from flask_login import current_user
 
@@ -21,68 +22,115 @@ def save_topic(topic_name, data):
             topic = Topic(name=topic_name, user_id=current_user.username)
             db.session.add(topic)
         
-        # Update fields
-        # Note: We rely on the JSON structure provided by the app
-        # Fix: App uses 'plan', Model uses 'study_plan'
+        # Update topic fields
         topic.study_plan = data.get('plan', []) 
-        # topic.last_quiz_result = data.get('last_quiz_result') # MOVED to QuizMode table
         
-        # Clear existing children to rebuild (simple strategy for full replace)
-        # For efficiency, could compare, but this ensures consistency with "overwrite" behavior of JSON
-        # However, deleting and re-creating might change IDs.
-        # Let's try to update in place if possible, or just delete all children for now.
-        # Given the app likely dumps the whole state, deleting children is safer for consistency.
+        # Explicitly update modified_at when saving
+        topic.modified_at = datetime.datetime.utcnow()
         
-        # Delete existing relationships
-        ChapterMode.query.filter_by(topic_id=topic.id).delete()
-        QuizMode.query.filter_by(topic_id=topic.id).delete()
-        FlashcardMode.query.filter_by(topic_id=topic.id).delete()
-        
-        # Steps
+        # --- Handle ChapterMode (Steps) ---
         plan = data.get('plan', [])
-        for i, step_data in enumerate(data.get('steps', [])):
+        incoming_steps = data.get('steps', [])
+        
+        # Existing steps map: index -> instance
+        existing_steps_map = {s.step_index: s for s in topic.steps}
+        seen_indices = set()
+        
+        for i, step_data in enumerate(incoming_steps):
+            step_index = step_data.get('step_index', i)
+            seen_indices.add(step_index)
+            
             step_title = step_data.get('title')
             if not step_title and plan and i < len(plan):
                 step_title = plan[i]
-
-            step = ChapterMode(
-                topic=topic,
-                step_index=step_data.get('step_index', i), # Ensure this is in JSON or default to index
-                title=step_title,
-                # Fix: App uses 'teaching_material', Model uses 'content'
-                content=step_data.get('teaching_material') or step_data.get('content'),
-                questions=step_data.get('questions'),
-                user_answers=step_data.get('user_answers'),
-                feedback=step_data.get('feedback'),
-                score=step_data.get('score'),
-                chat_history=step_data.get('chat_history'),
-                time_spent=step_data.get('time_spent', 0)
-            )
-            db.session.add(step)
+                
+            content = step_data.get('teaching_material') or step_data.get('content')
             
-        # QuizMode
+            if step_index in existing_steps_map:
+                # Update existing
+                step = existing_steps_map[step_index]
+                step.title = step_title
+                step.content = content
+                step.questions = step_data.get('questions')
+                step.user_answers = step_data.get('user_answers')
+                step.feedback = step_data.get('feedback')
+                step.score = step_data.get('score')
+                step.chat_history = step_data.get('chat_history')
+                step.time_spent = step_data.get('time_spent', 0)
+            else:
+                # Create new
+                step = ChapterMode(
+                    topic=topic,
+                    step_index=step_index,
+                    title=step_title,
+                    content=content,
+                    questions=step_data.get('questions'),
+                    user_answers=step_data.get('user_answers'),
+                    feedback=step_data.get('feedback'),
+                    score=step_data.get('score'),
+                    chat_history=step_data.get('chat_history'),
+                    time_spent=step_data.get('time_spent', 0)
+                )
+                db.session.add(step)
+        
+        # Delete removed steps
+        for idx, step in existing_steps_map.items():
+            if idx not in seen_indices:
+                db.session.delete(step)
+            
+        # --- Handle QuizMode ---
         # "quiz" key in JSON
         if 'quiz' in data:
              q_data = data.get('quiz')
              if q_data:
-                 quiz = QuizMode(
-                     topic=topic,
-                     questions=q_data.get('questions'),
-                     score=q_data.get('score'),
-                     result=data.get('last_quiz_result'), # Storing the result here
-                     time_spent=q_data.get('time_spent', 0)
-                 )
-                 db.session.add(quiz)
+                 # Check existing quizzes
+                 existing_quiz = topic.quizzes[-1] if topic.quizzes else None
+                 
+                 if existing_quiz:
+                     existing_quiz.questions = q_data.get('questions')
+                     existing_quiz.score = q_data.get('score')
+                     existing_quiz.result = data.get('last_quiz_result')
+                     existing_quiz.time_spent = q_data.get('time_spent', 0)
+                 else:
+                     quiz = QuizMode(
+                         topic=topic,
+                         questions=q_data.get('questions'),
+                         score=q_data.get('score'),
+                         result=data.get('last_quiz_result'), 
+                         time_spent=q_data.get('time_spent', 0)
+                     )
+                     db.session.add(quiz)
 
-        # Flashcards
-        for card_data in data.get('flashcards', []):
-            card = FlashcardMode(
-                topic=topic,
-                term=card_data.get('term'),
-                definition=card_data.get('definition'),
-                time_spent=card_data.get('time_spent', 0)
-            )
-            db.session.add(card)
+        # --- Handle Flashcards ---
+        # Flashcards are tricky without IDs. We'll match by TERM.
+        incoming_cards = data.get('flashcards', [])
+        existing_cards_map = {c.term: c for c in topic.flashcards}
+        seen_terms = set()
+        
+        for card_data in incoming_cards:
+            term = card_data.get('term')
+            if not term: continue
+            seen_terms.add(term)
+            
+            if term in existing_cards_map:
+                # Update
+                card = existing_cards_map[term]
+                card.definition = card_data.get('definition')
+                card.time_spent = card_data.get('time_spent', 0)
+            else:
+                # Create
+                card = FlashcardMode(
+                    topic=topic,
+                    term=term,
+                    definition=card_data.get('definition'),
+                    time_spent=card_data.get('time_spent', 0)
+                )
+                db.session.add(card)
+        
+        # Delete removed flashcards
+        for term, card in existing_cards_map.items():
+            if term not in seen_terms:
+                db.session.delete(card)
 
         db.session.commit()
     except Exception as e:
@@ -138,6 +186,14 @@ def load_topic(topic_name):
     topic = Topic.query.filter_by(name=topic_name, user_id=current_user.username).first()
     if not topic:
         return None
+        
+    # User requested Modified At to update when opened ("any time")
+    try:
+        topic.modified_at = datetime.datetime.utcnow()
+        db.session.commit()
+    except Exception as e:
+        logging.warning(f"Failed to update modify time on read for {topic_name}: {e}")
+        # Don't block loading
         
     data = {
         "name": topic.name,
