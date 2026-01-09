@@ -13,7 +13,7 @@ class Topic(TimestampMixin, db.Model):
     __tablename__ = 'topics'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(100), db.ForeignKey('users.username'), nullable=False)
+    user_id = db.Column(db.String(36), db.ForeignKey('logins.userid'), nullable=False)
     name = db.Column(db.String(255), nullable=False)
     
     __table_args__ = (
@@ -147,11 +147,12 @@ class Installation(TimestampMixin, db.Model):
     logins = db.relationship('Login', backref='installation', lazy=True)
     telemetry_logs = db.relationship('TelemetryLog', backref='installation', lazy=True)
 
-
+# TODO: both id and session_id should be kept.  session_id should come from Flask and id MUST be unique.
 class TelemetryLog(TimestampMixin, db.Model):
     __tablename__ = 'telemetry_logs'
 
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(36), db.ForeignKey('logins.userid'))
     installation_id = db.Column(db.String(36), db.ForeignKey('installations.installation_id'), nullable=False)
     session_id = db.Column(db.String(36))  # UUID
     event_type = db.Column(db.String(100), nullable=False)
@@ -163,7 +164,7 @@ class Feedback(TimestampMixin, db.Model):
     __tablename__ = 'feedback'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(100), db.ForeignKey('users.username'), nullable=False)
+    user_id = db.Column(db.String(36), db.ForeignKey('logins.userid'), nullable=False)
     feedback_type = db.Column(db.String(50), nullable=False)  # 'form', 'in_place'
     content_reference = db.Column(db.String(255))  # ID of the generated content
     rating = db.Column(db.Integer)
@@ -174,7 +175,7 @@ class LLMPerformance(TimestampMixin, db.Model):
     __tablename__ = 'llm_performance'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(100), db.ForeignKey('users.username'), nullable=False)
+    user_id = db.Column(db.String(36), db.ForeignKey('logins.userid'), nullable=False)
     feature = db.Column(db.String(100))
     model_name = db.Column(db.String(100))
     latency_ms = db.Column(db.Integer)
@@ -188,7 +189,7 @@ class PlanRevision(TimestampMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
-    user_id = db.Column(db.String(100), db.ForeignKey('users.username'), nullable=False)
+    user_id = db.Column(db.String(36), db.ForeignKey('logins.userid'), nullable=False)
     reason = db.Column(db.Text)
     old_plan_json = db.Column(JSON)
     new_plan_json = db.Column(JSON)
@@ -199,7 +200,7 @@ class Login(TimestampMixin, db.Model):
     __tablename__ = 'logins'
 
     userid = db.Column(db.String(36), primary_key=True)
-    username = db.Column(db.String(100), unique=True, nullable=False)
+    username = db.Column(db.String(100), db.ForeignKey('users.username'), unique=True, nullable=False)
     name = db.Column(db.String(100))
     password = db.Column(db.String(255))
     installation_id = db.Column(db.String(36), db.ForeignKey('installations.installation_id'))
