@@ -19,7 +19,7 @@ class Topic(db.Model):
     
     # Relationships
     study_plan = db.Column(JSON) # Storing list of strings as JSON
-    steps = db.relationship('StudyStep', backref='topic', cascade='all, delete-orphan')
+    steps = db.relationship('ChapterMode', backref='topic', cascade='all, delete-orphan')
     quizzes = db.relationship('QuizMode', backref='topic', cascade='all, delete-orphan')
     flashcards = db.relationship('FlashcardMode', backref='topic', cascade='all, delete-orphan')
     chat_mode = db.relationship('ChatMode', backref='topic', uselist=False, cascade='all, delete-orphan')
@@ -33,8 +33,8 @@ class ChatMode(db.Model):
     time_spent = db.Column(db.Integer, default=0) # Duration in seconds
     updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
-class StudyStep(db.Model):
-    __tablename__ = 'study_steps'
+class ChapterMode(db.Model):
+    __tablename__ = 'chapter_mode'
     
     id = db.Column(db.Integer, primary_key=True)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)

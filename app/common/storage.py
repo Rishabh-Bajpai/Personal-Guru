@@ -1,5 +1,5 @@
 from app.core.extensions import db
-from app.core.models import Topic, StudyStep, QuizMode, FlashcardMode
+from app.core.models import Topic, ChapterMode, QuizMode, FlashcardMode
 import logging
 
 from flask_login import current_user
@@ -34,7 +34,7 @@ def save_topic(topic_name, data):
         # Given the app likely dumps the whole state, deleting children is safer for consistency.
         
         # Delete existing relationships
-        StudyStep.query.filter_by(topic_id=topic.id).delete()
+        ChapterMode.query.filter_by(topic_id=topic.id).delete()
         QuizMode.query.filter_by(topic_id=topic.id).delete()
         FlashcardMode.query.filter_by(topic_id=topic.id).delete()
         
@@ -45,7 +45,7 @@ def save_topic(topic_name, data):
             if not step_title and plan and i < len(plan):
                 step_title = plan[i]
 
-            step = StudyStep(
+            step = ChapterMode(
                 topic=topic,
                 step_index=step_data.get('step_index', i), # Ensure this is in JSON or default to index
                 title=step_title,

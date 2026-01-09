@@ -24,7 +24,9 @@ from app.core import models  # noqa: E402
 # List of models to check
 TARGET_MODELS = [
     models.Topic,
-    models.StudyStep,
+    models.Topic,
+    models.ChapterMode,
+    models.QuizMode,
     models.QuizMode,
     models.FlashcardMode,
     models.ChatMode,
@@ -48,14 +50,31 @@ def update_database():
     app = create_app()
     with app.app_context():
         logger.info("Starting database update...")
-        inspector = inspect(db.engine)
         
+        # 0. Pre-check for table renames (Manual Migrations)
+        inspector = inspect(db.engine)
+        existing_tables = inspector.get_table_names()
+        
+        if 'study_steps' in existing_tables and 'chapter_mode' not in existing_tables:
+            logger.info("Detected legacy table 'study_steps'. Renaming to 'chapter_mode'...")
+            try:
+                # Rename table
+                db.session.execute(text('ALTER TABLE study_steps RENAME TO chapter_mode'))
+                db.session.commit()
+                logger.info(" -> Table renamed successfully.")
+                
+                # Check consistency of ID sequence if necessary (usually auto-handled by serial)
+            except Exception as e:
+                logger.error(f" -> Failed to rename table: {e}")
+                db.session.rollback()
+
         # 1. Create missing tables (Standard SQLAlchemy)
         logger.info("Ensuring all tables exist...")
         db.create_all()
         
         # 2. Inspect and Update existing tables
         logger.info("Checking for schema updates...")
+        inspector = inspect(db.engine) # Re-inspect after create/rename
         
         for model in TARGET_MODELS:
             table_name = model.__tablename__

@@ -5,7 +5,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app import create_app
-from app.core.models import Topic, StudyStep, QuizMode, FlashcardMode
+from app.core.models import Topic, ChapterMode, QuizMode, FlashcardMode
 from sqlalchemy.orm import class_mapper
 
 def generate_mermaid_er():
@@ -13,7 +13,7 @@ def generate_mermaid_er():
     with app.app_context():
         print("erDiagram")
         
-        models = [Topic, StudyStep, QuizMode, FlashcardMode]
+        models = [Topic, ChapterMode, QuizMode, FlashcardMode]
         
         # Track processed relationships to avoid duplicates if needed, 
         # but Mermaid handles multiple lines fine usually.
