@@ -18,15 +18,14 @@ class Topic(db.Model):
     )
     
     # Relationships
-    # Relationships
     study_plan = db.Column(JSON) # Storing list of strings as JSON
     steps = db.relationship('StudyStep', backref='topic', cascade='all, delete-orphan')
-    quizzes = db.relationship('Quiz', backref='topic', cascade='all, delete-orphan')
-    flashcards = db.relationship('Flashcard', backref='topic', cascade='all, delete-orphan')
-    chat_session = db.relationship('ChatSession', backref='topic', uselist=False, cascade='all, delete-orphan')
+    quizzes = db.relationship('QuizMode', backref='topic', cascade='all, delete-orphan')
+    flashcards = db.relationship('FlashcardMode', backref='topic', cascade='all, delete-orphan')
+    chat_mode = db.relationship('ChatMode', backref='topic', uselist=False, cascade='all, delete-orphan')
 
-class ChatSession(db.Model):
-    __tablename__ = 'chat_sessions'
+class ChatMode(db.Model):
+    __tablename__ = 'chat_mode'
     
     id = db.Column(db.Integer, primary_key=True)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False, unique=True)
@@ -49,8 +48,8 @@ class StudyStep(db.Model):
     score = db.Column(db.Float)
     chat_history = db.Column(JSON) # Store chat history for this step
     
-class Quiz(db.Model):
-    __tablename__ = 'quizzes'
+class QuizMode(db.Model):
+    __tablename__ = 'quiz_mode'
     
     id = db.Column(db.Integer, primary_key=True)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
@@ -60,8 +59,8 @@ class Quiz(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
-class Flashcard(db.Model):
-    __tablename__ = 'flashcards'
+class FlashcardMode(db.Model):
+    __tablename__ = 'flashcard_mode'
     
     id = db.Column(db.Integer, primary_key=True)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
@@ -149,6 +148,7 @@ class Installation(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
     users = db.relationship('User', backref='installation', lazy=True)
+    logins = db.relationship('Login', backref='installation', lazy=True)
     telemetry_logs = db.relationship('TelemetryLog', backref='installation', lazy=True)
 
 
@@ -198,3 +198,13 @@ class PlanRevision(db.Model):
     old_plan_json = db.Column(JSON)
     new_plan_json = db.Column(JSON)
     timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+
+class Login(db.Model):
+    __tablename__ = 'logins'
+
+    userid = db.Column(db.String(36), primary_key=True)
+    username = db.Column(db.String(100), unique=True, nullable=False)
+    name = db.Column(db.String(100))
+    password = db.Column(db.String(255))
+    installation_id = db.Column(db.String(36), db.ForeignKey('installations.installation_id'))

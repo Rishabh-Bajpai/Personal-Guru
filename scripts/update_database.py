@@ -25,15 +25,16 @@ from app.core import models  # noqa: E402
 TARGET_MODELS = [
     models.Topic,
     models.StudyStep,
-    models.Quiz,
-    models.Flashcard,
-    models.ChatSession,
+    models.QuizMode,
+    models.FlashcardMode,
+    models.ChatMode,
     models.User,
     models.Installation,
     models.TelemetryLog,
     models.Feedback,
     models.LLMPerformance,
-    models.PlanRevision
+    models.PlanRevision,
+    models.Login
 ]
 
 def get_column_type(column):

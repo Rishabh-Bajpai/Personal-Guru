@@ -1,7 +1,7 @@
 import pytest
 import time
 from unittest.mock import patch
-from app.common.utils import call_llm
+from app.common.utils import call_llm, LLM_BASE_URL, LLM_MODEL_NAME
 from app.modes.quiz.agent import QuizAgent
 from app.common.agents import PlannerAgent, FeedbackAgent
 from app.modes.chapter.agent import ChapterTeachingAgent, AssessorAgent
@@ -9,6 +9,16 @@ from app.modes.flashcard.agent import FlashcardTeachingAgent
 
 # Mark all tests in this file as 'integration'
 pytestmark = pytest.mark.integration
+
+def requires_llm(func):
+    """Decorator to fail test if LLM config is missing."""
+    import functools
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if not LLM_BASE_URL or not LLM_MODEL_NAME:
+            pytest.fail("Test failed: LLM environment variables (LLM_BASE_URL, LLM_MODEL_NAME) not set")
+        return func(*args, **kwargs)
+    return wrapper
 
 def retry_agent_call(func, *args, max_retries=3, **kwargs):
     """Helper to retry agent calls that might fail due to LLM flakiness."""
@@ -22,6 +32,7 @@ def retry_agent_call(func, *args, max_retries=3, **kwargs):
         time.sleep(1) # Brief pause
     return None, last_error
 
+@requires_llm
 def test_call_llm(logger):
     """Test that the LLM call function is working."""
     logger.section("test_call_llm")
@@ -34,6 +45,9 @@ def test_call_llm(logger):
     assert len(response) > 0
 
 
+    assert len(response) > 0
+
+@requires_llm
 def test_quiz_agent(logger):
     """Test that the QuizAgent can generate a quiz."""
     logger.section("test_quiz_agent")
@@ -56,6 +70,10 @@ def test_quiz_agent(logger):
     assert len(quiz["questions"]) == 2
 
 
+    assert len(quiz["questions"]) == 2
+
+
+@requires_llm
 def test_planner_agent(logger):
     """Test that the PlannerAgent can generate a study plan."""
     logger.section("test_planner_agent")
@@ -70,6 +88,10 @@ def test_planner_agent(logger):
     assert len(plan) > 0
 
 
+    assert len(plan) > 0
+
+
+@requires_llm
 def test_feedback_agent(logger):
     """Test that the FeedbackAgent can generate feedback."""
     logger.section("test_feedback_agent")
@@ -107,6 +129,10 @@ def test_chapter_teaching_agent(logger):
     assert material == "Mocked Teaching Material"
 
 
+    assert material == "Mocked Teaching Material"
+
+
+@requires_llm
 def test_flashcard_teaching_agent(logger):
     """Test that the FlashcardTeachingAgent can generate flashcards."""
     logger.section("test_flashcard_teaching_agent")
@@ -121,6 +147,10 @@ def test_flashcard_teaching_agent(logger):
     assert len(flashcards) > 0
 
 
+    assert len(flashcards) > 0
+
+
+@requires_llm
 def test_assessor_agent(logger):
     """Test that the AssessorAgent can generate a question."""
     logger.section("test_assessor_agent")
@@ -145,7 +175,7 @@ def test_assessor_agent(logger):
 
 
 def test_chat_session_persistence(logger, app):
-    """Test that chat history is saved to ChatSession table."""
+    """Test that chat history is saved to ChatMode table."""
     logger.section("test_chat_session_persistence")
     from app.core.models import Topic, User, db
     from app.common.storage import save_chat_history
@@ -175,11 +205,11 @@ def test_chat_session_persistence(logger, app):
             # Verify
             t = Topic.query.filter_by(name=topic_name).first()
             assert t is not None
-            assert t.chat_session is not None
-            assert len(t.chat_session.history) == 1
-            assert t.chat_session.history[0]['content'] == "Hi"
+            assert t.chat_mode is not None
+            assert len(t.chat_mode.history) == 1
+            assert t.chat_mode.history[0]['content'] == "Hi"
             
-            logger.info("ChatSession persistence verified.")
+            logger.info("ChatMode persistence verified.")
 
 def test_quiz_result_persistence(logger, app):
     """Test that quiz result is saved to Quiz table."""

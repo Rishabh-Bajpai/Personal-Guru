@@ -1,5 +1,5 @@
 from app.core.extensions import db
-from app.core.models import Topic, StudyStep, Quiz, Flashcard
+from app.core.models import Topic, StudyStep, QuizMode, FlashcardMode
 import logging
 
 from flask_login import current_user
@@ -25,7 +25,7 @@ def save_topic(topic_name, data):
         # Note: We rely on the JSON structure provided by the app
         # Fix: App uses 'plan', Model uses 'study_plan'
         topic.study_plan = data.get('plan', []) 
-        # topic.last_quiz_result = data.get('last_quiz_result') # MOVED to Quiz table
+        # topic.last_quiz_result = data.get('last_quiz_result') # MOVED to QuizMode table
         
         # Clear existing children to rebuild (simple strategy for full replace)
         # For efficiency, could compare, but this ensures consistency with "overwrite" behavior of JSON
@@ -35,8 +35,8 @@ def save_topic(topic_name, data):
         
         # Delete existing relationships
         StudyStep.query.filter_by(topic_id=topic.id).delete()
-        Quiz.query.filter_by(topic_id=topic.id).delete()
-        Flashcard.query.filter_by(topic_id=topic.id).delete()
+        QuizMode.query.filter_by(topic_id=topic.id).delete()
+        FlashcardMode.query.filter_by(topic_id=topic.id).delete()
         
         # Steps
         plan = data.get('plan', [])
@@ -59,12 +59,12 @@ def save_topic(topic_name, data):
             )
             db.session.add(step)
             
-        # Quiz
+        # QuizMode
         # "quiz" key in JSON
         if 'quiz' in data:
              q_data = data.get('quiz')
              if q_data:
-                 quiz = Quiz(
+                 quiz = QuizMode(
                      topic=topic,
                      questions=q_data.get('questions'),
                      score=q_data.get('score'),
@@ -74,7 +74,7 @@ def save_topic(topic_name, data):
 
         # Flashcards
         for card_data in data.get('flashcards', []):
-            card = Flashcard(
+            card = FlashcardMode(
                 topic=topic,
                 term=card_data.get('term'),
                 definition=card_data.get('definition')
@@ -102,13 +102,13 @@ def save_chat_history(topic_name, history):
             db.session.add(topic)
             db.session.flush() # Ensure ID exists
 
-        from app.core.models import ChatSession
+        from app.core.models import ChatMode
 
-        if not topic.chat_session:
-            chat_session = ChatSession(topic=topic, history=[])
+        if not topic.chat_mode:
+            chat_session = ChatMode(topic=topic, history=[])
             db.session.add(chat_session)
         else:
-            chat_session = topic.chat_session
+            chat_session = topic.chat_mode
 
         # Update history
         from sqlalchemy.orm.attributes import flag_modified
@@ -137,7 +137,7 @@ def load_topic(topic_name):
         "name": topic.name,
         "plan": topic.study_plan or [], # Map model 'study_plan' back to app 'plan'
         "last_quiz_result": None, # Will populate from Quiz
-        "chat_history": topic.chat_session.history if topic.chat_session else [],
+        "chat_history": topic.chat_mode.history if topic.chat_mode else [],
         "steps": [],
         "quiz": None,
         "flashcards": []
@@ -175,7 +175,7 @@ def load_topic(topic_name):
     data["plan"] = plan
     data["steps"] = steps_data
         
-    # Quiz
+    # QuizMode
     # Assuming one quiz per topic for now, similar to previous JSON usually
     if topic.quizzes:
         # Check if models.py defined strict 1-to-many. It did.

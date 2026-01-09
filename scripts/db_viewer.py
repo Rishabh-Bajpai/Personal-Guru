@@ -29,9 +29,9 @@ app = create_viewer_app()
 MODELS = {
     'Topic': models.Topic,
     'StudyStep': models.StudyStep,
-    'Quiz': models.Quiz,
-    'Flashcard': models.Flashcard,
-    'ChatSession': models.ChatSession,
+    'QuizMode': models.QuizMode,
+    'FlashcardMode': models.FlashcardMode,
+    'ChatMode': models.ChatMode,
     'User': models.User,
     'Installation': models.Installation,
     'TelemetryLog': models.TelemetryLog,
