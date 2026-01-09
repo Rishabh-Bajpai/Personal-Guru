@@ -79,6 +79,8 @@ function initChatPopup(config) {
             chatMaximizeBtn.textContent = '□';
             chatMaximizeBtn.title = 'Maximize';
         }
+        // Recalculate input height as width might have changed
+        setTimeout(resizePopupInput, 100);
     }
 
     chatLauncher.addEventListener('click', openChat);
@@ -150,6 +152,30 @@ function initChatPopup(config) {
             if (submitButton) submitButton.disabled = false;
             chatInput.focus();
         }
+    });
+
+    // Auto-resize and Keydown logic for popup input
+    function resizePopupInput() {
+        chatInput.style.height = 'auto';
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
+    }
+
+    chatInput.addEventListener('input', resizePopupInput);
+
+    chatInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (this.value.trim()) {
+                chatForm.requestSubmit();
+            }
+        }
+    });
+
+    // Reset height on submit
+    chatForm.addEventListener('submit', () => {
+        setTimeout(() => {
+            chatInput.style.height = 'auto';
+        }, 0);
     });
 
     // Initially make sure the launcher is visible and popup is hidden

@@ -1,6 +1,6 @@
 from app.common.utils import call_llm
 from app.common.agents import ChatAgent
-from app.modes.chat.prompts import get_chat_system_message, get_welcome_prompt
+from app.modes.chat.prompts import get_chat_system_message, get_welcome_prompt, get_chat_popup_system_message
 
 
 class ChatModeMainChatAgent(ChatAgent):
@@ -29,3 +29,13 @@ class ChatModeMainChatAgent(ChatAgent):
         prompt = get_welcome_prompt(topic_name, user_background, plan)
         answer = call_llm(prompt)
         return answer
+
+
+class ChatModeChatPopupAgent(ChatAgent):
+    """
+    Agent for handling chat interactions specifically in Chat mode popup.
+    """
+
+    def __init__(self):
+        """Initializes the ChatModeChatPopupAgent with the popup system message."""
+        super().__init__(get_chat_popup_system_message)

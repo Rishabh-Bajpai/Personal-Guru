@@ -36,7 +36,7 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <!-- Pass current step index to return to it -->
                 <input type="hidden" name="current_step_index" value="{{ step_index }}">
-                <textarea id="plan-modification-input" name="comment"
+                <textarea id="plan-modification-input" name="comment" maxlength="255"
                     placeholder="Suggest changes to the plan..."></textarea>
                 <button id="plan-modification-button" type="submit" class="button is-small">Update Plan</button>
             </form>

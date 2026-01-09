@@ -1,5 +1,5 @@
 from app.common.agents import ChatAgent, TopicTeachingAgent
-from app.modes.chapter.prompts import get_chapter_system_message
+from app.modes.chapter.prompts import get_chapter_popup_system_message
 import re
 from app.common.utils import call_llm
 
@@ -11,7 +11,7 @@ class ChapterModeChatAgent(ChatAgent):
 
     def __init__(self):
         """Initializes the ChapterModeChatAgent with the chapter system message."""
-        super().__init__(get_chapter_system_message)
+        super().__init__(get_chapter_popup_system_message)
 
 
 class ChapterTeachingAgent(TopicTeachingAgent):
