@@ -5,13 +5,16 @@ from sqlalchemy import JSON
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
-class Topic(db.Model):
+class TimestampMixin:
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
+    modified_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, nullable=False)
+
+class Topic(TimestampMixin, db.Model):
     __tablename__ = 'topics'
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(100), db.ForeignKey('users.username'), nullable=False)
     name = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     
     __table_args__ = (
         db.UniqueConstraint('user_id', 'name', name='_user_topic_uc'),
@@ -24,16 +27,15 @@ class Topic(db.Model):
     flashcards = db.relationship('FlashcardMode', backref='topic', cascade='all, delete-orphan')
     chat_mode = db.relationship('ChatMode', backref='topic', uselist=False, cascade='all, delete-orphan')
 
-class ChatMode(db.Model):
+class ChatMode(TimestampMixin, db.Model):
     __tablename__ = 'chat_mode'
     
     id = db.Column(db.Integer, primary_key=True)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False, unique=True)
     history = db.Column(JSON)
     time_spent = db.Column(db.Integer, default=0) # Duration in seconds
-    updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
-class ChapterMode(db.Model):
+class ChapterMode(TimestampMixin, db.Model):
     __tablename__ = 'chapter_mode'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -50,7 +52,7 @@ class ChapterMode(db.Model):
     chat_history = db.Column(JSON) # Store chat history for this step
     time_spent = db.Column(db.Integer, default=0) # Duration in seconds
     
-class QuizMode(db.Model):
+class QuizMode(TimestampMixin, db.Model):
     __tablename__ = 'quiz_mode'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -59,10 +61,9 @@ class QuizMode(db.Model):
     score = db.Column(db.Float)
     result = db.Column(JSON) # Detailed result (last_quiz_result)
     time_spent = db.Column(db.Integer, default=0) # Duration in seconds
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
-class FlashcardMode(db.Model):
+class FlashcardMode(TimestampMixin, db.Model):
     __tablename__ = 'flashcard_mode'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -72,7 +73,7 @@ class FlashcardMode(db.Model):
     time_spent = db.Column(db.Integer, default=0) # Duration in seconds
 
 
-class User(UserMixin, db.Model):
+class User(UserMixin, TimestampMixin, db.Model):
     __tablename__ = 'users'
     
     username = db.Column(db.String(100), primary_key=True)
@@ -140,7 +141,7 @@ class User(UserMixin, db.Model):
 #     embedding = db.Column(Vector(1536)) # Assuming OpenAI Ada-002 dimension
 #     metadata_json = db.Column(JSONB)
 
-class Installation(db.Model):
+class Installation(TimestampMixin, db.Model):
     __tablename__ = 'installations'
 
     installation_id = db.Column(db.String(36), primary_key=True)  # UUID
@@ -149,14 +150,13 @@ class Installation(db.Model):
     gpu_model = db.Column(db.String(255))
     os_version = db.Column(db.String(255))
     install_method = db.Column(db.String(100))
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
     users = db.relationship('User', backref='installation', lazy=True)
     logins = db.relationship('Login', backref='installation', lazy=True)
     telemetry_logs = db.relationship('TelemetryLog', backref='installation', lazy=True)
 
 
-class TelemetryLog(db.Model):
+class TelemetryLog(TimestampMixin, db.Model):
     __tablename__ = 'telemetry_logs'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -167,7 +167,7 @@ class TelemetryLog(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
-class Feedback(db.Model):
+class Feedback(TimestampMixin, db.Model):
     __tablename__ = 'feedback'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -176,10 +176,9 @@ class Feedback(db.Model):
     content_reference = db.Column(db.String(255))  # ID of the generated content
     rating = db.Column(db.Integer)
     comment = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
-class LLMPerformance(db.Model):
+class LLMPerformance(TimestampMixin, db.Model):
     __tablename__ = 'llm_performance'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -192,7 +191,7 @@ class LLMPerformance(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
-class PlanRevision(db.Model):
+class PlanRevision(TimestampMixin, db.Model):
     __tablename__ = 'plan_revisions'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -204,7 +203,7 @@ class PlanRevision(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
-class Login(db.Model):
+class Login(TimestampMixin, db.Model):
     __tablename__ = 'logins'
 
     userid = db.Column(db.String(36), primary_key=True)
