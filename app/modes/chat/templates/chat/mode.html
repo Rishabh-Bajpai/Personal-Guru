@@ -72,4 +72,13 @@
 </div>
 
 <script src="{{ url_for('chat.static', filename='chat.js') }}"></script>
+<script src="{{ url_for('common.static', filename='js/time_tracker.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        new TimeTracker({
+            updateUrl: "{{ url_for('chat.update_time', topic_name=topic_name) }}",
+            topicName: "{{ topic_name }}"
+        });
+    });
+</script>
 {% endblock %}

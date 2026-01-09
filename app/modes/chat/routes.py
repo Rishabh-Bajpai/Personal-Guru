@@ -143,6 +143,21 @@ def send_message(topic_name):
 
     return redirect(url_for('chat.mode', topic_name=topic_name))
 
+@chat_bp.route('/<topic_name>/update_time', methods=['POST'])
+def update_time(topic_name):
+    try:
+        time_spent = int(request.form.get('time_spent', 0))
+    except ValueError:
+        time_spent = 0
+        
+    if time_spent > 0:
+        topic_data = load_topic(topic_name)
+        if topic_data:
+             chat_history = topic_data.get('chat_history', [])
+             save_chat_history(topic_name, chat_history, time_spent=time_spent)
+             
+    return '', 204
+
 @chat_bp.route('/<topic_name>/<int:step_index>', methods=['POST'])
 def chat(topic_name, step_index):
     user_question = request.json.get('question')

@@ -197,9 +197,16 @@
 
 {% block scripts %}
 <script src="{{ url_for('chapter.static', filename='learn_step.js') }}"></script>
+<script src="{{ url_for('common.static', filename='js/time_tracker.js') }}"></script>
 <script src="{{ url_for('common.static', filename='js/chat_popup.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        // Initialize Time Tracker
+        const timeTracker = new TimeTracker({
+            updateUrl: "{{ url_for('chapter.update_time', topic_name=topic.name, step_index=step_index) }}",
+            topicName: "{{ topic.name }}"
+        });
+
         initLearnStep({
             urls: {
                 execute_code: "{{ url_for('chapter.execute_code') }}",

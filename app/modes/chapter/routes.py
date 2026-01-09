@@ -224,6 +224,22 @@ def assess_step(topic_name, step_index):
                            next_step_index=step_index + 1,
                            total_steps=len(topic_data['plan']))
 
+@chapter_bp.route('/<topic_name>/update_time/<int:step_index>', methods=['POST'])
+def update_time(topic_name, step_index):
+    try:
+        time_spent = int(request.form.get('time_spent', 0))
+    except (ValueError, TypeError):
+        time_spent = 0
+
+    if time_spent > 0:
+        topic_data = load_topic(topic_name)
+        if topic_data and 'steps' in topic_data and 0 <= step_index < len(topic_data['steps']):
+            current_step_data = topic_data['steps'][step_index]
+            current_step_data['time_spent'] = (current_step_data.get('time_spent', 0) or 0) + time_spent
+            save_topic(topic_name, topic_data)
+            
+    return '', 204
+
 @chapter_bp.route('/reset_quiz/<topic_name>/<int:step_index>', methods=['POST'])
 def reset_quiz(topic_name, step_index):
     topic_data = load_topic(topic_name)

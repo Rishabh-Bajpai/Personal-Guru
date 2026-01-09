@@ -109,8 +109,8 @@ VIEWER_HTML = """
                         <th style="width: 30px; text-align: center; cursor: default;" onclick="event.stopPropagation()">
                             <input type="checkbox" id="selectAll">
                         </th>
-                        {% for col in columns %}
-                            <th onclick="sortTable({{ loop.index }})">{{ col }}</th>
+                        {% for header in headers %}
+                            <th onclick="sortTable({{ loop.index }})">{{ header }}</th>
                         {% endfor %}
                         <th style="cursor: default;">Actions</th>
                     </tr>
@@ -412,10 +412,19 @@ def db_viewer(model_name=None):
             row['_pk_value'] = getattr(item, pk_name)
             rows.append(row)
             
+        # Custom aliases for headers
+        headers = []
+        for c in columns:
+            if c == 'time_spent':
+                headers.append('time_spent (seconds)')
+            else:
+                headers.append(c)
+
         return render_template_string(VIEWER_HTML, 
                                       models=MODELS.keys(), 
                                       current_model=model_name, 
-                                      columns=columns, 
+                                      columns=columns,  # Use original keys for data lookup
+                                      headers=headers,  # Use aliases for display
                                       rows=rows,
                                       json_cols=json_cols)
     
