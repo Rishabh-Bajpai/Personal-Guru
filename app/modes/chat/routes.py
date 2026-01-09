@@ -105,6 +105,10 @@ def update_plan(topic_name):
 @chat_bp.route('/<topic_name>/send', methods=['POST'])
 def send_message(topic_name):
     user_message = request.form.get('message')
+    try:
+        time_spent = int(request.form.get('time_spent', 0))
+    except ValueError:
+        time_spent = 0
     
     # Prevent empty or whitespace-only messages from being processed
     if not user_message or not user_message.strip():
@@ -135,13 +139,14 @@ def send_message(topic_name):
         chat_history.append({"role": "assistant", "content": answer})
 
     # Save to DB
-    save_chat_history(topic_name, chat_history)
+    save_chat_history(topic_name, chat_history, time_spent=time_spent)
 
     return redirect(url_for('chat.mode', topic_name=topic_name))
 
 @chat_bp.route('/<topic_name>/<int:step_index>', methods=['POST'])
 def chat(topic_name, step_index):
     user_question = request.json.get('question')
+    time_spent = request.json.get('time_spent', 0)
     topic_data = load_topic(topic_name)
 
     if not user_question:
@@ -183,6 +188,8 @@ def chat(topic_name, step_index):
     
     # Save back to topic data
     current_step_data['chat_history'] = step_history
+    if time_spent:
+         current_step_data['time_spent'] = (current_step_data.get('time_spent', 0) or 0) + int(time_spent)
     # We must save the whole topic to persist the step update
     save_topic(topic_name, topic_data)
 

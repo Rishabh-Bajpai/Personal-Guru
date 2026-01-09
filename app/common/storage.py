@@ -55,7 +55,8 @@ def save_topic(topic_name, data):
                 user_answers=step_data.get('user_answers'),
                 feedback=step_data.get('feedback'),
                 score=step_data.get('score'),
-                chat_history=step_data.get('chat_history')
+                chat_history=step_data.get('chat_history'),
+                time_spent=step_data.get('time_spent', 0)
             )
             db.session.add(step)
             
@@ -68,7 +69,8 @@ def save_topic(topic_name, data):
                      topic=topic,
                      questions=q_data.get('questions'),
                      score=q_data.get('score'),
-                     result=data.get('last_quiz_result') # Storing the result here
+                     result=data.get('last_quiz_result'), # Storing the result here
+                     time_spent=q_data.get('time_spent', 0)
                  )
                  db.session.add(quiz)
 
@@ -77,7 +79,8 @@ def save_topic(topic_name, data):
             card = FlashcardMode(
                 topic=topic,
                 term=card_data.get('term'),
-                definition=card_data.get('definition')
+                definition=card_data.get('definition'),
+                time_spent=card_data.get('time_spent', 0)
             )
             db.session.add(card)
 
@@ -87,7 +90,7 @@ def save_topic(topic_name, data):
         logging.error(f"Error saving topic {topic_name}: {e}")
         raise e
 
-def save_chat_history(topic_name, history):
+def save_chat_history(topic_name, history, time_spent=0):
     """
     Save chat history for a topic.
     """
@@ -109,6 +112,9 @@ def save_chat_history(topic_name, history):
             db.session.add(chat_session)
         else:
             chat_session = topic.chat_mode
+
+        if time_spent > 0:
+            chat_session.time_spent = (chat_session.time_spent or 0) + time_spent
 
         # Update history
         from sqlalchemy.orm.attributes import flag_modified
@@ -163,6 +169,7 @@ def load_topic(topic_name):
                 "feedback": step_model.feedback,
                 "score": step_model.score,
                 "chat_history": step_model.chat_history or [],
+                "time_spent": step_model.time_spent or 0,
                 # Include derived fields if needed, e.g. teaching_material is actually 'content' in model?
                 # In model: content = db.Column(db.Text) # Markdown content
                 # In app: key is 'teaching_material'
@@ -185,7 +192,8 @@ def load_topic(topic_name):
         data["quiz"] = {
             "questions": latest_quiz.questions,
             "score": latest_quiz.score,
-            "date": latest_quiz.created_at.isoformat() if latest_quiz.created_at else None
+            "date": latest_quiz.created_at.isoformat() if latest_quiz.created_at else None,
+            "time_spent": latest_quiz.time_spent or 0
         }
         # Populate last_quiz_result from the quiz
         data["last_quiz_result"] = latest_quiz.result
@@ -194,9 +202,14 @@ def load_topic(topic_name):
     for card in topic.flashcards:
         data["flashcards"].append({
             "term": card.term,
-            "definition": card.definition
+            "definition": card.definition,
+            "time_spent": card.time_spent or 0
         })
         
+    # Chat Mode time
+    if topic.chat_mode:
+        data["chat_time_spent"] = topic.chat_mode.time_spent or 0
+
     return data
 
 def get_all_topics():

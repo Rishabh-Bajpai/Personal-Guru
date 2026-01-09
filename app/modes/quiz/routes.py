@@ -55,6 +55,12 @@ def submit_quiz(topic_name):
     questions = session.get('quiz_questions', [])
     num_correct = 0
     feedback_results = []
+    
+    # Capture time spent
+    try:
+        time_spent = int(request.form.get('time_spent', 0))
+    except ValueError:
+        time_spent = 0
 
     for i, question in enumerate(questions):
         user_answer_index = user_answers_indices[i]
@@ -101,12 +107,19 @@ def submit_quiz(topic_name):
             'topic_name': topic_name,
             'score': score,
             'feedback_results': feedback_results,
-            'date': datetime.date.today().isoformat()
+            'score': score,
+            'feedback_results': feedback_results,
+            'date': datetime.date.today().isoformat(),
+            'time_spent': time_spent
         }
         
         # Ensure the score is also saved to the Quiz table
         if topic_data.get('quiz'):
             topic_data['quiz']['score'] = score
+            # Accumulate or set time? Usually set for a single run, but let's accumulate if it's a session.
+            # But the user might be submitting the *total* time on page.
+            # Let's assume it's the time for this attempt.
+            topic_data['quiz']['time_spent'] = (topic_data['quiz'].get('time_spent', 0) or 0) + time_spent
 
         save_topic(topic_name, topic_data)
     

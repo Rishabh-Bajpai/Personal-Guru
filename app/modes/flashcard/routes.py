@@ -57,6 +57,24 @@ def generate_flashcards_route():
 
     return {"flashcards": cards}
 
+@flashcard_bp.route('/<topic_name>/update_progress', methods=['POST'])
+def update_progress(topic_name):
+    data = request.json
+    topic_data = load_topic(topic_name)
+    if not topic_data:
+        return {"error": "Topic not found"}, 404
+        
+    # Expecting data['flashcards'] to be a list of {term: ..., time_spent: ...}
+    updates = {item['term']: item.get('time_spent', 0) for item in data.get('flashcards', [])}
+    
+    for card in topic_data.get('flashcards', []):
+        if card['term'] in updates:
+            # Accumulate time
+            card['time_spent'] = (card.get('time_spent', 0) or 0) + updates[card['term']]
+            
+    save_topic(topic_name, topic_data)
+    return {"status": "success"}
+
 @flashcard_bp.route('/<topic_name>/export/pdf')
 def export_pdf(topic_name):
     topic_data = load_topic(topic_name)

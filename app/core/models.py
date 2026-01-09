@@ -30,6 +30,7 @@ class ChatMode(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False, unique=True)
     history = db.Column(JSON)
+    time_spent = db.Column(db.Integer, default=0) # Duration in seconds
     updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
 class StudyStep(db.Model):
@@ -47,6 +48,7 @@ class StudyStep(db.Model):
     feedback = db.Column(JSON)
     score = db.Column(db.Float)
     chat_history = db.Column(JSON) # Store chat history for this step
+    time_spent = db.Column(db.Integer, default=0) # Duration in seconds
     
 class QuizMode(db.Model):
     __tablename__ = 'quiz_mode'
@@ -56,6 +58,7 @@ class QuizMode(db.Model):
     questions = db.Column(JSON) # List of question objects
     score = db.Column(db.Float)
     result = db.Column(JSON) # Detailed result (last_quiz_result)
+    time_spent = db.Column(db.Integer, default=0) # Duration in seconds
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
@@ -66,6 +69,7 @@ class FlashcardMode(db.Model):
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
     term = db.Column(db.String(255), nullable=False)
     definition = db.Column(db.Text, nullable=False)
+    time_spent = db.Column(db.Integer, default=0) # Duration in seconds
 
 
 class User(UserMixin, db.Model):

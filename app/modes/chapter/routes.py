@@ -178,6 +178,11 @@ def assess_step(topic_name, step_index):
     current_step_data = topic_data['steps'][step_index]
     questions = current_step_data.get('questions', {}).get('questions', [])
     user_answers = [request.form.get(f'option_{i}') for i in range(len(questions))]
+    
+    try:
+        time_spent = int(request.form.get('time_spent', 0))
+    except ValueError:
+        time_spent = 0
 
     num_correct = 0
     feedback_results = []
@@ -200,6 +205,8 @@ def assess_step(topic_name, step_index):
     answered_questions_count = len([ua for ua in user_answers if ua])
     score = (num_correct / answered_questions_count * 100) if answered_questions_count > 0 else 0
     current_step_data['score'] = score
+    if time_spent:
+         current_step_data['time_spent'] = (current_step_data.get('time_spent', 0) or 0) + time_spent
 
     if score < 50 and incorrect_questions:
         session['incorrect_questions'] = incorrect_questions
