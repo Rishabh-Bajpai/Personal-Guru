@@ -141,7 +141,8 @@ def signup():
         db.session.commit()
 
         login_user(new_user)
-        return redirect(url_for('main.user_profile'))
+        # Redirect with new_user flag
+        return redirect(url_for('main.user_profile', new_user='true'))
 
     return render_template('signup.html')
 
@@ -158,6 +159,7 @@ def user_profile():
     from app.core.extensions import db
 
     user = current_user
+    show_terms = request.args.get('new_user') == 'true'
 
     if request.method == 'POST':
         user.name = request.form.get('name')
@@ -176,7 +178,7 @@ def user_profile():
         db.session.commit()
         return redirect(url_for('main.index'))
 
-    return render_template('user_profile.html', user=user)
+    return render_template('user_profile.html', user=user, show_terms=show_terms)
 
 
 @main_bp.route('/delete/<topic_name>')
