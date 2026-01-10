@@ -129,7 +129,7 @@ def send_message(topic_name):
     user_message = request.form.get('message')
     try:
         time_spent = int(request.form.get('time_spent', 0))
-    except ValueError:
+    except (ValueError, TypeError):
         time_spent = 0
     
     # Prevent empty or whitespace-only messages from being processed
@@ -211,7 +211,7 @@ def send_message(topic_name):
 def update_time(topic_name):
     try:
         time_spent = int(request.form.get('time_spent', 0))
-    except ValueError:
+    except (ValueError, TypeError):
         time_spent = 0
         
     if time_spent > 0:
@@ -227,7 +227,7 @@ def chat(topic_name, step_index):
     user_question = request.json.get('question')
     try:
         time_spent = int(request.json.get('time_spent', 0))
-    except ValueError:
+    except (ValueError, TypeError):
         time_spent = 0
     topic_data = load_topic(topic_name)
 

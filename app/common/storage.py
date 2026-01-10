@@ -73,7 +73,7 @@ def save_topic(topic_name, data):
             else:
                 # Create new
                 step = ChapterMode(
-                    topics=topic,
+                    topic_id=topic.id,
                     step_index=step_index,
                     title=step_title,
                     content=content,
@@ -243,7 +243,7 @@ def save_chat_history(topic_name, history, history_summary=None, time_spent=0):
         from app.core.models import ChatMode
 
         if not topic.chat_mode:
-            chat_session = ChatMode(topics=topic, history=[])
+            chat_session = ChatMode(topic_id=topic.id, history=[])
             db.session.add(chat_session)
         else:
             chat_session = topic.chat_mode
@@ -335,7 +335,6 @@ def load_topic(topic_name):
                 "content": step_model.content,
                 "questions": step_model.questions,
                 "user_answers": step_model.user_answers,
-                # "feedback": step_model.feedback, # REMOVED column
                 "score": step_model.score,
                 "chat_history": step_model.chat_history or [],
                 "time_spent": step_model.time_spent or 0,

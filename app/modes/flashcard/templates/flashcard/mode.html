@@ -51,16 +51,6 @@
 <script src="{{ url_for('common.static', filename='js/time_tracker.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Flashcard mode has a special endpoint for detailed updates, 
-        // but we also want generic page time tracking? 
-        // The user requirement is 'count as soon as user gets out of that mode'.
-        // The generic time tracker does exactly that.
-        // However, flashcard route uses /update_progress which takes JSON body.
-        // TimeTracker sends FormData by default to separate /update_time endpoints.
-        // We haven't created a /update_time for flashcard_bp yet.
-        // Wait, I see I missed adding /update_time to flashcard routes in the previous step.
-        // I should add it now.
-
         new TimeTracker({
             // I need to add this route to flashcard/routes.py first
             updateUrl: "{{ url_for('flashcard.update_time', topic_name=topic_name) }}",

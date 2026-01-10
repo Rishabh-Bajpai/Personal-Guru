@@ -49,9 +49,6 @@ def test_call_llm(logger):
     assert isinstance(response, str)
     assert len(response) > 0
 
-
-    assert len(response) > 0
-
 @requires_llm
 def test_quiz_agent(logger):
     """Test that the QuizAgent can generate a quiz."""

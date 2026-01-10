@@ -77,20 +77,6 @@ def update_time(topic_name):
     if time_spent > 0:
         topic_data = load_topic(topic_name)
         if topic_data and topic_data.get('flashcards'):
-             # Accumulate time generally for the topic or distribute?
-             # FlashcardMode table has time_spent per card.
-             # If we just track "page time", where does it go?
-             # We can distribute it among all cards or just pick the first one?
-             # OR, we should rely on update_progress for specific cards.
-             # BUT the user asked for "time spent in that mode".
-             # If they just stare at the screen, we should count it.
-             # Let's add it to the first card as a fallback if no specific interaction?
-             # Or maybe generic topic time? Topic doesn't have time_spent.
-             # Let's just return 204 for now as the update_progress covers active use.
-             # Actually, let's distribute it evenly or add to first card to not lose it.
-             # Better: do nothing if we want to rely on detailed tracking, 
-             # but `time_tracker.js` is generic.
-             # Let's add it to the first flashcard to ensure it is captured.
              if len(topic_data['flashcards']) > 0:
                  topic_data['flashcards'][0]['time_spent'] = (topic_data['flashcards'][0].get('time_spent', 0) or 0) + time_spent
                  save_topic(topic_name, topic_data)
