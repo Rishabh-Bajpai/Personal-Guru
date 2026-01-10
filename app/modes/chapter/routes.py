@@ -317,6 +317,11 @@ def generate_podcast_route(topic_name, step_index):
          return {"error": error}, 500
          
     audio_url = url_for('static', filename=filename)
+    
+    # Save the podcast path to the step
+    current_step_data['podcast_audio_path'] = filename
+    save_topic(topic_name, topic_data)
+    
     return {"audio_url": audio_url}
 
 @chapter_bp.route('/complete/<topic_name>')

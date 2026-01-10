@@ -51,8 +51,24 @@ def save_topic(topic_name, data):
                 step = existing_steps_map[step_index]
                 step.title = step_title
                 step.content = content
+                step.podcast_audio_path = step_data.get('podcast_audio_path')
                 step.questions = step_data.get('questions')
                 step.user_answers = step_data.get('user_answers')
+                db.session.add(step)
+            else:
+                # Create new
+                step = ChapterMode(
+                    topics=topic,
+                    step_index=step_index,
+                    title=step_title,
+                    content=content,
+                    podcast_audio_path=step_data.get('podcast_audio_path'),
+                    questions=step_data.get('questions'),
+                    user_answers=step_data.get('user_answers'),
+                    score=step_data.get('score'),
+                    chat_history=step_data.get('chat_history'),
+                    time_spent=step_data.get('time_spent', 0)
+                )
                 db.session.add(step)
             
             # --- Handle Feedback (Moved to dedicated table) ---
@@ -249,7 +265,8 @@ def load_topic(topic_name):
                 # Include derived fields if needed, e.g. teaching_material is actually 'content' in model?
                 # In model: content = db.Column(db.Text) # Markdown content
                 # In app: key is 'teaching_material'
-                "teaching_material": step_model.content 
+                "teaching_material": step_model.content,
+                "podcast_audio_path": step_model.podcast_audio_path 
             })
             
             # Populate feedback from Feedback table

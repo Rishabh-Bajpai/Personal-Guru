@@ -47,6 +47,7 @@ class ChapterMode(TimestampMixin, db.Model):
     step_index = db.Column(db.Integer, nullable=False)
     title = db.Column(db.String(255))
     content = db.Column(db.Text) # Markdown content
+    podcast_audio_path = db.Column(db.String(512)) # path e.g. "/data/audio/podcast_<user_id><topic><step_id>.mp3"
     
     # Questions and Feedback stored as JSON
     questions = db.Column(JSON) 
