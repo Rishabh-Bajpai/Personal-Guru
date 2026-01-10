@@ -36,7 +36,7 @@ MODELS = {
     'Installation': models.Installation,
     'TelemetryLog': models.TelemetryLog,
     'Feedback': models.Feedback,
-    'LLMPerformance': models.LLMPerformance,
+    'AIModelPerformance': models.AIModelPerformance,
     'PlanRevision': models.PlanRevision,
     'Login': models.Login
 }

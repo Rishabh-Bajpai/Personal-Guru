@@ -15,18 +15,18 @@ class Topic(TimestampMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(36), db.ForeignKey('logins.userid'), nullable=False)
     name = db.Column(db.String(255), nullable=False)
+    study_plan = db.Column(JSON) # Storing list of strings as JSON
     
     __table_args__ = (
         db.UniqueConstraint('user_id', 'name', name='_user_topic_uc'),
     )
     
     # Relationships
-    study_plan = db.Column(JSON) # Storing list of strings as JSON
-    steps = db.relationship('ChapterMode', backref='topic', cascade='all, delete-orphan')
-    quizzes = db.relationship('QuizMode', backref='topic', cascade='all, delete-orphan')
-    flashcards = db.relationship('FlashcardMode', backref='topic', cascade='all, delete-orphan')
-    chat_mode = db.relationship('ChatMode', backref='topic', uselist=False, cascade='all, delete-orphan')
-    plan_revisions = db.relationship('PlanRevision', backref='topic', lazy=True)
+    steps = db.relationship('ChapterMode', backref='topics', cascade='all, delete-orphan')
+    quizzes = db.relationship('QuizMode', backref='topics', uselist=False, cascade='all, delete-orphan')
+    flashcards = db.relationship('FlashcardMode', backref='topics', cascade='all, delete-orphan')
+    chat_mode = db.relationship('ChatMode', backref='topics', uselist=False, cascade='all, delete-orphan')
+    plan_revisions = db.relationship('PlanRevision', backref='topics', uselist=False, cascade='all, delete-orphan')
 
 class ChatMode(TimestampMixin, db.Model):
     __tablename__ = 'chat_mode'
@@ -48,6 +48,7 @@ class ChapterMode(TimestampMixin, db.Model):
     # Questions and Feedback stored as JSON
     questions = db.Column(JSON) 
     user_answers = db.Column(JSON)
+    # TODO: Remove this field as we have a dedicated Feedback table now
     feedback = db.Column(JSON)
     score = db.Column(db.Float)
     chat_history = db.Column(JSON) # Store chat history for this step
@@ -57,8 +58,9 @@ class QuizMode(TimestampMixin, db.Model):
     __tablename__ = 'quiz_mode'
     
     id = db.Column(db.Integer, primary_key=True)
-    topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
-    questions = db.Column(JSON) # List of question objects
+    # TODO: Remove unique constraint to allow multiple quizzes per topic
+    topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False, unique=True)
+    questions = db.Column(JSON, nullable=False) # List of question objects
     score = db.Column(db.Float)
     result = db.Column(JSON) # Detailed result (last_quiz_result)
     time_spent = db.Column(db.Integer, default=0) # Duration in seconds
@@ -77,12 +79,13 @@ class FlashcardMode(TimestampMixin, db.Model):
 class User(UserMixin, TimestampMixin, db.Model):
     __tablename__ = 'users'
     
-    username = db.Column(db.String(100), primary_key=True)
-    login = db.relationship('Login', backref='user_profile', uselist=False)
-    password_hash = db.Column(db.String(255))
-    name = db.Column(db.String(100))
+    id = db.Column(db.Integer, primary_key=True)
+    login_id = db.Column(db.String(36), db.ForeignKey('logins.userid'))
+    login = db.relationship('Login', back_populates='user_profile', uselist=False)
+    
     age = db.Column(db.Integer)
     country = db.Column(db.String(100))
+    #TODO: Change primary_language to an array to support multilingual users
     primary_language = db.Column(db.String(100))
     education_level = db.Column(db.String(100))
     field_of_study = db.Column(db.String(100))
@@ -92,22 +95,13 @@ class User(UserMixin, TimestampMixin, db.Model):
     learning_style = db.Column(db.String(100))
     time_commitment = db.Column(db.String(100))
     preferred_format = db.Column(db.String(100))
-    installation_id = db.Column(db.String(36), db.ForeignKey('installations.installation_id'))
 
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
-    def get_id(self):
-        return self.username
-
+    # TODO: Update strings below to match any changes in user profile fields
     def to_context_string(self):
         """Generates a text description of the user profile for LLM context."""
         parts = []
-        if self.name:
-            parts.append(f"Name: {self.name}")
+        if self.login and self.login.name: 
+            parts.append(f"Name: {self.login.name}") # TODO Move to  Logins table
         if self.age:
             parts.append(f"Age: {self.age}")
         if self.country:
@@ -140,27 +134,25 @@ class Installation(TimestampMixin, db.Model):
 
     installation_id = db.Column(db.String(36), primary_key=True)  # UUID
     cpu_cores = db.Column(db.Integer)
-    ram_gb = db.Column(db.Float)
+    ram_gb = db.Column(db.Integer)
     gpu_model = db.Column(db.String(255))
     os_version = db.Column(db.String(255))
-    install_method = db.Column(db.String(100))
+    install_method = db.Column(db.String(100), nullable=False)  # 'docker', 'local', 'cloud'
 
-    users = db.relationship('User', backref='installation', lazy=True)
-    logins = db.relationship('Login', backref='installation', lazy=True)
-    telemetry_logs = db.relationship('TelemetryLog', backref='installation', lazy=True)
+    # Relationships
+    logins = db.relationship('Login', backref='installations', cascade='all, delete-orphan')
 
-# TODO: both id and session_id should be kept.  session_id should come from Flask and id MUST be unique.
+# TODO: both id and session_id should be kept. session_id should come from Flask and id MUST be unique.
 class TelemetryLog(TimestampMixin, db.Model):
     __tablename__ = 'telemetry_logs'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(36), db.ForeignKey('logins.userid'))
-    installation_id = db.Column(db.String(36), db.ForeignKey('installations.installation_id'), nullable=False)
-    session_id = db.Column(db.String(36))  # UUID
-    event_type = db.Column(db.String(100), nullable=False)
-    triggers = db.Column(JSON) # events, number of lines
-    payload = db.Column(JSON)  # TODO: Define content structure. Stores latency, error logs, quiz scores, etc.
-    timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    user_id = db.Column(db.String(36), db.ForeignKey('logins.userid'), nullable=False)
+    session_id = db.Column(db.String(36), nullable=False)  # UUID
+    event_type = db.Column(db.String(100), nullable=False) # TODO: event_tags like 'content_generated', 'quiz_completed', etc.
+    triggers = db.Column(JSON, nullable=False) # event triggers like 'user_action', 'auto_save', etc.
+    payload = db.Column(JSON, nullable=False)  # TODO: Define content structure. Stores latency, error logs, quiz scores, etc.
+    timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
 
 
 class Feedback(TimestampMixin, db.Model):
@@ -169,17 +161,17 @@ class Feedback(TimestampMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(36), db.ForeignKey('logins.userid'), nullable=False)
     feedback_type = db.Column(db.String(50), nullable=False)  # 'form', 'in_place'
-    content_reference = db.Column(db.String(255))  # ID of the generated content
+    content_reference = db.Column(db.String(255))  # TODO: Define content tag like 'chapter_1', 'quiz_2', etc. Use topic_id, step_index etc. to uniquely identify content
     rating = db.Column(db.Integer)
     comment = db.Column(db.Text)
 
 
-class LLMPerformance(TimestampMixin, db.Model):
-    __tablename__ = 'llm_performance'
+class AIModelPerformance(TimestampMixin, db.Model):
+    __tablename__ = 'ai_model_performance'
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(36), db.ForeignKey('logins.userid'), nullable=False)
-    feature = db.Column(db.String(100))
+    model_type = db.Column(db.String(100), nullable=False)  # 'LLM', 'Embedding', etc.
     model_name = db.Column(db.String(100))
     latency_ms = db.Column(db.Integer)
     input_tokens = db.Column(db.Integer)
@@ -193,24 +185,37 @@ class PlanRevision(TimestampMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
     user_id = db.Column(db.String(36), db.ForeignKey('logins.userid'), nullable=False)
-    reason = db.Column(db.Text)
+    reason = db.Column(db.Text) # Reason for revision, e.g., "User requested more advanced topics"
     old_plan_json = db.Column(JSON)
     new_plan_json = db.Column(JSON)
     timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
-class Login(TimestampMixin, db.Model):
+class Login(UserMixin, TimestampMixin, db.Model):
     __tablename__ = 'logins'
 
-    userid = db.Column(db.String(36), primary_key=True)
-    username = db.Column(db.String(100), db.ForeignKey('users.username'), unique=True, nullable=False)
+    # TODO: Append installation_id to userid to ensure uniqueness across installations
+    userid = db.Column(db.String(36), primary_key=True) 
+    username = db.Column(db.String(100), unique=True, nullable=False)
     name = db.Column(db.String(100))
-    password = db.Column(db.String(255))
+    password = db.Column(db.String(255)) # TODO: Store in hashed format
     installation_id = db.Column(db.String(36), db.ForeignKey('installations.installation_id'))
 
+    #TODO: Add a function to append installation_id to userid upon creation
+
+    def set_password(self, password):
+        self.password = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password, password)
+
+    def get_id(self):
+        return self.userid
+
     # Relationships
-    topics = db.relationship('Topic', backref='user_login', lazy=True)
-    feedbacks = db.relationship('Feedback', backref='user_login', lazy=True)
-    telemetry_logs = db.relationship('TelemetryLog', backref='user_login', lazy=True)
-    llm_performances = db.relationship('LLMPerformance', backref='user_login', lazy=True)
-    plan_revisions = db.relationship('PlanRevision', backref='user_login', lazy=True)
+    topics = db.relationship('Topic', backref='logins', cascade='all, delete-orphan')
+    feedbacks = db.relationship('Feedback', backref='logins', cascade='all, delete-orphan')
+    telemetry_logs = db.relationship('TelemetryLog', backref='logins', cascade='all, delete-orphan')
+    llm_performances = db.relationship('AIModelPerformance', backref='logins', cascade='all, delete-orphan')
+    plan_revisions = db.relationship('PlanRevision', backref='logins', cascade='all, delete-orphan')
+    user_profile = db.relationship('User', back_populates='login', uselist=False)

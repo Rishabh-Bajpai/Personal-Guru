@@ -98,8 +98,8 @@ def login():
         username = request.form['username']
         password = request.form['password']
         
-        from app.core.models import User
-        user = User.query.filter_by(username=username).first()
+        from app.core.models import Login
+        user = Login.query.filter_by(username=username).first()
         
         if user is None or not user.check_password(password):
             return render_template('login.html', error='Invalid username or password')
@@ -118,19 +118,25 @@ def signup():
         username = request.form['username']
         password = request.form['password']
         
-        from app.core.models import User
+        from app.core.models import User, Login
         from app.core.extensions import db
+        import uuid
         
-        user = User.query.filter_by(username=username).first()
-        if user:
+        login_check = Login.query.filter_by(username=username).first()
+        if login_check:
             return render_template('signup.html', error='Username already exists')
             
-        new_user = User(username=username)
-        new_user.set_password(password)
+        uid = str(uuid.uuid4())
+        new_login = Login(userid=uid, username=username, name=username)
+        new_login.set_password(password)
+        db.session.add(new_login)
+        
+        new_user = User(login_id=uid) # Profile details separate
         db.session.add(new_user)
+        
         db.session.commit()
         
-        login_user(new_user)
+        login_user(new_login)
         return redirect(url_for('main.user_profile'))
         
     return render_template('signup.html')
@@ -145,10 +151,10 @@ def logout():
 def user_profile():
     from app.core.extensions import db
     
-    user = current_user
+    user = current_user.user_profile
         
     if request.method == 'POST':
-        user.name = request.form.get('name')
+        user.login.name = request.form.get('name')
         user.age = request.form.get('age') or None
         user.country = request.form.get('country')
         user.primary_language = request.form.get('primary_language')
@@ -180,7 +186,7 @@ def suggest_topics():
     from flask import jsonify
     
     user = current_user
-    user_profile = user.to_context_string()
+    user_profile = current_user.user_profile.to_context_string() if current_user.user_profile else ""
     past_topics = get_all_topics() # This gets all topics for the specific user because of how storage works (folder based) or we might need to verify isolation. 
     # Actually storage.get_all_topics() scans the directory. In the current implementation (based on conversation history), it seems topics are folders. 
     # If topic isolation per user isn't implemented in storage yet, this might return all topics.

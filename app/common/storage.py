@@ -17,9 +17,9 @@ def save_topic(topic_name, data):
              logging.warning(f"Attempt to save topic {topic_name} without auth user.")
              raise Exception("User must be logged in to save topic.")
 
-        topic = Topic.query.filter_by(name=topic_name, user_id=current_user.username).first()
+        topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
         if not topic:
-            topic = Topic(name=topic_name, user_id=current_user.username)
+            topic = Topic(name=topic_name, user_id=current_user.userid)
             db.session.add(topic)
         
         # Update topic fields
@@ -60,7 +60,7 @@ def save_topic(topic_name, data):
             else:
                 # Create new
                 step = ChapterMode(
-                    topic=topic,
+                    topics=topic,
                     step_index=step_index,
                     title=step_title,
                     content=content,
@@ -84,7 +84,7 @@ def save_topic(topic_name, data):
              q_data = data.get('quiz')
              if q_data:
                  # Check existing quizzes
-                 existing_quiz = topic.quizzes[-1] if topic.quizzes else None
+                 existing_quiz = topic.quizzes if topic.quizzes else None
                  
                  if existing_quiz:
                      existing_quiz.questions = q_data.get('questions')
@@ -93,7 +93,7 @@ def save_topic(topic_name, data):
                      existing_quiz.time_spent = q_data.get('time_spent', 0)
                  else:
                      quiz = QuizMode(
-                         topic=topic,
+                         topics=topic,
                          questions=q_data.get('questions'),
                          score=q_data.get('score'),
                          result=data.get('last_quiz_result'), 
@@ -121,7 +121,7 @@ def save_topic(topic_name, data):
             else:
                 # Create
                 card = FlashcardMode(
-                    topic=topic,
+                    topics=topic,
                     term=term,
                     definition=card_data.get('definition'),
                     time_spent=card_data.get('time_spent', 0)
@@ -148,16 +148,16 @@ def save_chat_history(topic_name, history, time_spent=0):
              logging.warning(f"Attempt to save chat history {topic_name} without auth.")
              raise Exception("User must be logged in.")
 
-        topic = Topic.query.filter_by(name=topic_name, user_id=current_user.username).first()
+        topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
         if not topic:
-            topic = Topic(name=topic_name, user_id=current_user.username)
+            topic = Topic(name=topic_name, user_id=current_user.userid)
             db.session.add(topic)
             db.session.flush() # Ensure ID exists
 
         from app.core.models import ChatMode
 
         if not topic.chat_mode:
-            chat_session = ChatMode(topic=topic, history=[])
+            chat_session = ChatMode(topics=topic, history=[])
             db.session.add(chat_session)
         else:
             chat_session = topic.chat_mode
@@ -184,7 +184,7 @@ def load_topic(topic_name):
     if not current_user.is_authenticated:
         return None
 
-    topic = Topic.query.filter_by(name=topic_name, user_id=current_user.username).first()
+    topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
     if not topic:
         return None
         
@@ -242,10 +242,8 @@ def load_topic(topic_name):
     # QuizMode
     # Assuming one quiz per topic for now, similar to previous JSON usually
     if topic.quizzes:
-        # Check if models.py defined strict 1-to-many. It did.
-        # But if the app treats it as a single object...
-        # I'll take the latest one.
-        latest_quiz = topic.quizzes[-1] 
+        # Quiz is 1-to-1
+        latest_quiz = topic.quizzes 
         data["quiz"] = {
             "questions": latest_quiz.questions,
             "score": latest_quiz.score,
@@ -273,14 +271,14 @@ def get_all_topics():
     if not current_user.is_authenticated:
         return []
 
-    topics = Topic.query.with_entities(Topic.name).filter_by(user_id=current_user.username).all()
+    topics = Topic.query.with_entities(Topic.name).filter_by(user_id=current_user.userid).all()
     return [t.name for t in topics]
 
 def delete_topic(topic_name):
     if not current_user.is_authenticated:
         return 
 
-    topic = Topic.query.filter_by(name=topic_name, user_id=current_user.username).first()
+    topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
     if topic:
         db.session.delete(topic)
         db.session.commit()

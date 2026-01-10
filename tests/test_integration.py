@@ -183,18 +183,32 @@ def test_chat_session_persistence(logger, app):
     with app.app_context():
         # Ensure user exists (created in conftest auth_client logic or manually here)
         # Since we use app_context, creating fresh.
-        if not User.query.get('testuser'):
-            u = User(username='testuser')
-            u.set_password('password')
-            db.session.add(u)
+        if not User.query.first(): # Check if empty
+             pass 
+             
+        from app.core.models import Login
+        if not Login.query.filter_by(username='testuser').first():
+            import uuid
+            uid = str(uuid.uuid4())
+            login = Login(userid=uid, username='testuser', name='Test User')
+            login.set_password('password')
+            db.session.add(login)
+            
+            user = User(login_id=uid)
+            db.session.add(user)
             db.session.commit()
             
         # Mock current_user
         from unittest.mock import patch
         
+        # Get real ID
+        real_login = Login.query.filter_by(username='testuser').first()
+        real_uid = real_login.userid
+
         # Patching current_user in app.common.storage module scope
         with patch('app.common.storage.current_user') as mock_user:
             mock_user.is_authenticated = True
+            mock_user.userid = real_uid
             mock_user.username = 'testuser'
             
             topic_name = "Session Test"
@@ -219,14 +233,28 @@ def test_quiz_result_persistence(logger, app):
     
     with app.app_context():
         # Ensure user exists
-        if not User.query.get('testuser'):
-            u = User(username='testuser')
-            u.set_password('password')
-            db.session.add(u)
+        if not User.query.first(): # Check if empty
+             pass 
+             
+        from app.core.models import Login
+        if not Login.query.filter_by(username='testuser').first():
+            import uuid
+            uid = str(uuid.uuid4())
+            login = Login(userid=uid, username='testuser', name='Test User')
+            login.set_password('password')
+            db.session.add(login)
+            
+            user = User(login_id=uid)
+            db.session.add(user)
             db.session.commit()
+            
+        # Get real ID
+        real_login = Login.query.filter_by(username='testuser').first()
+        real_uid = real_login.userid
             
         with patch('app.common.storage.current_user') as mock_user:
             mock_user.is_authenticated = True
+            mock_user.userid = real_uid
             mock_user.username = 'testuser'
             
             topic_name = "Quiz Persistence Test"
@@ -246,9 +274,8 @@ def test_quiz_result_persistence(logger, app):
             # Verify DB
             t = Topic.query.filter_by(name=topic_name).first()
             assert t is not None
-            assert len(t.quizzes) == 1
-            idx = -1
-            q = t.quizzes[idx]
+            assert t.quizzes is not None
+            q = t.quizzes
             assert q.result is not None
             assert q.result['score'] == 90
             assert q.result['details'] == "Great job"
