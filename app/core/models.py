@@ -25,11 +25,11 @@ class Topic(TimestampMixin, db.Model):
     )
     
     # Relationships
-    steps = db.relationship('ChapterMode', backref='topics', cascade='all, delete-orphan')
-    quizzes = db.relationship('QuizMode', backref='topics', uselist=False, cascade='all, delete-orphan')
-    flashcards = db.relationship('FlashcardMode', backref='topics', cascade='all, delete-orphan')
-    chat_mode = db.relationship('ChatMode', backref='topics', uselist=False, cascade='all, delete-orphan')
-    plan_revisions = db.relationship('PlanRevision', backref='topics', uselist=False, cascade='all, delete-orphan')
+    steps = db.relationship('ChapterMode', backref='topic', cascade='all, delete-orphan')
+    quizzes = db.relationship('QuizMode', backref='topic', uselist=False, cascade='all, delete-orphan')
+    flashcards = db.relationship('FlashcardMode', backref='topic', cascade='all, delete-orphan')
+    chat_mode = db.relationship('ChatMode', backref='topic', uselist=False, cascade='all, delete-orphan')
+    plan_revisions = db.relationship('PlanRevision', backref='topic', uselist=False, cascade='all, delete-orphan')
 
 class ChatMode(TimestampMixin, db.Model):
     __tablename__ = 'chat_mode'
@@ -58,7 +58,6 @@ class ChapterMode(TimestampMixin, db.Model):
     
     # Questions and Feedback stored as JSON
     questions = db.Column(JSON)
-    user_answers = db.Column(JSON)
     user_answers = db.Column(JSON)
     score = db.Column(db.Float)
     chat_history = db.Column(JSON) # Store chat history for this step
@@ -156,7 +155,7 @@ class Installation(TimestampMixin, db.Model):
     install_method = db.Column(db.String(100), nullable=False)  # 'docker', 'local', 'cloud'
 
     # Relationships
-    logins = db.relationship('Login', backref='installations', cascade='all, delete-orphan')
+    logins = db.relationship('Login', backref='installation', cascade='all, delete-orphan')
 
 # TODO: both id and session_id should be kept. session_id should come from Flask and id MUST be unique.
 class TelemetryLog(TimestampMixin, db.Model):
@@ -234,9 +233,9 @@ class Login(UserMixin, TimestampMixin, db.Model):
         return self.userid
 
     # Relationships
-    topics = db.relationship('Topic', backref='logins', cascade='all, delete-orphan')
-    feedbacks = db.relationship('Feedback', backref='logins', cascade='all, delete-orphan')
-    telemetry_logs = db.relationship('TelemetryLog', backref='logins', cascade='all, delete-orphan')
-    llm_performances = db.relationship('AIModelPerformance', backref='logins', cascade='all, delete-orphan')
-    plan_revisions = db.relationship('PlanRevision', backref='logins', cascade='all, delete-orphan')
+    topics = db.relationship('Topic', backref='login', cascade='all, delete-orphan')
+    feedbacks = db.relationship('Feedback', backref='login', cascade='all, delete-orphan')
+    telemetry_logs = db.relationship('TelemetryLog', backref='login', cascade='all, delete-orphan')
+    llm_performances = db.relationship('AIModelPerformance', backref='login', cascade='all, delete-orphan')
+    plan_revisions = db.relationship('PlanRevision', backref='login', cascade='all, delete-orphan')
     user_profile = db.relationship('User', back_populates='login', uselist=False)

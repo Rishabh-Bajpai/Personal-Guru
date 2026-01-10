@@ -202,7 +202,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // Initialize Time Tracker
-        const timeTracker = new TimeTracker({
+        new TimeTracker({
             updateUrl: "{{ url_for('chapter.update_time', topic_name=topic.name, step_index=step_index) }}",
             topicName: "{{ topic.name }}"
         });

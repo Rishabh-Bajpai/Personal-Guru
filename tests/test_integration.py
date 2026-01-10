@@ -76,9 +76,6 @@ def test_quiz_agent(logger):
     assert len(quiz["questions"]) == 2
 
 
-    assert len(quiz["questions"]) == 2
-
-
 @requires_llm
 def test_planner_agent(logger):
     """Test that the PlannerAgent can generate a study plan."""
@@ -94,10 +91,10 @@ def test_planner_agent(logger):
     assert len(plan) > 0
 
 
-    assert len(plan) > 0
-
-
 @requires_llm
+def test_feedback_agent(logger):
+    """Test that the FeedbackAgent can generate feedback."""
+    logger.section("test_feedback_agent")
 def test_feedback_agent(logger):
     """Test that the FeedbackAgent can generate feedback."""
     logger.section("test_feedback_agent")
@@ -142,9 +139,6 @@ def test_chapter_teaching_agent(logger):
     assert material == "Mocked Teaching Material"
 
 
-    assert material == "Mocked Teaching Material"
-
-
 @requires_llm
 def test_flashcard_teaching_agent(logger):
     """Test that the FlashcardTeachingAgent can generate flashcards."""
@@ -160,7 +154,6 @@ def test_flashcard_teaching_agent(logger):
     assert len(flashcards) > 0
 
 
-    assert len(flashcards) > 0
 
 
 @requires_llm
@@ -196,9 +189,6 @@ def test_chat_session_persistence(logger, app):
     with app.app_context():
         # Ensure user exists (created in conftest auth_client logic or manually here)
         # Since we use app_context, creating fresh.
-        if not User.query.first(): # Check if empty
-             pass 
-             
         from app.core.models import Login
         if not Login.query.filter_by(username='testuser').first():
             import uuid
@@ -246,9 +236,6 @@ def test_quiz_result_persistence(logger, app):
     
     with app.app_context():
         # Ensure user exists
-        if not User.query.first(): # Check if empty
-             pass 
-             
         from app.core.models import Login
         if not Login.query.filter_by(username='testuser').first():
             import uuid
@@ -287,8 +274,8 @@ def test_quiz_result_persistence(logger, app):
             # Verify DB
             t = Topic.query.filter_by(name=topic_name).first()
             assert t is not None
-            assert t.quizzes is not None
             q = t.quizzes
+            assert q is not None
             assert q.result is not None
             assert q.result['score'] == 90
             assert q.result['details'] == "Great job"

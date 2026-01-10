@@ -108,7 +108,6 @@ def update_database():
                             logger.info("      -> Dropped successfully.")
                         except Exception as e:
                             logger.error(f"      -> FAILED to drop column: {e}")
-                            logger.error(f"      -> FAILED to drop column: {e}")
                             db.session.rollback()
 
             # Special check for 'feedback' column removal in ChapterMode (moved to table)
@@ -148,8 +147,6 @@ def update_database():
                             db.session.commit()
                             logger.info("      -> Dropped successfully.")
                         except Exception as e:
-                            logger.error(f"      -> FAILED to drop column: {e}")
-                            db.session.rollback()
                             logger.error(f"      -> FAILED to drop column: {e}")
                             db.session.rollback()
 

@@ -225,7 +225,10 @@ def update_time(topic_name):
 @chat_bp.route('/<topic_name>/<int:step_index>', methods=['POST'])
 def chat(topic_name, step_index):
     user_question = request.json.get('question')
-    time_spent = request.json.get('time_spent', 0)
+    try:
+        time_spent = int(request.json.get('time_spent', 0))
+    except ValueError:
+        time_spent = 0
     topic_data = load_topic(topic_name)
 
     if not user_question:
