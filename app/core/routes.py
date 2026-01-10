@@ -118,7 +118,7 @@ def signup():
         username = request.form['username']
         password = request.form['password']
         
-        from app.core.models import User, Login
+        from app.core.models import User, Login, Installation
         from app.core.extensions import db
         import uuid
         
@@ -126,8 +126,13 @@ def signup():
         if login_check:
             return render_template('signup.html', error='Username already exists')
             
-        uid = str(uuid.uuid4())
-        new_login = Login(userid=uid, username=username, name=username)
+        # Check for installation context
+        installation = Installation.query.first()
+        inst_id = installation.installation_id if installation else None
+        
+        uid = Login.generate_userid(inst_id)
+        
+        new_login = Login(userid=uid, username=username, name=username, installation_id=inst_id)
         new_login.set_password(password)
         db.session.add(new_login)
         

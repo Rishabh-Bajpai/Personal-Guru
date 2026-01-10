@@ -16,7 +16,7 @@ class Topic(TimestampMixin, db.Model):
     __tablename__ = 'topics'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(36), db.ForeignKey('logins.userid'), nullable=False)
+    user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     name = db.Column(db.String(255), nullable=False)
     study_plan = db.Column(JSON) # Storing list of strings as JSON
     
@@ -82,7 +82,7 @@ class User(UserMixin, TimestampMixin, db.Model):
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
-    login_id = db.Column(db.String(36), db.ForeignKey('logins.userid'))
+    login_id = db.Column(db.String(100), db.ForeignKey('logins.userid'))
     age = db.Column(db.Integer)
     country = db.Column(db.String(100))
     languages = db.Column(JSON) # Storing list of strings as JSON
@@ -98,12 +98,11 @@ class User(UserMixin, TimestampMixin, db.Model):
     #Relationship
     login = db.relationship('Login', back_populates='user_profile', uselist=False)
 
-    # TODO: Update strings below to match any changes in user profile fields
     def to_context_string(self):
         """Generates a text description of the user profile for LLM context."""
         parts = []
         if self.login and self.login.name: 
-            parts.append(f"Name: {self.login.name}") # TODO Move to  Logins table
+            parts.append(f"Name: {self.login.name}")
         if self.age:
             parts.append(f"Age: {self.age}")
         if self.country:
@@ -153,7 +152,7 @@ class TelemetryLog(TimestampMixin, db.Model):
     __tablename__ = 'telemetry_logs'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(36), db.ForeignKey('logins.userid'), nullable=False)
+    user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     session_id = db.Column(db.String(36), nullable=False)  # UUID
     event_type = db.Column(db.String(100), nullable=False) # TODO: event_tags like 'content_generated', 'quiz_completed', etc.
     triggers = db.Column(JSON, nullable=False) # event triggers like 'user_action', 'auto_save', etc.
@@ -165,7 +164,7 @@ class Feedback(TimestampMixin, db.Model):
     __tablename__ = 'feedback'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(36), db.ForeignKey('logins.userid'), nullable=False)
+    user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     feedback_type = db.Column(db.String(50), nullable=False)  # 'form', 'in_place'
     content_reference = db.Column(db.String(255))  # TODO: Define content tag like 'chapter_1', 'quiz_2', etc. Use topic_id, step_index etc. to uniquely identify content
     rating = db.Column(db.Integer)
@@ -176,7 +175,7 @@ class AIModelPerformance(TimestampMixin, db.Model):
     __tablename__ = 'ai_model_performance'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(36), db.ForeignKey('logins.userid'), nullable=False)
+    user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     model_type = db.Column(db.String(100), nullable=False)  # 'LLM', 'Embedding', etc.
     model_name = db.Column(db.String(100))
     latency_ms = db.Column(db.Integer)
@@ -190,7 +189,7 @@ class PlanRevision(TimestampMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
-    user_id = db.Column(db.String(36), db.ForeignKey('logins.userid'), nullable=False)
+    user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     reason = db.Column(db.Text) # Reason for revision, e.g., "User requested more advanced topics"
     old_plan_json = db.Column(JSON)
     new_plan_json = db.Column(JSON)
@@ -200,14 +199,19 @@ class PlanRevision(TimestampMixin, db.Model):
 class Login(UserMixin, TimestampMixin, db.Model):
     __tablename__ = 'logins'
 
-    # TODO: Append installation_id to userid to ensure uniqueness across installations
-    userid = db.Column(db.String(36), primary_key=True) 
+    userid = db.Column(db.String(100), primary_key=True) 
     username = db.Column(db.String(100), unique=True, nullable=False)
     name = db.Column(db.String(100))
-    password = db.Column(db.String(255)) # TODO: Store in hashed format
+    password = db.Column(db.String(255))
     installation_id = db.Column(db.String(36), db.ForeignKey('installations.installation_id'))
 
-    #TODO: Add a function to append installation_id to userid upon creation
+    @staticmethod
+    def generate_userid(installation_id=None):
+        import uuid
+        base_id = str(uuid.uuid4())
+        if installation_id:
+            return f"{base_id}_{installation_id}"
+        return base_id
 
     def set_password(self, password):
         self.password = generate_password_hash(password)
