@@ -3,12 +3,7 @@ from app.common.storage import get_all_topics, load_topic
 from flask_login import login_user, logout_user, login_required, current_user
 import os
 
-
 main_bp = Blueprint('main', __name__)
-
-
-
-
 
 @main_bp.route('/', methods=['GET', 'POST'])
 def index():
@@ -120,7 +115,6 @@ def signup():
         
         from app.core.models import User, Login, Installation
         from app.core.extensions import db
-        import uuid
         
         login_check = Login.query.filter_by(username=username).first()
         if login_check:
@@ -197,7 +191,6 @@ def suggest_topics():
     from app.common.storage import get_all_topics
     from flask import jsonify
     
-    user = current_user
     user_profile = current_user.user_profile.to_context_string() if current_user.user_profile else ""
     past_topics = get_all_topics() # This gets all topics for the specific user because of how storage works (folder based) or we might need to verify isolation. 
     # Actually storage.get_all_topics() scans the directory. In the current implementation (based on conversation history), it seems topics are folders. 

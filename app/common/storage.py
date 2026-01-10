@@ -260,7 +260,6 @@ def load_topic(topic_name):
                 "content": step_model.content,
                 "questions": step_model.questions,
                 "user_answers": step_model.user_answers,
-                "user_answers": step_model.user_answers,
                 # "feedback": step_model.feedback, # REMOVED column
                 "score": step_model.score,
                 "chat_history": step_model.chat_history or [],
