@@ -54,6 +54,9 @@ def save_topic(topic_name, data):
                 step.podcast_audio_path = step_data.get('podcast_audio_path')
                 step.questions = step_data.get('questions')
                 step.user_answers = step_data.get('user_answers')
+                step.score = step_data.get('score')
+                step.chat_history = step_data.get('chat_history')
+                step.time_spent = step_data.get('time_spent', 0)
                 db.session.add(step)
             else:
                 # Create new
