@@ -129,10 +129,8 @@ def submit_quiz(topic_name):
         # Ensure the score is also saved to the Quiz table
         if topic_data.get('quiz'):
             topic_data['quiz']['score'] = score
-            # Accumulate or set time? Usually set for a single run, but let's accumulate if it's a session.
-            # But the user might be submitting the *total* time on page.
-            # Let's assume it's the time for this attempt.
-            topic_data['quiz']['time_spent'] = (topic_data['quiz'].get('time_spent', 0) or 0) + time_spent
+            # Store time for this attempt (matches last_quiz_result behavior)
+            topic_data['quiz']['time_spent'] = time_spent
 
         save_topic(topic_name, topic_data)
 

@@ -142,7 +142,7 @@ def save_topic(topic_name, data):
                      existing_quiz.time_spent = q_data.get('time_spent', 0)
                  else:
                      quiz = QuizMode(
-                         topics=topic,
+                         topic_id=topic.id,
                          questions=q_data.get('questions'),
                          score=q_data.get('score'),
                          result=data.get('last_quiz_result'), 
