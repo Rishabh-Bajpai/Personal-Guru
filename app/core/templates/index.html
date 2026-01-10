@@ -92,11 +92,12 @@
         {% endfor %}
     </ul>
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
 </div>
 {% else %}
 <p>You don't have any saved topics yet.</p>
 {% endif %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
 
 <script src="{{ url_for('static', filename='suggestions.js') }}"></script>
 {% endblock %}

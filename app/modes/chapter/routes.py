@@ -19,16 +19,17 @@ feedback_agent = FeedbackAgent()
 md = MarkdownIt()
 podcast_agent = PodcastAgent()
 
+
 @chapter_bp.route('/<topic_name>')
 def mode(topic_name):
     topic_data = load_topic(topic_name)
-    
+
     # Initialize Persistent Sandbox
     sandbox_id = session.get('sandbox_id')
     # If exists, reuse. If None, create new.
     sandbox = Sandbox(sandbox_id=sandbox_id)
     session['sandbox_id'] = sandbox.id
-    
+
     # If topic exists and has a plan, go directly to learning
     # If topic exists and has a plan, go directly to learning
     if topic_data and topic_data.get('plan'):
@@ -36,29 +37,40 @@ def mode(topic_name):
         steps = topic_data.get('steps', [])
         resume_step_index = 0
         for i, step in enumerate(steps):
-             # Check if step has content (teaching_material or questions)
-             has_content = bool(step.get('teaching_material') or step.get('questions'))
-             if has_content:
-                 resume_step_index = i
-        
-        return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=resume_step_index))
-    
+            # Check if step has content (teaching_material or questions)
+            has_content = bool(step.get('teaching_material')
+                               or step.get('questions'))
+            if has_content:
+                resume_step_index = i
+
+        return redirect(
+            url_for(
+                'chapter.learn_topic',
+                topic_name=topic_name,
+                step_index=resume_step_index))
+
     # No plan exists - generate one automatically
     from app.common.utils import get_user_context
     user_background = get_user_context()
-    plan_steps, error = planner.generate_study_plan(topic_name, user_background)
-    
-    if error:
-        return f"<h1>Error Generating Plan</h1><p>{plan_steps}</p>"
-    
+    try:
+        plan_steps = planner.generate_study_plan(topic_name, user_background)
+    except Exception:
+        # Error will be caught by global handler
+        raise
+
     # Save the new plan
     topic_data = topic_data or {"name": topic_name}
     topic_data['plan'] = plan_steps
     topic_data['steps'] = [{} for _ in plan_steps]
     save_topic(topic_name, topic_data)
-    
+
     # Go directly to learning
-    return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=0))
+    return redirect(
+        url_for(
+            'chapter.learn_topic',
+            topic_name=topic_name,
+            step_index=0))
+
 
 @chapter_bp.route('/generate', methods=['POST'])
 def generate_plan():
@@ -66,30 +78,36 @@ def generate_plan():
     topic_name = data.get('topic')
     if not topic_name:
         return {"error": "Topic name required"}, 400
-        
+
     from app.common.utils import get_user_context
     user_background = get_user_context()
-    plan_steps, error = planner.generate_study_plan(topic_name, user_background)
-    
-    if error:
-        return {"error": plan_steps}, 500
-        
+    try:
+        plan_steps = planner.generate_study_plan(topic_name, user_background)
+    except Exception:
+        # Error will be caught by global handler
+        raise
+
     topic_data = load_topic(topic_name) or {"name": topic_name}
     topic_data['plan'] = plan_steps
     # Initialize steps structure
     topic_data['steps'] = [{} for _ in plan_steps]
-    
+
     save_topic(topic_name, topic_data)
-    
+
     return {"status": "success", "plan": plan_steps}
+
 
 @chapter_bp.route('/<topic_name>/update_plan', methods=['POST'])
 def update_plan(topic_name):
     comment = request.form.get('comment')
     current_step_index = request.form.get('current_step_index', 0)
-    
+
     if not comment or not comment.strip():
-         return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=current_step_index))
+        return redirect(
+            url_for(
+                'chapter.learn_topic',
+                topic_name=topic_name,
+                step_index=current_step_index))
 
     topic_data = load_topic(topic_name)
     if not topic_data:
@@ -100,25 +118,34 @@ def update_plan(topic_name):
     user_background = get_user_context()
 
     # Use the unified PlannerAgent
-    new_plan, error = planner.update_study_plan(topic_name, user_background, current_plan, comment)
+    try:
+        new_plan = planner.update_study_plan(
+            topic_name, user_background, current_plan, comment)
+    except Exception:
+        # Error will be caught by global handler
+        raise
 
-    if not error:
-        # Smart Update: Preserve content for unchanged steps
-        from app.common.utils import reconcile_plan_steps
+    # Smart Update: Preserve content for unchanged steps
+    from app.common.utils import reconcile_plan_steps
 
-        # Smart Update using helper
-        topic_data['plan'] = new_plan
-        topic_data['steps'] = reconcile_plan_steps(
-            topic_data.get('steps', []),
-            current_plan, # Original plan strings! We need them.
-            new_plan
-        )
-        # Wait, reconcile_plan_steps signature: (current_steps, current_plan, new_plan)
-        # I have current_plan already (line 94).
-        
-        save_topic(topic_name, topic_data)
+    # Smart Update using helper
+    topic_data['plan'] = new_plan
+    topic_data['steps'] = reconcile_plan_steps(
+        topic_data.get('steps', []),
+        current_plan,  # Original plan strings! We need them.
+        new_plan
+    )
+    # Wait, reconcile_plan_steps signature: (current_steps, current_plan, new_plan)
+    # I have current_plan already (line 94).
 
-    return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=0))
+    save_topic(topic_name, topic_data)
+
+    return redirect(
+        url_for(
+            'chapter.learn_topic',
+            topic_name=topic_name,
+            step_index=0))
+
 
 @chapter_bp.route('/learn/<topic_name>/<int:step_index>')
 def learn_topic(topic_name, step_index):
@@ -127,7 +154,7 @@ def learn_topic(topic_name, step_index):
         return "Topic not found", 404
 
     plan_steps = topic_data.get('plan', [])
-    
+
     # If topic has no plan (quiz/flashcard only), redirect
     # Not needed after issue #28 is fixed, but keeping the commented logic for now
     # if not plan_steps:
@@ -135,8 +162,9 @@ def learn_topic(topic_name, step_index):
     #     if 'flashcards' in topic_data and topic_data['flashcards']:
     #         return redirect(url_for('flashcard.mode', topic_name=topic_name)) # Adjusted endpoint name
     #     elif 'quiz' in topic_data:
-    #         return redirect(url_for('quiz.mode', topic_name=topic_name)) # Adjusted endpoint name
-    
+    # return redirect(url_for('quiz.mode', topic_name=topic_name)) # Adjusted
+    # endpoint name
+
     if not 0 <= step_index < len(plan_steps):
         return "Invalid step index", 404
 
@@ -146,28 +174,42 @@ def learn_topic(topic_name, step_index):
         incorrect_questions = session.get('incorrect_questions')
         from app.common.utils import get_user_context
         current_background = get_user_context()
-        teaching_material, error = teacher.generate_teaching_material(plan_steps[step_index], plan_steps, current_background, incorrect_questions)
-        if error:
-            return f"<h1>Error Generating Teaching Material</h1><p>{teaching_material}</p>"
+        try:
+            teaching_material = teacher.generate_teaching_material(
+                plan_steps[step_index], plan_steps, current_background, incorrect_questions)
+        except Exception as error:
+            return f"<h1>Error Generating Teaching Material</h1><p>{error}</p>"
+
         current_step_data['teaching_material'] = teaching_material
         from app.common.utils import get_user_context
         current_background = get_user_context()
-        question_data, error = assessor.generate_question(teaching_material, current_background)
-        if not error:
+        try:
+            question_data = assessor.generate_question(
+                teaching_material, current_background)
             current_step_data['questions'] = question_data
+        except Exception:
+            # If question generation fails, continue without questions
+            current_step_data['questions'] = None
 
         save_topic(topic_name, topic_data)
         session.pop('incorrect_questions', None)
 
-    show_assessment = current_step_data.get('questions') and not current_step_data.get('user_answers')
-    return render_template('chapter/learn_step.html',
-                           topic=topic_data,
-                           step_index=step_index,
-                           total_steps=len(plan_steps),
-                           step_title=plan_steps[step_index],
-                           step_content=current_step_data.get('teaching_material', ''),
-                           question_data=current_step_data.get('questions', None),
-                           show_assessment=show_assessment)
+    show_assessment = current_step_data.get(
+        'questions') and not current_step_data.get('user_answers')
+    return render_template(
+        'chapter/learn_step.html',
+        topic=topic_data,
+        step_index=step_index,
+        total_steps=len(plan_steps),
+        step_title=plan_steps[step_index],
+        step_content=current_step_data.get(
+            'teaching_material',
+            ''),
+        question_data=current_step_data.get(
+            'questions',
+            None),
+        show_assessment=show_assessment)
+
 
 @chapter_bp.route('/assess/<topic_name>/<int:step_index>', methods=['POST'])
 def assess_step(topic_name, step_index):
@@ -191,8 +233,9 @@ def assess_step(topic_name, step_index):
     for i, question in enumerate(questions):
         user_answer = user_answers[i]
 
-        if user_answer: # Only score answered questions
-            feedback_data, _ = feedback_agent.evaluate_answer(question.get('correct_answer'), user_answer)
+        if user_answer:  # Only score answered questions
+            feedback_data, _ = feedback_agent.evaluate_answer(
+                question.get('correct_answer'), user_answer)
             if feedback_data['is_correct']:
                 num_correct += 1
             else:
@@ -203,7 +246,8 @@ def assess_step(topic_name, step_index):
     current_step_data['feedback'] = feedback_results
 
     answered_questions_count = len([ua for ua in user_answers if ua])
-    score = (num_correct / answered_questions_count * 100) if answered_questions_count > 0 else 0
+    score = (num_correct / answered_questions_count *
+             100) if answered_questions_count > 0 else 0
     current_step_data['score'] = score
     if time_spent:
          current_step_data['time_spent'] = (current_step_data.get('time_spent', 0) or 0) + time_spent
@@ -214,7 +258,10 @@ def assess_step(topic_name, step_index):
     save_topic(topic_name, topic_data)
 
     if step_index == len(topic_data['plan']) - 1:
-        return redirect(url_for('chapter.complete_topic', topic_name=topic_name))
+        return redirect(
+            url_for(
+                'chapter.complete_topic',
+                topic_name=topic_name))
 
     return render_template('chapter/feedback.html',
                            feedback_results=feedback_results,
@@ -245,7 +292,7 @@ def reset_quiz(topic_name, step_index):
     topic_data = load_topic(topic_name)
     if not topic_data:
         return "Topic not found", 404
-    
+
     if 0 <= step_index < len(topic_data['steps']):
         current_step_data = topic_data['steps'][step_index]
         if 'user_answers' in current_step_data:
@@ -255,8 +302,13 @@ def reset_quiz(topic_name, step_index):
         if 'score' in current_step_data:
             del current_step_data['score']
         save_topic(topic_name, topic_data)
-        
-    return redirect(url_for('chapter.learn_topic', topic_name=topic_name, step_index=step_index))
+
+    return redirect(
+        url_for(
+            'chapter.learn_topic',
+            topic_name=topic_name,
+            step_index=step_index))
+
 
 @chapter_bp.route('/generate-audio/<int:step_index>', methods=['POST'])
 def generate_audio_route(step_index):
@@ -264,8 +316,9 @@ def generate_audio_route(step_index):
     if not teaching_material:
         return {"error": "No text provided"}, 400
 
-    audio_filename, error = generate_audio(teaching_material, step_index)
-    if error:
+    try:
+        audio_filename = generate_audio(teaching_material, step_index)
+    except Exception as error:
         print(f"DEBUG: Audio Generation Error for step {step_index}: {error}")
         return {"error": str(error)}, 500
 
@@ -273,49 +326,56 @@ def generate_audio_route(step_index):
     audio_url = url_for('static', filename=audio_filename)
     return {"audio_url": audio_url}
 
-@chapter_bp.route('/generate-podcast/<topic_name>/<int:step_index>', methods=['POST'])
+
+@chapter_bp.route('/generate-podcast/<topic_name>/<int:step_index>',
+                  methods=['POST'])
 def generate_podcast_route(topic_name, step_index):
     topic_data = load_topic(topic_name)
     if not topic_data:
         return {"error": "Topic not found"}, 404
-        
+
     if not 0 <= step_index < len(topic_data['steps']):
         return {"error": "Invalid step index"}, 400
-        
+
     current_step_data = topic_data['steps'][step_index]
     teaching_material = current_step_data.get('teaching_material')
-    
+
     if not teaching_material:
         return {"error": "No teaching material found for this step"}, 400
 
     from app.common.utils import get_user_context
     user_background = get_user_context()
-    
+
     # Define output path
     filename = f"podcast_{topic_name}_{step_index}.mp3"
     # Ensure filename is safe
     import werkzeug
     filename = werkzeug.utils.secure_filename(filename)
-    
+
     static_dir = os.path.join(os.getcwd(), 'app', 'static')
     if not os.path.exists(static_dir):
         os.makedirs(static_dir)
-        
+
     output_path = os.path.join(static_dir, filename)
-    
+
     # Refactored Logic
     # 1. Generate Script
-    transcript, error = podcast_agent.generate_script(teaching_material, user_background)
-    if error:
-         return {"error": f"Script generation failed: {error}"}, 500
-         
+    try:
+        transcript = podcast_agent.generate_script(
+            teaching_material, user_background)
+    except Exception as error:
+        return {"error": f"Script generation failed: {error}"}, 500
+
     # 2. Generate Audio
     from app.common.utils import generate_podcast_audio
-    success, error = generate_podcast_audio(transcript, output_path)
-    
+    try:
+        success = generate_podcast_audio(transcript, output_path)
+    except Exception as error:
+        return {"error": f"Audio generation failed: {error}"}, 500
+
     if not success:
-         return {"error": error}, 500
-         
+        return {"error": "Audio generation failed"}, 500
+
     audio_url = url_for('static', filename=filename)
     
     # Save the podcast path to the step
@@ -324,14 +384,20 @@ def generate_podcast_route(topic_name, step_index):
     
     return {"audio_url": audio_url}
 
+
 @chapter_bp.route('/complete/<topic_name>')
 def complete_topic(topic_name):
     topic_data, average_score = _get_topic_data_and_score(topic_name)
     if not topic_data:
         return "Topic not found", 404
     # Template was moved to app/templates/complete.html (global?)
-    # Request said complete.html is GLOBAL TEMPLATE. So generic render_template 'complete.html'
-    return render_template('complete.html', topic_name=topic_name, average_score=average_score)
+    # Request said complete.html is GLOBAL TEMPLATE. So generic
+    # render_template 'complete.html'
+    return render_template(
+        'complete.html',
+        topic_name=topic_name,
+        average_score=average_score)
+
 
 @chapter_bp.route('/export/<topic_name>')
 def export_topic(topic_name):
@@ -349,6 +415,7 @@ def export_topic(topic_name):
     response.headers["Content-Type"] = "text/markdown"
     return response
 
+
 @chapter_bp.route('/export/<topic_name>/pdf')
 def export_topic_pdf(topic_name):
     topic_data = load_topic(topic_name)
@@ -359,20 +426,33 @@ def export_topic_pdf(topic_name):
     if topic_data.get('plan'):
         # Render chapter/quiz as PDF
         average_score = 0
-        topic_data, average_score = _get_topic_data_and_score(topic_name) # Reuse helper
-        html = render_template('chapter/pdf_export.html', topic=topic_data, average_score=average_score)
-        
+        topic_data, average_score = _get_topic_data_and_score(
+            topic_name)  # Reuse helper
+        html = render_template(
+            'chapter/pdf_export.html',
+            topic=topic_data,
+            average_score=average_score)
+
     # Fallback to Flashcards if no plan but flashcards exist
     elif topic_data.get('flashcards'):
-        html = render_template('flashcard/export.html', topic_name=topic_name, flashcards=topic_data.get('flashcards', []))
+        html = render_template(
+            'flashcard/export.html',
+            topic_name=topic_name,
+            flashcards=topic_data.get(
+                'flashcards',
+                []))
     else:
         return "No content to export", 404
         # Render chapter/quiz as PDF
         average_score = 0
-        topic_data, average_score = _get_topic_data_and_score(topic_name) # Reuse helper
-        
-        html = render_template('chapter/pdf_export.html', topic=topic_data, average_score=average_score)
-    
+        topic_data, average_score = _get_topic_data_and_score(
+            topic_name)  # Reuse helper
+
+        html = render_template(
+            'chapter/pdf_export.html',
+            topic=topic_data,
+            average_score=average_score)
+
     pdf = HTML(string=html).write_pdf(
         document_metadata={
             'title': topic_name,
@@ -388,11 +468,12 @@ def export_topic_pdf(topic_name):
 
 code_agent = CodeExecutionAgent()
 
+
 @chapter_bp.route('/execute_code', methods=['POST'])
 def execute_code():
     data = request.json
     code = data.get('code')
-    
+
     if not code:
         return {"error": "No code provided"}, 400
 
@@ -400,31 +481,32 @@ def execute_code():
     enhanced_data = code_agent.enhance_code(code)
     enhanced_code = enhanced_data.get('code')
     dependencies = enhanced_data.get('dependencies', [])
-    
+
     # 2. Run in Sandbox
     sandbox_id = session.get('sandbox_id')
     sandbox = Sandbox(sandbox_id=sandbox_id)
-    
+
     # Ensure ID is in session (if it was lost or new)
     if not sandbox_id:
-         session['sandbox_id'] = sandbox.id
-         
+        session['sandbox_id'] = sandbox.id
+
     try:
         # Install deps (basic caching could be used here in future)
         if dependencies:
             sandbox.install_deps(dependencies)
-            
+
         result = sandbox.run_code(enhanced_code)
-        
+
         return {
             "output": result.get('output'),
             "error": result.get('error'),
-            "images": result.get('images', []), # List of base64 strings
+            "images": result.get('images', []),  # List of base64 strings
             "enhanced_code": enhanced_code
         }
     finally:
         # Do persistent cleanup later
         pass
+
 
 def _get_topic_data_and_score(topic_name):
     topic_data = load_topic(topic_name)
@@ -440,5 +522,7 @@ def _get_topic_data_and_score(topic_name):
             total_score += step['score']
             answered_questions += 1
 
-    average_score = (total_score / answered_questions) if answered_questions > 0 else 0
+    average_score = (
+        total_score /
+        answered_questions) if answered_questions > 0 else 0
     return topic_data, average_score

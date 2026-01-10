@@ -9,12 +9,21 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('chat.static', filename='chat.css') }}">
+<link rel="stylesheet" href="{{ url_for('common.static', filename='css/chat_popup.css') }}">
 {% endblock %}
 
 {% block content %}
 <div id="main-container">
     <!-- Left Column: Study Plan -->
     <div id="plan-sidebar">
+        <script>
+            // Apply collapsed state immediately to prevent flicker
+            if (localStorage.getItem('chatSidebarCollapsed') === 'true') {
+                const sidebar = document.getElementById('plan-sidebar');
+                sidebar.classList.add('collapsed');
+                sidebar.classList.add('no-transition');
+            }
+        </script>
         <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">
             ☰
         </button>
@@ -30,8 +39,8 @@
                 action="{{ url_for('chat.update_plan', topic_name=topic_name) }}">
                 <h3>Modify the Plan</h3>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <textarea id="plan-modification-input" name="comment"
-                    placeholder="Suggest changes to the plan. For example, 'Instead of talking about X, let's focus on Y.'"></textarea>
+                <textarea id="plan-modification-input" name="comment" maxlength="255"
+                    placeholder="Suggest changes to the plan..."></textarea>
                 <button id="plan-modification-button" type="submit" class="button is-small">Update Plan</button>
             </form>
         </div>
@@ -51,7 +60,6 @@
                     if message.role == 'user' else 'AI Tutor' }}</div>
                 <div class="message {{ 'user-message' if message.role == 'user' else 'assistant-message' }}">
                     <div class="message-content"></div>
-                    <!-- Hidden div stores raw content; | safe prevents HTML escaping -->
                     <div class="raw-markdown" style="display: none;">{{ message.content | safe }}</div>
                 </div>
             </div>
@@ -61,8 +69,8 @@
         <div id="input-area">
             <form id="chat-form" method="POST" action="{{ url_for('chat.send_message', topic_name=topic_name) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="text" id="chat-input" name="message" placeholder="Ask your AI tutor a question..."
-                    autocomplete="off" autofocus required>
+                <textarea id="chat-input" name="message" placeholder="Ask your AI tutor a question..."
+                    autocomplete="off" autofocus required rows="1" style="resize: none;"></textarea>
                 <button type="button" id="mic-button" class="button secondary" title="Voice Input">🎙️</button>
                 <button id="send-button" class="button" type="submit">Send</button>
                 <span id="loading-indicator" class="loading-indicator" style="display: none;">Thinking...</span>
@@ -70,6 +78,8 @@
         </div>
     </div>
 </div>
+
+{% include 'common/chat_popup.html' %}
 
 <script src="{{ url_for('chat.static', filename='chat.js') }}"></script>
 <script src="{{ url_for('common.static', filename='js/time_tracker.js') }}"></script>

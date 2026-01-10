@@ -4,6 +4,143 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='profile.css') }}">
+<style>
+    /* Modal Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(2px);
+    }
+
+    .modal-content {
+        background-color: #f8f9fa;
+        /* slightly off-white */
+        padding: 2.5rem;
+        border-radius: 16px;
+        width: 90%;
+        max-width: 600px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        /* softer shadow */
+        animation: slideIn 0.3s ease-out;
+        display: flex;
+        flex-direction: column;
+        max-height: 90vh;
+        border: 1px solid #e9ecef;
+    }
+
+    .modal-content.warning {
+        background-color: #fff5f5;
+        border-top: none;
+        border: 1px solid #fed7d7;
+    }
+
+    .modal-body {
+        margin-bottom: 2rem;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+        line-height: 1.7;
+        color: #4b5563;
+        /* Softer text color */
+    }
+
+    .modal h2 {
+        margin-top: 0;
+        color: #111827 !important;
+        /* Force dark color */
+        font-size: 1.5rem;
+        border-bottom: 2px solid #edf2f7;
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+        font-weight: 700;
+    }
+
+    .modal h3 {
+        color: #1a202c !important;
+        /* Force dark color */
+        margin-top: 1.5rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .welcome-message {
+        margin-top: 2rem;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+        border-radius: 12px;
+        color: #0369a1;
+        text-align: center;
+        font-weight: 600;
+        font-size: 1.1rem;
+        border: 1px solid #bae6fd;
+    }
+
+    .welcome-message p {
+        margin: 0;
+    }
+
+    .modal p {
+        margin-bottom: 1rem;
+    }
+
+    .btn-primary,
+    .btn-warning {
+        padding: 1rem 2rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        align-self: center;
+        /* Center buttons */
+        width: 100%;
+        max-width: 300px;
+        margin-top: 1rem;
+    }
+
+    .btn-primary {
+        background-color: #3b82f6;
+        /* Softer blue */
+        color: white;
+        box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+    }
+
+    .btn-primary:hover {
+        background-color: #2563eb;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 8px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-warning {
+        background-color: #e53e3e;
+        color: white;
+        box-shadow: 0 4px 6px rgba(229, 62, 62, 0.2);
+    }
+
+    .btn-warning:hover {
+        background-color: #c53030;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateY(-20px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -130,5 +267,100 @@
 
         <button type="submit" class="btn-save">Save Profile</button>
     </form>
+    <!-- T&C Modal -->
+    <div id="termsModal" class="modal" data-show-terms="{{ show_terms|tojson }}">
+        <div class="modal-content">
+            <h2>Terms, Conditions & Privacy Policy</h2>
+            <div class="modal-body">
+                <h3>1. Introduction</h3>
+                <p>Welcome to Personal Guru. By accessing or using our application, you agree to comply with and be
+                    bound by these Terms. If you do not agree with any part of these Terms, please refrain from
+                    accessing or using the application.</p>
+
+                <h3>2. Open Source & Contribution</h3>
+                <p>This is an open-source project that thrives on community feedback and contributions. We need
+                    developers like you to help us grow!</p>
+                <p>Please consider contributing or starring our repository:
+                    <a href="https://github.com/Rishabh-Bajpai/Personal-Guru" target="_blank"
+                        style="color: #2563eb; text-decoration: none; font-weight: 600;">
+                        View on GitHub 🚀
+                    </a>
+                </p>
+
+                <h3>3. Responsible Use Disclosure</h3>
+                <p>This app is in an early, rapidly evolving stage of development and may be unstable or produce
+                    inaccurate or unregulated content. Output can vary depending on the Large Language Model (LLM)
+                    selected by the user.
+                    By using this app, you acknowledge these limitations and agree that the developers are not liable
+                    for
+                    <strong>any loss, damage, or consequences</strong> arising from its use.
+                </p>
+                <p>Users are expected to use this tool responsibly and ethically. Do not use this application to
+                    generate content that is illegal, harmful, threatening, abusive, harassing, defamatory, or otherwise
+                    objectionable.</p>
+
+                <h3>4. Beta Phase & Data Collection</h3>
+                <p>We do not collect any personally identifiable data (PII) to protect your privacy. However, during
+                    this beta phase, we may collect general usage data for research, debugging, and improving the
+                    application. By using this app, you agree to participate as a beta tester and are encouraged to
+                    share feedback to help us enhance the experience.</p>
+
+                <h3>5. Age Restriction & Supervision</h3>
+                <p>If you are under 18 years of age, you must use this application under the supervision of a parent or
+                    guardian. The AI models used in this application may occasionally generate content that is
+                    age-restricted or inappropriate for minors.</p>
+
+                <h3>6. No Warranty</h3>
+                <p>The service is provided on an "AS-IS" and "AS AVAILABLE" basis. The developers make no warranties,
+                    expressed or implied, regarding the reliability, accuracy, or availability of the service.</p>
+
+                <div class="welcome-message">
+                    <p>✨ Ready to embark on your personalized learning journey? Let's grow and discover together!</p>
+                </div>
+            </div>
+            <button class="btn-primary" onclick="closeModal('termsModal')">I Understand & Let's Start!</button>
+        </div>
+    </div>
+
+    <!-- Age Warning Modal -->
+    <div id="ageWarningModal" class="modal">
+        <div class="modal-content warning">
+            <h2>⚠️ Age Warning</h2>
+            <div class="modal-body">
+                <p><strong>Attention:</strong> You have entered an age less than 18.</p>
+                <p>Please be aware that AI can generate age-restricted, complex, or unregulated content.</p>
+                <p style="color: #d93025; font-weight: bold;">You must use this application under strictly adult
+                    supervision.</p>
+            </div>
+            <button class="btn-warning" onclick="closeModal('ageWarningModal')">I Confirm Adult Supervision</button>
+        </div>
+    </div>
+
 </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Show T&C if new user
+        const termsModal = document.getElementById('termsModal');
+        if (termsModal.dataset.showTerms === 'true') {
+            termsModal.style.display = 'flex';
+        }
+
+        // Age Warning Logic
+        const ageInput = document.getElementById('age');
+        ageInput.addEventListener('change', function () {
+            const age = parseInt(this.value);
+            if (age && age < 18) {
+                document.getElementById('ageWarningModal').style.display = 'flex';
+            }
+        });
+    });
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+</script>
 {% endblock %}

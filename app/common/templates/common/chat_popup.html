@@ -4,17 +4,18 @@
 </button>
 
 <div id="chat-popup" class="chat-popup" style="display: none;">
-    <div id="chat-header" class="chat-header">
+    <div id="chat-header-popup" class="chat-header">
         <span>Ask a Question</span>
         <div class="chat-controls">
             <button id="chat-maximize-btn" title="Maximize" aria-label="Maximize chat window">□</button>
             <button id="chat-toggle-btn" title="Minimize" aria-label="Minimize chat window">−</button>
         </div>
     </div>
-    <div id="chat-window" class="chat-window">
+    <div id="chat-window-popup" class="chat-window">
         <div id="chat-history-popup" class="chat-history"></div>
         <form id="chat-form-popup" class="chat-form">
-            <input type="text" id="chat-input-popup" placeholder="Type your question..." required maxlength="1000">
+            <textarea id="chat-input-popup" placeholder="Type your question..." required maxlength="1000" rows="1"
+                style="resize: none;"></textarea>
             <button type="button" id="mic-button-popup" class="button secondary" title="Voice Input"
                 style="margin-right: 5px;">🎙️</button>
             <button type="submit" class="button">Send</button>

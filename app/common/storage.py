@@ -4,18 +4,29 @@ import logging
 import datetime
 
 from flask_login import current_user
+from app.core.exceptions import (
+    AuthenticationError,
+    DatabaseOperationError,
+    DatabaseConnectionError,
+    DatabaseIntegrityError,
+    ModelValidationError
+)
+
 
 def save_topic(topic_name, data):
     """
     Save topic data to PostgreSQL database.
     """
+    logger = logging.getLogger(__name__)
+
     try:
-        # Check if topic exists for current user
-        # Handle case where current_user might not be authenticated (e.g. CLI usage?)
-        # For now, assume web context.
+        # Check authentication
         if not current_user.is_authenticated:
-             logging.warning(f"Attempt to save topic {topic_name} without auth user.")
-             raise Exception("User must be logged in to save topic.")
+            raise AuthenticationError(
+                "Attempt to save topic without authentication",
+                error_code="AUTH100",
+                debug_info={"topic_name": topic_name}
+            )
 
         topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
         if not topic:
@@ -171,25 +182,62 @@ def save_topic(topic_name, data):
                 db.session.delete(card)
 
         db.session.commit()
+
+    except AuthenticationError:
+        db.session.rollback()
+        raise  # Re-raise custom exceptions
+    except (ModelValidationError, DatabaseIntegrityError):
+        db.session.rollback()
+        raise  # Re-raise validation errors
+    except IntegrityError as e:
+        db.session.rollback()
+        logger.error(
+            f"Database integrity error saving topic {topic_name}: {e}")
+        raise DatabaseIntegrityError(
+            f"Topic '{topic_name}' may already exist or violates database constraints",
+            error_code="DB100",
+            debug_info={
+                "topic_name": topic_name,
+                "original_error": str(e)})
+    except OperationalError as e:
+        db.session.rollback()
+        logger.error(f"Database connection error saving topic: {e}")
+        raise DatabaseConnectionError(
+            "Unable to connect to database",
+            error_code="DB101",
+            debug_info={"operation": "save_topic", "original_error": str(e)}
+        )
     except Exception as e:
         db.session.rollback()
-        logging.error(f"Error saving topic {topic_name}: {e}")
-        raise e
+        logger.error(
+            f"Unexpected error saving topic {topic_name}: {e}",
+            exc_info=True)
+        raise DatabaseOperationError(
+            f"Failed to save topic: {str(e)}",
+            operation="save_topic",
+            error_code="DB102",
+            debug_info={"topic_name": topic_name}
+        )
 
-def save_chat_history(topic_name, history, time_spent=0):
+def save_chat_history(topic_name, history, history_summary=None, time_spent=0):
     """
-    Save chat history for a topic.
+    Save chat history and optional summary for a topic.
     """
+    logger = logging.getLogger(__name__)
+
     try:
         if not current_user.is_authenticated:
-             logging.warning(f"Attempt to save chat history {topic_name} without auth.")
-             raise Exception("User must be logged in.")
+            raise AuthenticationError(
+                "Attempt to save chat history without authentication",
+                error_code="AUTH101",
+                debug_info={"topic_name": topic_name}
+            )
 
         topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
         if not topic:
             topic = Topic(name=topic_name, user_id=current_user.userid)
             db.session.add(topic)
-            db.session.flush() # Ensure ID exists
+            db.session.flush()  # Ensure ID exists
 
         from app.core.models import ChatMode
 
@@ -206,20 +254,46 @@ def save_chat_history(topic_name, history, time_spent=0):
         from sqlalchemy.orm.attributes import flag_modified
         chat_session.history = list(history)
         flag_modified(chat_session, 'history')
+
+        if history_summary is not None:
+             chat_session.history_summary = list(history_summary)
+             flag_modified(chat_session, 'history_summary')
+
         db.session.add(chat_session)
 
         db.session.commit()
+
+    except AuthenticationError:
+        db.session.rollback()
+        raise
+    except OperationalError as e:
+        db.session.rollback()
+        logger.error(f"Database connection error saving chat history: {e}")
+        raise DatabaseConnectionError(
+            "Unable to connect to database",
+            error_code="DB103",
+            debug_info={
+                "operation": "save_chat_history",
+                "original_error": str(e)})
     except Exception as e:
         db.session.rollback()
-        logging.error(f"Error saving chat history for {topic_name}: {e}")
-        raise e
+        logger.error(
+            f"Error saving chat history for {topic_name}: {e}",
+            exc_info=True)
+        raise DatabaseOperationError(
+            f"Failed to save chat history: {str(e)}",
+            operation="save_chat_history",
+            error_code="DB104",
+            debug_info={"topic_name": topic_name}
+        )
+
 
 def load_topic(topic_name):
     """
     Load topic data from PostgreSQL and reconstruct dictionary structure.
+    Returns None if topic doesn't exist or user not authenticated (normal behavior for new topics).
     """
-    if not current_user.is_authenticated:
-        return None
+    logger = logging.getLogger(__name__)
 
     topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
     if not topic:
@@ -317,18 +391,71 @@ def load_topic(topic_name):
     return data
 
 def get_all_topics():
-    if not current_user.is_authenticated:
-        return []
+    """Get all topics for the current authenticated user."""
+    logger = logging.getLogger(__name__)
+
+    try:
+        if not current_user.is_authenticated:
+            return []  # Return empty list for unauthenticated - original behavior
+
+        topics = Topic.query.with_entities(
+            Topic.name).filter_by(
+            user_id=current_user.username).all()
+        return [t.name for t in topics]
+
+    except OperationalError as e:
+        logger.error(f"Database connection error getting topics: {e}")
+        raise DatabaseConnectionError(
+            "Unable to connect to database",
+            error_code="DB107",
+            debug_info={
+                "operation": "get_all_topics",
+                "original_error": str(e)})
+    except Exception as e:
+        logger.error(f"Error getting topics: {e}", exc_info=True)
+        raise DatabaseOperationError(
+            "Failed to retrieve topics",
+            operation="get_all_topics",
+            error_code="DB108"
+        )
 
     topics = Topic.query.with_entities(Topic.name).filter_by(user_id=current_user.userid).all()
     return [t.name for t in topics]
 
 def delete_topic(topic_name):
-    if not current_user.is_authenticated:
-        return 
+    """Delete a topic and all its related  data."""
+    logger = logging.getLogger(__name__)
+
+    try:
+        if not current_user.is_authenticated:
+            return  # Silently return for unauthenticated - original behavior
+
+        topic = Topic.query.filter_by(
+            name=topic_name,
+            user_id=current_user.username).first()
+        if not topic:
+            return  # Topic doesn't exist - silently return (original behavior)
 
     topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
     if topic:
         db.session.delete(topic)
         db.session.commit()
+        logger.info(f"Successfully deleted topic: {topic_name}")
 
+    except OperationalError as e:
+        db.session.rollback()
+        logger.error(f"Database connection error deleting topic: {e}")
+        raise DatabaseConnectionError(
+            "Unable to connect to database",
+            error_code="DB109",
+            debug_info={"operation": "delete_topic", "original_error": str(e)}
+        )
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error deleting topic {topic_name}: {e}", exc_info=True)
+        raise DatabaseOperationError(
+            f"Failed to delete topic: {str(e)}",
+            operation="delete_topic",
+            error_code="DB110",
+            debug_info={"topic_name": topic_name}
+        )

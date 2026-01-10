@@ -14,7 +14,7 @@ class TimestampMixin:
 
 class Topic(TimestampMixin, db.Model):
     __tablename__ = 'topics'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     name = db.Column(db.String(255), nullable=False)
@@ -35,7 +35,11 @@ class ChatMode(TimestampMixin, db.Model):
     __tablename__ = 'chat_mode'
     
     id = db.Column(db.Integer, primary_key=True)
-    topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False, unique=True)
+    topic_id = db.Column(
+        db.Integer,
+        db.ForeignKey('topics.id'),
+        nullable=False,
+        unique=True)
     history = db.Column(JSON)
     time_spent = db.Column(db.Integer, default=0) # Duration in seconds
 
@@ -43,14 +47,17 @@ class ChapterMode(TimestampMixin, db.Model):
     __tablename__ = 'chapter_mode'
     
     id = db.Column(db.Integer, primary_key=True)
-    topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
+    topic_id = db.Column(
+        db.Integer,
+        db.ForeignKey('topics.id'),
+        nullable=False)
     step_index = db.Column(db.Integer, nullable=False)
     title = db.Column(db.String(255))
     content = db.Column(db.Text) # Markdown content
     podcast_audio_path = db.Column(db.String(512)) # path e.g. "/data/audio/podcast_<user_id><topic><step_id>.mp3"
     
     # Questions and Feedback stored as JSON
-    questions = db.Column(JSON) 
+    questions = db.Column(JSON)
     user_answers = db.Column(JSON)
     user_answers = db.Column(JSON)
     score = db.Column(db.Float)
@@ -73,7 +80,10 @@ class FlashcardMode(TimestampMixin, db.Model):
     __tablename__ = 'flashcard_mode'
     
     id = db.Column(db.Integer, primary_key=True)
-    topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
+    topic_id = db.Column(
+        db.Integer,
+        db.ForeignKey('topics.id'),
+        nullable=False)
     term = db.Column(db.String(255), nullable=False)
     definition = db.Column(db.Text, nullable=False)
     time_spent = db.Column(db.Integer, default=0) # Duration in seconds
@@ -120,19 +130,19 @@ class User(UserMixin, TimestampMixin, db.Model):
             parts.append(f"Field of Study: {self.field_of_study}")
         if self.occupation:
             parts.append(f"Occupation: {self.occupation}")
-        
-        if self.learning_goals: 
+
+        if self.learning_goals:
             parts.append(f"Learning Goals: {self.learning_goals}")
         if self.prior_knowledge:
             parts.append(f"Prior Knowledge: {self.prior_knowledge}")
-            
+
         if self.learning_style:
             parts.append(f"Learning Style: {self.learning_style}")
         if self.time_commitment:
             parts.append(f"Time Commitment: {self.time_commitment}")
         if self.preferred_format:
             parts.append(f"Preferred Format: {self.preferred_format}")
-        
+
         return "\n".join(parts)
 
 class Installation(TimestampMixin, db.Model):
