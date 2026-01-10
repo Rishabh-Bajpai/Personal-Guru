@@ -202,8 +202,7 @@ def send_message(topic_name):
         chat_history.append({"role": "assistant", "content": error_msg})
         chat_history_summary.append({"role": "assistant", "content": error_msg})
 
-    # Save to DB
-    save_chat_history(topic_name, chat_history, time_spent=time_spent)
+    save_chat_history(topic_name, chat_history, history_summary=chat_history_summary, time_spent=time_spent)
 
     return redirect(url_for('chat.mode', topic_name=topic_name))
 

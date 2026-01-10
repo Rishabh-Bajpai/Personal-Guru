@@ -33,6 +33,7 @@ def save_topic(topic_name, data):
         if not topic:
             topic = Topic(name=topic_name, user_id=current_user.userid)
             db.session.add(topic)
+            db.session.flush()
         
         # Update topic fields
         topic.study_plan = data.get('plan', []) 
@@ -313,6 +314,7 @@ def load_topic(topic_name):
         "plan": topic.study_plan or [], # Map model 'study_plan' back to app 'plan'
         "last_quiz_result": None, # Will populate from Quiz
         "chat_history": topic.chat_mode.history if topic.chat_mode else [],
+        "chat_history_summary": topic.chat_mode.history_summary if topic.chat_mode else [],
         "steps": [],
         "quiz": None,
         "flashcards": []
@@ -400,7 +402,7 @@ def get_all_topics():
 
         topics = Topic.query.with_entities(
             Topic.name).filter_by(
-            user_id=current_user.username).all()
+            user_id=current_user.userid).all()
         return [t.name for t in topics]
 
     except OperationalError as e:
@@ -418,9 +420,6 @@ def get_all_topics():
             operation="get_all_topics",
             error_code="DB108"
         )
-
-    topics = Topic.query.with_entities(Topic.name).filter_by(user_id=current_user.userid).all()
-    return [t.name for t in topics]
 
 def delete_topic(topic_name):
     """Delete a topic and all its related  data."""

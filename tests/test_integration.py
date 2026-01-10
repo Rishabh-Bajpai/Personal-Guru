@@ -407,13 +407,13 @@ def test_chat_summary_integration(auth_client, app):
         from app.core.models import Topic
         topic = Topic.query.filter_by(name=topic_name).first()
         assert topic is not None
-        assert topic.chat_session is not None
+        assert topic.chat_mode is not None
         # Should be empty initially
-        assert len(topic.chat_session.history) == 1 # Welcome message
+        assert len(topic.chat_mode.history) == 1 # Welcome message
         # history_summary defaults to None in DB if just added, or [] via load_topic logic
-        # But accessing model directly (topic.chat_session.history_summary) gives raw value.
+        # But accessing model directly (topic.chat_mode.history_summary) gives raw value.
         # It should be None or empty.
-        val = topic.chat_session.history_summary
+        val = topic.chat_mode.history_summary
         assert val is None or len(val) == 0
     
     # Mock LLM to return distinct answers and summaries
@@ -434,7 +434,7 @@ def test_chat_summary_integration(auth_client, app):
         
     with app.app_context():
         topic = Topic.query.filter_by(name=topic_name).first()
-        session = topic.chat_session
+        session = topic.chat_mode
         
         print(f"History: {len(session.history)}")
         summary_len = len(session.history_summary) if session.history_summary else 0
@@ -475,7 +475,7 @@ def test_chat_context_construction(auth_client, app):
 
     with app.app_context():
         topic = Topic.query.filter_by(name=topic_name).first()
-        sess = topic.chat_session
+        sess = topic.chat_mode
         # History: W(0), U0(1), A0(2), U1(3), A1(4), U2(5), A2(6), U3(7), A3(8) = 9 messages
         assert len(sess.history) == 9 
         assert sess.history_summary and len(sess.history_summary) == 9

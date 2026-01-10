@@ -314,6 +314,14 @@ VIEWER_HTML = """
                 const th = table.querySelectorAll('th')[n];
                 th.classList.add(dir === 'asc' ? 'sorted-asc' : 'sorted-desc');
             }
+
+            // Numeric extraction helper for JS sorting
+            function getVal(td) {
+                let val = td.textContent.trim();
+                if (val === "" || val === "None" || val === "null") return -Infinity;
+                if (!isNaN(parseFloat(val)) && isFinite(val)) return parseFloat(val);
+                return val.toLowerCase();
+            }
         </script>
     {% else %}
         <p>Select a table to view data.</p>
@@ -402,7 +410,14 @@ def db_viewer(model_name=None):
             if 'JSON' in str(c.type):
                 json_cols.append(c.name)
 
-        items = model.query.all()
+        # Default sorting
+        query = model.query
+        if 'step_index' in columns:
+            query = query.order_by(model.step_index.asc())
+        elif 'id' in columns:
+            query = query.order_by(model.id.asc())
+        
+        items = query.all()
         rows = []
         for item in items:
             row = {}
