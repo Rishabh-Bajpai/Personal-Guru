@@ -4,6 +4,7 @@ import logging
 import datetime
 
 from flask_login import current_user
+from sqlalchemy.exc import IntegrityError, OperationalError
 from app.core.exceptions import (
     AuthenticationError,
     DatabaseOperationError,
@@ -293,7 +294,7 @@ def load_topic(topic_name):
     Load topic data from PostgreSQL and reconstruct dictionary structure.
     Returns None if topic doesn't exist or user not authenticated (normal behavior for new topics).
     """
-    logger = logging.getLogger(__name__)
+    logging.getLogger(__name__)
 
     topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
     if not topic:
@@ -432,12 +433,10 @@ def delete_topic(topic_name):
 
         topic = Topic.query.filter_by(
             name=topic_name,
-            user_id=current_user.username).first()
+            user_id=current_user.userid).first()
         if not topic:
             return  # Topic doesn't exist - silently return (original behavior)
 
-    topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
-    if topic:
         db.session.delete(topic)
         db.session.commit()
         logger.info(f"Successfully deleted topic: {topic_name}")

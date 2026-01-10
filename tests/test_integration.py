@@ -5,7 +5,6 @@ from app.common.utils import call_llm, LLM_BASE_URL, LLM_MODEL_NAME
 from unittest.mock import MagicMock
 from app.core.models import Topic
 from app.core.exceptions import LLMResponseError
-from app.common.utils import call_llm
 from app.modes.quiz.agent import QuizAgent
 from app.common.agents import PlannerAgent, FeedbackAgent
 from app.modes.chapter.agent import ChapterTeachingAgent, AssessorAgent
@@ -92,9 +91,6 @@ def test_planner_agent(logger):
 
 
 @requires_llm
-def test_feedback_agent(logger):
-    """Test that the FeedbackAgent can generate feedback."""
-    logger.section("test_feedback_agent")
 def test_feedback_agent(logger):
     """Test that the FeedbackAgent can generate feedback."""
     logger.section("test_feedback_agent")

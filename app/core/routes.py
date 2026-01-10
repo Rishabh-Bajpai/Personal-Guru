@@ -190,6 +190,7 @@ def user_profile():
         db.session.commit()
         return redirect(url_for('main.index'))
 
+    show_terms = False
     return render_template('user_profile.html', user=user, show_terms=show_terms)
 
 
