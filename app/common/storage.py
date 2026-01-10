@@ -170,7 +170,7 @@ def save_topic(topic_name, data):
             else:
                 # Create
                 card = FlashcardMode(
-                    topics=topic,
+                    topic_id=topic.id,
                     term=term,
                     definition=card_data.get('definition'),
                     time_spent=card_data.get('time_spent', 0)
