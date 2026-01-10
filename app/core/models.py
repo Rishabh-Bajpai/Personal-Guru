@@ -2,8 +2,11 @@ from app.core.extensions import db
 # from pgvector.sqlalchemy import Vector
 import datetime
 from sqlalchemy import JSON
-from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+
+# UserMixin provides default implementations for the methods that Flask-Login expects user objects to have:
+# is_authenticated, is_active, is_anonymous, and get_id.
+from flask_login import UserMixin 
 
 class TimestampMixin:
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
@@ -48,8 +51,7 @@ class ChapterMode(TimestampMixin, db.Model):
     # Questions and Feedback stored as JSON
     questions = db.Column(JSON) 
     user_answers = db.Column(JSON)
-    # TODO: Remove this field as we have a dedicated Feedback table now
-    feedback = db.Column(JSON)
+    user_answers = db.Column(JSON)
     score = db.Column(db.Float)
     chat_history = db.Column(JSON) # Store chat history for this step
     time_spent = db.Column(db.Integer, default=0) # Duration in seconds
@@ -81,12 +83,9 @@ class User(UserMixin, TimestampMixin, db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     login_id = db.Column(db.String(36), db.ForeignKey('logins.userid'))
-    login = db.relationship('Login', back_populates='user_profile', uselist=False)
-    
     age = db.Column(db.Integer)
     country = db.Column(db.String(100))
-    #TODO: Change primary_language to an array to support multilingual users
-    primary_language = db.Column(db.String(100))
+    languages = db.Column(JSON) # Storing list of strings as JSON
     education_level = db.Column(db.String(100))
     field_of_study = db.Column(db.String(100))
     occupation = db.Column(db.String(100))
@@ -95,6 +94,9 @@ class User(UserMixin, TimestampMixin, db.Model):
     learning_style = db.Column(db.String(100))
     time_commitment = db.Column(db.String(100))
     preferred_format = db.Column(db.String(100))
+
+    #Relationship
+    login = db.relationship('Login', back_populates='user_profile', uselist=False)
 
     # TODO: Update strings below to match any changes in user profile fields
     def to_context_string(self):
@@ -106,8 +108,12 @@ class User(UserMixin, TimestampMixin, db.Model):
             parts.append(f"Age: {self.age}")
         if self.country:
             parts.append(f"Country: {self.country}")
-        if self.primary_language:
-            parts.append(f"Primary Language: {self.primary_language}")
+        if self.languages:
+            # Handle both string (legacy) and list (new)
+            langs = self.languages
+            if isinstance(langs, list):
+                langs = ", ".join(langs)
+            parts.append(f"Languages: {langs}")
         if self.education_level:
             parts.append(f"Education Level: {self.education_level}")
         if self.field_of_study:

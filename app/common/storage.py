@@ -1,5 +1,5 @@
 from app.core.extensions import db
-from app.core.models import Topic, ChapterMode, QuizMode, FlashcardMode
+from app.core.models import Topic, ChapterMode, QuizMode, FlashcardMode, Feedback
 import logging
 import datetime
 
@@ -53,25 +53,43 @@ def save_topic(topic_name, data):
                 step.content = content
                 step.questions = step_data.get('questions')
                 step.user_answers = step_data.get('user_answers')
-                step.feedback = step_data.get('feedback')
-                step.score = step_data.get('score')
-                step.chat_history = step_data.get('chat_history')
-                step.time_spent = step_data.get('time_spent', 0)
-            else:
-                # Create new
-                step = ChapterMode(
-                    topics=topic,
-                    step_index=step_index,
-                    title=step_title,
-                    content=content,
-                    questions=step_data.get('questions'),
-                    user_answers=step_data.get('user_answers'),
-                    feedback=step_data.get('feedback'),
-                    score=step_data.get('score'),
-                    chat_history=step_data.get('chat_history'),
-                    time_spent=step_data.get('time_spent', 0)
-                )
                 db.session.add(step)
+            
+            # --- Handle Feedback (Moved to dedicated table) ---
+            # content_reference for this step: topic_{id}_step_{index}
+            # Note: Topic ID might not be available if topic is new and flush not called?
+            # We need to ensure topic is flushed.
+            db.session.flush()
+            content_ref = f"topic_{topic.id}_step_{step_index}"
+            
+            # Delete existing feedback for this step/user to overwrite with current state
+            Feedback.query.filter_by(
+                user_id=current_user.userid, 
+                content_reference=content_ref
+            ).delete()
+            
+            feedbacks_data = step_data.get('feedback')
+            if feedbacks_data:
+                # normalize to list
+                if not isinstance(feedbacks_data, list):
+                    feedbacks_data = [feedbacks_data]
+                
+                for fb_item in feedbacks_data:
+                    # fb_item might be string or dict
+                    comment = fb_item
+                    rating = None
+                    if isinstance(fb_item, dict):
+                        comment = fb_item.get('comment')
+                        rating = fb_item.get('rating')
+                    
+                    new_fb = Feedback(
+                        user_id=current_user.userid,
+                        feedback_type='in_place',
+                        content_reference=content_ref,
+                        comment=comment,
+                        rating=rating
+                    )
+                    db.session.add(new_fb)
         
         # Delete removed steps
         for idx, step in existing_steps_map.items():
@@ -223,7 +241,8 @@ def load_topic(topic_name):
                 "content": step_model.content,
                 "questions": step_model.questions,
                 "user_answers": step_model.user_answers,
-                "feedback": step_model.feedback,
+                "user_answers": step_model.user_answers,
+                # "feedback": step_model.feedback, # REMOVED column
                 "score": step_model.score,
                 "chat_history": step_model.chat_history or [],
                 "time_spent": step_model.time_spent or 0,
@@ -232,6 +251,17 @@ def load_topic(topic_name):
                 # In app: key is 'teaching_material'
                 "teaching_material": step_model.content 
             })
+            
+            # Populate feedback from Feedback table
+            content_ref = f"topic_{topic.id}_step_{step_model.step_index}"
+            feedbacks = Feedback.query.filter_by(
+                user_id=current_user.userid, 
+                content_reference=content_ref
+            ).all()
+            
+            # Format back to list of strings or dicts as expected by frontend
+            # Assuming simple strings for now or dicts if rating present
+            steps_data[-1]['feedback'] = [f.comment for f in feedbacks]
         else:
             # Placeholder for steps not yet started/saved
             steps_data.append({})

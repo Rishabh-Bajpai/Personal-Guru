@@ -157,7 +157,14 @@ def user_profile():
         user.login.name = request.form.get('name')
         user.age = request.form.get('age') or None
         user.country = request.form.get('country')
-        user.primary_language = request.form.get('primary_language')
+        
+        # Handle languages as list
+        langs = request.form.get('languages')
+        if langs:
+            user.languages = [x.strip() for x in langs.split(',') if x.strip()]
+        else:
+            user.languages = []
+
         user.education_level = request.form.get('education_level')
         user.field_of_study = request.form.get('field_of_study')
         user.occupation = request.form.get('occupation')

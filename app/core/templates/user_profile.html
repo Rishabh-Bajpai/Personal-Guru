@@ -39,9 +39,10 @@
             </div>
 
             <div class="form-group">
-                <label for="primary_language">Primary Language</label>
-                <input type="text" id="primary_language" name="primary_language" class="form-control"
-                    value="{{ user.primary_language or '' }}" placeholder="e.g. English, Spanish">
+                <label for="languages">Languages</label>
+                <input type="text" id="languages" name="languages" class="form-control"
+                    value="{{ user.languages | join(', ') if user.languages else '' }}"
+                    placeholder="e.g. English, Hindi">
             </div>
 
             <!-- Education & Profession -->
