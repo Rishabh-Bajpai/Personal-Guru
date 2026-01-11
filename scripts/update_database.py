@@ -8,6 +8,7 @@ import os
 import logging
 from dotenv import load_dotenv
 from sqlalchemy import inspect, text
+import uuid
 
 # Output buffer for detailed logs (to prevent spamming stdout if not needed, but here we print)
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -165,6 +166,111 @@ def update_database():
                     except Exception as e:
                          logger.error(f"      -> FAILED to rename column: {e}")
                          db.session.rollback()
+            if table_name == 'users':
+                 # Special check for User model change (username -> id/login_id)
+                 has_username = 'username' in existing_col_map
+                 has_id = 'id' in existing_col_map
+                 
+                 if has_username and not has_id:
+                     logger.warning(" !! Detected old 'users' table schema (username PK). Migrating data to new schema...")
+                     
+                     try:
+                         # 1. Backup old data
+                         logger.info("    -> Backing up old user data...")
+                         old_users_result = db.session.execute(text('SELECT * FROM "users"'))
+                         try:
+                             # SQLAlchemy 1.4+
+                             users_data = [dict(row._mapping) for row in old_users_result]
+                         except AttributeError:
+                             # Fallback
+                             columns = old_users_result.keys()
+                             users_data = [dict(zip(columns, row)) for row in old_users_result]
+                         
+                         logger.info(f"    -> Found {len(users_data)} user(s) to migrate.")
+                         
+                         # 2. Drop old table
+                         sql = text('DROP TABLE "users" CASCADE')
+                         db.session.execute(sql)
+                         db.session.commit()
+                         logger.info("    -> Old 'users' table dropped.")
+                         
+                         # 3. Recreate tables (User, Login, etc.)
+                         logger.info("    -> Re-creating tables...")
+                         db.create_all()
+                         
+                         # 4. Migrate data
+                         if users_data:
+                             logger.info("    -> Migrating data to new Login/User tables...")
+                             migrated_count = 0
+                             for u in users_data:
+                                 try:
+                                     # Generate new UUID for Login
+                                     new_userid = models.Login.generate_userid()
+                                     old_username = u.get('username')
+                                     
+                                     # Create Login (Auth)
+                                     new_login = models.Login(
+                                         userid=new_userid,
+                                         username=old_username,
+                                         name=u.get('name'),
+                                         # Map hash to password
+                                         password=u.get('password_hash')
+                                     )
+                                     
+                                     # Create User (Profile)
+                                     langs = u.get('primary_language')
+                                     if langs and isinstance(langs, str):
+                                         langs = [langs] # Convert to list for JSON
+                                     elif not langs:
+                                         langs = []
+                                         
+                                     new_user = models.User(
+                                        login_id=new_userid,
+                                        age=u.get('age'),
+                                        country=u.get('country'),
+                                        languages=langs,
+                                        education_level=u.get('education_level'),
+                                        field_of_study=u.get('field_of_study'),
+                                        occupation=u.get('occupation'),
+                                        learning_goals=u.get('learning_goals'),
+                                        prior_knowledge=u.get('prior_knowledge'),
+                                        learning_style=u.get('learning_style'),
+                                        time_commitment=u.get('time_commitment'),
+                                        preferred_format=u.get('preferred_format')
+                                     )
+                                     
+                                     db.session.add(new_login)
+                                     db.session.add(new_user)
+                                     
+                                     # Update Topic links (restore ownership)
+                                     if old_username:
+                                         update_topics_sql = text('UPDATE topics SET user_id = :new_uid WHERE user_id = :old_uid')
+                                         db.session.execute(update_topics_sql, {'new_uid': new_userid, 'old_uid': old_username})
+
+                                     migrated_count += 1
+                                 except Exception as migration_err:
+                                     logger.error(f"    -> Error migrating user {u.get('username')}: {migration_err}")
+                             
+                             db.session.commit()
+                             logger.info(f"    -> Migration complete. {migrated_count} users migrated.")
+                             
+                             # Attempt to restore FK constraint on topics if possible
+                             try:
+                                 # Best-effort restoration of FK
+                                 fk_sql = text('ALTER TABLE topics ADD CONSTRAINT fk_topics_logins FOREIGN KEY (user_id) REFERENCES logins(userid)')
+                                 db.session.execute(fk_sql)
+                                 db.session.commit()
+                                 logger.info("    -> Restored FK constraint on topics table.")
+                             except Exception as fk_err:
+                                  logger.warning(f"    -> Could not add FK constraint to topics (non-critical): {fk_err}")
+                                  db.session.rollback()
+
+                     except Exception as e:
+                         logger.error(f"    -> FATAL: Failed to migrate user data: {e}")
+                         db.session.rollback()
+                         db.create_all()
+
+                     continue
             # Get model columns
             model_columns = model.__table__.columns
             
@@ -172,20 +278,7 @@ def update_database():
                 col_name = column.name
                 col_type = column.type
                 
-                if table_name == 'users':
-                     # Special check for User model change (username -> id/login_id)
-                     has_username = 'username' in existing_col_map
-                     has_id = 'id' in existing_col_map
-                     
-                     if has_username and not has_id:
-                         logger.warning(" !! Detected old 'users' table schema (username PK). Dropping table to recreate with 'id' PK/login_id.")
-                         # Drop table
-                         sql = text('DROP TABLE "users" CASCADE')
-                         db.session.execute(sql)
-                         db.session.commit()
-                         logger.info("    -> Table dropped. Re-running create_all...")
-                         db.create_all()
-                         continue
+
                 
                 # Check if column exists
                 if col_name not in existing_col_map:
