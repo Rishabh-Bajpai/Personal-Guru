@@ -8,7 +8,6 @@ import os
 import logging
 from dotenv import load_dotenv
 from sqlalchemy import inspect, text
-import uuid
 
 # Output buffer for detailed logs (to prevent spamming stdout if not needed, but here we print)
 logging.basicConfig(level=logging.INFO, format='%(message)s')
