@@ -25,34 +25,31 @@ class Topic(TimestampMixin, db.Model):
     )
     
     # Relationships
-    chapter_mode = db.relationship('ChapterMode', backref='topic', order_by='ChapterMode.step_index', cascade='all, delete-orphan')
-    quiz_mode = db.relationship('QuizMode', backref='topic', uselist=False, cascade='all, delete-orphan')
-    flashcard_mode = db.relationship('FlashcardMode', backref='topic', cascade='all, delete-orphan')
-    chat_mode = db.relationship('ChatMode', backref='topic', uselist=False, cascade='all, delete-orphan')
-    plan_revisions = db.relationship('PlanRevision', backref='topic', uselist=True, cascade='all, delete-orphan')
+    chapter_mode = db.relationship('ChapterMode', back_populates='topic', order_by='ChapterMode.step_index', cascade='all, delete-orphan')
+    quiz_mode = db.relationship('QuizMode', back_populates='topic', uselist=False, cascade='all, delete-orphan')
+    flashcard_mode = db.relationship('FlashcardMode', back_populates='topic', cascade='all, delete-orphan')
+    chat_mode = db.relationship('ChatMode', back_populates='topic', uselist=False, cascade='all, delete-orphan')
+    plan_revisions = db.relationship('PlanRevision', back_populates='topic', uselist=True, cascade='all, delete-orphan')
+    login = db.relationship('Login', back_populates='topics')
 
 class ChatMode(TimestampMixin, db.Model):
     __tablename__ = 'chat_mode'
     
     id = db.Column(db.Integer, primary_key=True)
-    topic_id = db.Column(
-        db.Integer,
-        db.ForeignKey('topics.id'),
-        nullable=False,
-        unique=True)
+    topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False, unique=True)
     history = db.Column(JSON)
     history_summary = db.Column(JSON)
     popup_chat_history = db.Column(JSON)
     time_spent = db.Column(db.Integer, default=0) # Duration in seconds
 
+    # Relationships
+    topic = db.relationship('Topic', back_populates='chat_mode')
+
 class ChapterMode(TimestampMixin, db.Model):
     __tablename__ = 'chapter_mode'
     
     id = db.Column(db.Integer, primary_key=True)
-    topic_id = db.Column(
-        db.Integer,
-        db.ForeignKey('topics.id'),
-        nullable=False)
+    topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
     step_index = db.Column(db.Integer, nullable=False)
     title = db.Column(db.String(255))
     content = db.Column(db.Text) # Markdown content
@@ -64,6 +61,9 @@ class ChapterMode(TimestampMixin, db.Model):
     score = db.Column(db.Float)
     popup_chat_history = db.Column(JSON) # Store chat history for this step
     time_spent = db.Column(db.Integer, default=0) # Duration in seconds
+
+    # Relationships
+    topic = db.relationship('Topic', back_populates='chapter_mode')
     
 class QuizMode(TimestampMixin, db.Model):
     __tablename__ = 'quiz_mode'
@@ -76,18 +76,21 @@ class QuizMode(TimestampMixin, db.Model):
     result = db.Column(JSON) # Detailed result (last_quiz_result)
     time_spent = db.Column(db.Integer, default=0) # Duration in seconds
 
+    # Relationships
+    topic = db.relationship('Topic', back_populates='quiz_mode')
+
 
 class FlashcardMode(TimestampMixin, db.Model):
     __tablename__ = 'flashcard_mode'
     
     id = db.Column(db.Integer, primary_key=True)
-    topic_id = db.Column(
-        db.Integer,
-        db.ForeignKey('topics.id'),
-        nullable=False)
+    topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
     term = db.Column(db.String(255), nullable=False)
     definition = db.Column(db.Text, nullable=False)
     time_spent = db.Column(db.Integer, default=0) # Duration in seconds
+
+    # Relationships
+    topic = db.relationship('Topic', back_populates='flashcard_mode')
 
 
 class User(TimestampMixin, db.Model):
@@ -157,7 +160,7 @@ class Installation(TimestampMixin, db.Model):
     install_method = db.Column(db.String(100), nullable=False)  # 'docker', 'local', 'cloud'
 
     # Relationships
-    logins = db.relationship('Login', backref='installation', cascade='all, delete-orphan')
+    logins = db.relationship('Login', back_populates='installation', cascade='all, delete-orphan')
 
 # TODO: both id and session_id should be kept. session_id should come from Flask and id MUST be unique.
 class TelemetryLog(TimestampMixin, db.Model):
@@ -171,6 +174,9 @@ class TelemetryLog(TimestampMixin, db.Model):
     payload = db.Column(JSON, nullable=False)  # TODO: Define content structure. Stores latency, error logs, quiz scores, etc.
     timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
 
+    # Relationships
+    login = db.relationship('Login', back_populates='telemetry_logs')
+
 
 class Feedback(TimestampMixin, db.Model):
     __tablename__ = 'feedback'
@@ -181,6 +187,9 @@ class Feedback(TimestampMixin, db.Model):
     content_reference = db.Column(db.String(255))  # TODO: Define content tag like 'chapter_1', 'quiz_2', etc. Use topic_id, step_index etc. to uniquely identify content
     rating = db.Column(db.Integer)
     comment = db.Column(db.Text)
+
+    # Relationships
+    login = db.relationship('Login', back_populates='feedbacks')
 
 
 class AIModelPerformance(TimestampMixin, db.Model):
@@ -195,6 +204,9 @@ class AIModelPerformance(TimestampMixin, db.Model):
     output_tokens = db.Column(db.Integer)
     timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
+    # Relationships
+    login = db.relationship('Login', back_populates='llm_performances')
+
 
 class PlanRevision(TimestampMixin, db.Model):
     __tablename__ = 'plan_revisions'
@@ -206,6 +218,10 @@ class PlanRevision(TimestampMixin, db.Model):
     old_plan_json = db.Column(JSON)
     new_plan_json = db.Column(JSON)
     timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+    # Relationships
+    topic = db.relationship('Topic', back_populates='plan_revisions')
+    login = db.relationship('Login', back_populates='plan_revisions')
 
 
 class Login(UserMixin, TimestampMixin, db.Model):
@@ -235,9 +251,10 @@ class Login(UserMixin, TimestampMixin, db.Model):
         return self.userid
 
     # Relationships
-    topics = db.relationship('Topic', backref='login', cascade='all, delete-orphan')
-    feedbacks = db.relationship('Feedback', backref='login', cascade='all, delete-orphan')
-    telemetry_logs = db.relationship('TelemetryLog', backref='login', cascade='all, delete-orphan')
-    llm_performances = db.relationship('AIModelPerformance', backref='login', cascade='all, delete-orphan')
-    plan_revisions = db.relationship('PlanRevision', backref='login', cascade='all, delete-orphan')
+    installation = db.relationship('Installation', back_populates='logins')
+    topics = db.relationship('Topic', back_populates='login', cascade='all, delete-orphan')
+    feedbacks = db.relationship('Feedback', back_populates='login', cascade='all, delete-orphan')
+    telemetry_logs = db.relationship('TelemetryLog', back_populates='login', cascade='all, delete-orphan')
+    llm_performances = db.relationship('AIModelPerformance', back_populates='login', cascade='all, delete-orphan')
+    plan_revisions = db.relationship('PlanRevision', back_populates='login', cascade='all, delete-orphan')
     user_profile = db.relationship('User', back_populates='login', uselist=False)
