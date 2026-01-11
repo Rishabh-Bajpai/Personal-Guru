@@ -365,9 +365,9 @@ def load_topic(topic_name):
                      logging.info(f"DEBUG: Path not found. Trying candidate: {candidate_path}")
                      if os.path.exists(candidate_path):
                          audio_path = candidate_path
-                         logging.info(f"DEBUG: Candidate found!")
+                         logging.info("DEBUG: Candidate found!")
                      else:
-                         logging.debug(f"DEBUG: Candidate also not found.")
+                         logging.debug("DEBUG: Candidate also not found.")
 
                 if os.path.exists(audio_path):
                     try:
