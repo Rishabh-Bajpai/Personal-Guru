@@ -219,9 +219,12 @@ def assess_step(topic_name, step_index):
 
     current_step_data = topic_data['steps'][step_index]
     questions = current_step_data.get('questions', {}).get('questions', [])
-    user_answers = [
-        request.form.get(f'option_{i}') for i in range(
-            len(questions))]
+    user_answers = [request.form.get(f'option_{i}') for i in range(len(questions))]
+    
+    try:
+        time_spent = int(request.form.get('time_spent', 0))
+    except ValueError:
+        time_spent = 0
 
     num_correct = 0
     feedback_results = []
@@ -246,6 +249,8 @@ def assess_step(topic_name, step_index):
     score = (num_correct / answered_questions_count *
              100) if answered_questions_count > 0 else 0
     current_step_data['score'] = score
+    if time_spent:
+         current_step_data['time_spent'] = (current_step_data.get('time_spent', 0) or 0) + time_spent
 
     if score < 50 and incorrect_questions:
         session['incorrect_questions'] = incorrect_questions
@@ -266,9 +271,23 @@ def assess_step(topic_name, step_index):
                            next_step_index=step_index + 1,
                            total_steps=len(topic_data['plan']))
 
+@chapter_bp.route('/<topic_name>/update_time/<int:step_index>', methods=['POST'])
+def update_time(topic_name, step_index):
+    try:
+        time_spent = int(request.form.get('time_spent', 0))
+    except (ValueError, TypeError):
+        time_spent = 0
 
-@chapter_bp.route('/reset_quiz/<topic_name>/<int:step_index>',
-                  methods=['POST'])
+    if time_spent > 0:
+        topic_data = load_topic(topic_name)
+        if topic_data and 'steps' in topic_data and 0 <= step_index < len(topic_data['steps']):
+            current_step_data = topic_data['steps'][step_index]
+            current_step_data['time_spent'] = (current_step_data.get('time_spent', 0) or 0) + time_spent
+            save_topic(topic_name, topic_data)
+            
+    return '', 204
+
+@chapter_bp.route('/reset_quiz/<topic_name>/<int:step_index>', methods=['POST'])
 def reset_quiz(topic_name, step_index):
     topic_data = load_topic(topic_name)
     if not topic_data:
@@ -358,6 +377,11 @@ def generate_podcast_route(topic_name, step_index):
         return {"error": "Audio generation failed"}, 500
 
     audio_url = url_for('static', filename=filename)
+    
+    # Save the podcast path to the step
+    current_step_data['podcast_audio_path'] = filename
+    save_topic(topic_name, topic_data)
+    
     return {"audio_url": audio_url}
 
 

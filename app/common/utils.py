@@ -409,8 +409,8 @@ def get_user_context():
     from flask_login import current_user
 
     try:
-        if current_user.is_authenticated:
-            context = current_user.to_context_string()
+        if current_user.is_authenticated and current_user.user_profile:
+            context = current_user.user_profile.to_context_string()
             if context.strip():
                 return context
     except Exception as e:

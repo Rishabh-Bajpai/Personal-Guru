@@ -70,9 +70,18 @@ def auth_client(client, app):
     with app.app_context():
         # Create test user
         # Check if exists first to be safe (though db dropped per test)
-        if not User.query.get('testuser'):
-            user = User(username='testuser')
-            user.set_password('password')
+        if not User.query.first(): # Check if empty
+             pass 
+             
+        from app.core.models import Login
+        if not Login.query.filter_by(username='testuser').first():
+            import uuid
+            uid = str(uuid.uuid4())
+            login = Login(userid=uid, username='testuser', name='Test User')
+            login.set_password('password')
+            db.session.add(login)
+            
+            user = User(login_id=uid)
             db.session.add(user)
             db.session.commit()
             
