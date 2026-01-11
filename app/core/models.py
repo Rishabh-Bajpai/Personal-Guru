@@ -238,7 +238,7 @@ class Login(UserMixin, TimestampMixin, db.Model):
         import uuid
         base_id = str(uuid.uuid4())
         if installation_id:
-            return f"{base_id}_{installation_id}"
+            return f"{installation_id}_{base_id}"
         return base_id
 
     def set_password(self, password):
@@ -264,7 +264,7 @@ class Login(UserMixin, TimestampMixin, db.Model):
     telemetry_logs = db.relationship('TelemetryLog', back_populates='login', cascade='all, delete-orphan')
     llm_performances = db.relationship('AIModelPerformance', back_populates='login', cascade='all, delete-orphan')
     plan_revisions = db.relationship('PlanRevision', back_populates='login', cascade='all, delete-orphan')
-    user_profile = db.relationship('User', back_populates='login', uselist=False)
+    user_profile = db.relationship('User', back_populates='login', uselist=False, cascade='all, delete-orphan')
 
 # class VectorEmbedding(db.Model):
 #     __tablename__ = 'vector_embeddings'
