@@ -20,7 +20,7 @@ def mode(topic_name):
         save_topic(topic_name, topic_data)
         topic_data = load_topic(topic_name)
 
-    chat_history = topic_data.get('chat_history') or [] if topic_data else []
+    chat_history = topic_data.get('chat_history', []) if topic_data else []
 
     if not chat_history:
         # Generate welcome message if chat is new
@@ -114,7 +114,7 @@ def update_plan(topic_name):
     # Add a system message to the chat
     # Reload history from DB to be safe
     topic_data = load_topic(topic_name)
-    chat_history = topic_data.get('chat_history') or []
+    chat_history = topic_data.get('chat_history', [])
 
     system_message = f"Based on your feedback, I've updated the study plan. The new focus will be on: {', '.join(new_plan)}. Let's proceed with the new direction."
     chat_history.append({"role": "assistant", "content": system_message})
@@ -148,8 +148,8 @@ def send_message(topic_name):
     user_background = get_user_context()
 
     # Load history from DB
-    chat_history = (topic_data.get('chat_history') or []) if topic_data else []
-    chat_history_summary = (topic_data.get('chat_history_summary') or []) if topic_data else []
+    chat_history = topic_data.get('chat_history', []) if topic_data else []
+    chat_history_summary = topic_data.get('chat_history_summary', []) if topic_data else []
 
     # Initialize summary if missing (for backward compatibility)
     if chat_history and not chat_history_summary:
@@ -216,8 +216,8 @@ def update_time(topic_name):
     if time_spent > 0:
         topic_data = load_topic(topic_name)
         if topic_data:
-             chat_history = topic_data.get('chat_history') or []
-             save_chat_history(topic_name, chat_history, time_spent=time_spent)
+            chat_history = topic_data.get('chat_history', [])
+            save_chat_history(topic_name, chat_history, time_spent=time_spent)
              
     return '', 204
 
