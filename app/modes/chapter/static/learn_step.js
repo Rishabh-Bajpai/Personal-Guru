@@ -305,7 +305,12 @@ function setupPodcast() {
         }
     });
 
-    function initPlayer(url) {
+    // Check if audio already exists (reloaded from DB)
+    if (audio.src && audio.src.length > 0 && audio.src !== window.location.href) {
+        initPlayer(audio.src, false);
+    }
+
+    function initPlayer(url, autoplay = true) {
         audio.src = url;
         audio.load();
 
@@ -321,7 +326,11 @@ function setupPodcast() {
         };
 
         // Auto-play
-        togglePlay();
+        if (autoplay) {
+            togglePlay();
+        } else {
+            updatePlayIcon(false);
+        }
     }
 
     function togglePlay() {

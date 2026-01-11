@@ -2,6 +2,8 @@ from app.core.extensions import db
 from app.core.models import Topic, ChapterMode, QuizMode, FlashcardMode, Feedback
 import logging
 import datetime
+import os
+import base64
 
 from flask_login import current_user
 from sqlalchemy.exc import IntegrityError, OperationalError
@@ -64,7 +66,8 @@ def save_topic(topic_name, data):
                 step = existing_steps_map[step_index]
                 step.title = step_title
                 step.content = content
-                step.podcast_audio_path = step_data.get('podcast_audio_path')
+                if step_data.get('podcast_audio_path'):
+                    step.podcast_audio_path = step_data.get('podcast_audio_path')
                 step.questions = step_data.get('questions')
                 step.user_answers = step_data.get('user_answers')
                 step.score = step_data.get('score')
@@ -344,8 +347,38 @@ def load_topic(topic_name):
                 # In model: content = db.Column(db.Text) # Markdown content
                 # In app: key is 'teaching_material'
                 "teaching_material": step_model.content,
-                "podcast_audio_path": step_model.podcast_audio_path 
+                "podcast_audio_path": step_model.podcast_audio_path,
+                "podcast_audio_content": None
             })
+
+            # Load audio content if path exists
+            if step_model.podcast_audio_path:
+                audio_path = step_model.podcast_audio_path
+                logging.info(f"DEBUG: Processing audio for step {step_model.step_index}. Raw path: {audio_path}")
+                
+                # If path doesn't exist as is, check if it's relative to app/static
+                if not os.path.exists(audio_path):
+                     # Try resolving relative to app/static
+                     # Assuming project root is cwd. app/static is standard.
+                     # We can also rely on flask static folder if available context, but here we are in storage.
+                     candidate_path = os.path.join(os.getcwd(), 'app', 'static', os.path.basename(audio_path))
+                     logging.info(f"DEBUG: Path not found. Trying candidate: {candidate_path}")
+                     if os.path.exists(candidate_path):
+                         audio_path = candidate_path
+                         logging.info(f"DEBUG: Candidate found!")
+                     else:
+                         logging.debug(f"DEBUG: Candidate also not found.")
+
+                if os.path.exists(audio_path):
+                    try:
+                        with open(audio_path, 'rb') as audio_file:
+                            encoded_string = base64.b64encode(audio_file.read()).decode('utf-8')
+                            steps_data[-1]["podcast_audio_content"] = encoded_string
+                            logging.info(f"DEBUG: Successfully loaded and encoded audio for step {step_model.step_index}")
+                    except Exception as e:
+                         logging.warning(f"Failed to load audio file for topic {topic_name} step {step_model.step_index}: {e}")
+                else:
+                    logging.warning(f"Audio file not found at path: {step_model.podcast_audio_path} or resolved path {audio_path}")
             
             # Populate feedback from Feedback table
             content_ref = f"topic_{topic.id}_step_{step_model.step_index}"
