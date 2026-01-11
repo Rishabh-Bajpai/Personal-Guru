@@ -45,7 +45,8 @@ def save_topic(topic_name, data):
         
         # --- Handle ChapterMode (Steps) ---
         plan = data.get('plan', [])
-        incoming_steps = data.get('steps', [])
+        # Support both 'steps' (legacy/API) and 'chapter_mode' (storage sync)
+        incoming_steps = data.get('chapter_mode') or data.get('steps') or []
         
         # Existing steps map: index -> instance
         existing_steps_map = {s.step_index: s for s in topic.chapter_mode}
@@ -71,7 +72,7 @@ def save_topic(topic_name, data):
                 step.questions = step_data.get('questions')
                 step.user_answers = step_data.get('user_answers')
                 step.score = step_data.get('score')
-                step.chat_history = step_data.get('chat_history')
+                step.popup_chat_history = step_data.get('popup_chat_history') or step_data.get('chat_history')
                 step.time_spent = step_data.get('time_spent', 0)
                 db.session.add(step)
             else:
@@ -85,7 +86,7 @@ def save_topic(topic_name, data):
                     questions=step_data.get('questions'),
                     user_answers=step_data.get('user_answers'),
                     score=step_data.get('score'),
-                    chat_history=step_data.get('chat_history'),
+                    popup_chat_history=step_data.get('popup_chat_history') or step_data.get('chat_history'),
                     time_spent=step_data.get('time_spent', 0)
                 )
                 db.session.add(step)
@@ -186,6 +187,31 @@ def save_topic(topic_name, data):
             if term not in seen_terms:
                 db.session.delete(card)
 
+        # --- Handle ChatMode ---
+        # Ensure we save history and popup_history if they are in the data
+        if 'chat_history' in data or 'popup_chat_history' in data:
+            from app.core.models import ChatMode
+            if not topic.chat_mode:
+                chat_session = ChatMode(topic_id=topic.id)
+                db.session.add(chat_session)
+            else:
+                chat_session = topic.chat_mode
+            
+            from sqlalchemy.orm.attributes import flag_modified
+            if 'chat_history' in data:
+                chat_session.history = data['chat_history']
+                flag_modified(chat_session, 'history')
+            if 'chat_history_summary' in data:
+                chat_session.history_summary = data['chat_history_summary']
+                flag_modified(chat_session, 'history_summary')
+            if 'popup_chat_history' in data:
+                chat_session.popup_chat_history = data['popup_chat_history']
+                flag_modified(chat_session, 'popup_chat_history')
+            if 'chat_time_spent' in data:
+                chat_session.time_spent = data['chat_time_spent']
+            
+            db.session.add(chat_session)
+
         db.session.commit()
 
     except AuthenticationError:
@@ -224,7 +250,7 @@ def save_topic(topic_name, data):
             debug_info={"topic_name": topic_name}
         )
 
-def save_chat_history(topic_name, history, history_summary=None, time_spent=0):
+def save_chat_history(topic_name, history, history_summary=None, time_spent=0, popup_history=None):
     """
     Save chat history and optional summary for a topic.
     """
@@ -263,6 +289,10 @@ def save_chat_history(topic_name, history, history_summary=None, time_spent=0):
         if history_summary is not None:
              chat_session.history_summary = list(history_summary)
              flag_modified(chat_session, 'history_summary')
+
+        if popup_history is not None:
+             chat_session.popup_chat_history = list(popup_history)
+             flag_modified(chat_session, 'popup_chat_history')
 
         db.session.add(chat_session)
 
@@ -316,8 +346,9 @@ def load_topic(topic_name):
         "name": topic.name,
         "plan": topic.study_plan or [], # Map model 'study_plan' back to app 'plan'
         "last_quiz_result": None, # Will populate from Quiz
-        "chat_history": topic.chat_mode.history if topic.chat_mode else [],
-        "chat_history_summary": topic.chat_mode.history_summary if topic.chat_mode else [],
+        "chat_history": (topic.chat_mode.history or []) if topic.chat_mode else [],
+        "chat_history_summary": (topic.chat_mode.history_summary or []) if topic.chat_mode else [],
+        "popup_chat_history": (topic.chat_mode.popup_chat_history or []) if topic.chat_mode else [],
         "chapter_mode": [],
         "quiz_mode": None,
         "flashcard_mode": []
@@ -341,7 +372,7 @@ def load_topic(topic_name):
                 "questions": step_model.questions,
                 "user_answers": step_model.user_answers,
                 "score": step_model.score,
-                "chat_history": step_model.chat_history or [],
+                "popup_chat_history": step_model.popup_chat_history or [],
                 "time_spent": step_model.time_spent or 0,
                 # Include derived fields if needed, e.g. teaching_material is actually 'content' in model?
                 # In model: content = db.Column(db.Text) # Markdown content

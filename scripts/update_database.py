@@ -123,6 +123,22 @@ def update_database():
                           logger.error(f"      -> FAILED to drop column: {e}")
                           db.session.rollback()
 
+            # Special check for renaming 'chat_history' -> 'popup_chat_history' in ChapterMode
+            if table_name == 'chapter_mode':
+                if 'chat_history' in existing_col_map and 'popup_chat_history' not in existing_col_map:
+                    logger.info("  [~] Renaming column 'chat_history' to 'popup_chat_history'")
+                    try:
+                        sql = text('ALTER TABLE "chapter_mode" RENAME COLUMN "chat_history" TO "popup_chat_history"')
+                        db.session.execute(sql)
+                        db.session.commit()
+                        logger.info("      -> Renamed successfully.")
+                        # Update local map
+                        existing_col_map['popup_chat_history'] = existing_col_map.pop('chat_history')
+                        existing_col_map['popup_chat_history']['name'] = 'popup_chat_history'
+                    except Exception as e:
+                         logger.error(f"      -> FAILED to rename column: {e}")
+                         db.session.rollback()
+
             # Special check for 'installation_id' removal in Feedback (refactor to user-centric)
             if table_name == 'feedback':
                 if 'installation_id' in existing_col_map:

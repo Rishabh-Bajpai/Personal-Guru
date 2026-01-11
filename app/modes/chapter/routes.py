@@ -243,6 +243,7 @@ def assess_step(topic_name, step_index):
             feedback_results.append(feedback_data)
 
     current_step_data['user_answers'] = user_answers
+    current_step_data['popup_chat_history'] = current_step_data.get('popup_chat_history', []) # placeholder for template if needed
     current_step_data['feedback'] = feedback_results
 
     answered_questions_count = len([ua for ua in user_answers if ua])
@@ -299,6 +300,8 @@ def reset_quiz(topic_name, step_index):
             del current_step_data['user_answers']
         if 'feedback' in current_step_data:
             del current_step_data['feedback']
+        if 'popup_chat_history' in current_step_data:
+            del current_step_data['popup_chat_history']
         if 'score' in current_step_data:
             del current_step_data['score']
         save_topic(topic_name, topic_data)

@@ -42,6 +42,7 @@ class ChatMode(TimestampMixin, db.Model):
         unique=True)
     history = db.Column(JSON)
     history_summary = db.Column(JSON)
+    popup_chat_history = db.Column(JSON)
     time_spent = db.Column(db.Integer, default=0) # Duration in seconds
 
 class ChapterMode(TimestampMixin, db.Model):
@@ -61,7 +62,7 @@ class ChapterMode(TimestampMixin, db.Model):
     questions = db.Column(JSON)
     user_answers = db.Column(JSON)
     score = db.Column(db.Float)
-    chat_history = db.Column(JSON) # Store chat history for this step
+    popup_chat_history = db.Column(JSON) # Store chat history for this step
     time_spent = db.Column(db.Integer, default=0) # Duration in seconds
     
 class QuizMode(TimestampMixin, db.Model):

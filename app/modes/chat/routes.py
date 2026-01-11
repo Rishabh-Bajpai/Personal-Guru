@@ -20,7 +20,7 @@ def mode(topic_name):
         save_topic(topic_name, topic_data)
         topic_data = load_topic(topic_name)
 
-    chat_history = topic_data.get('chat_history', []) if topic_data else []
+    chat_history = topic_data.get('chat_history') or [] if topic_data else []
 
     if not chat_history:
         # Generate welcome message if chat is new
@@ -114,7 +114,7 @@ def update_plan(topic_name):
     # Add a system message to the chat
     # Reload history from DB to be safe
     topic_data = load_topic(topic_name)
-    chat_history = topic_data.get('chat_history', [])
+    chat_history = topic_data.get('chat_history') or []
 
     system_message = f"Based on your feedback, I've updated the study plan. The new focus will be on: {', '.join(new_plan)}. Let's proceed with the new direction."
     chat_history.append({"role": "assistant", "content": system_message})
@@ -148,8 +148,8 @@ def send_message(topic_name):
     user_background = get_user_context()
 
     # Load history from DB
-    chat_history = topic_data.get('chat_history', []) if topic_data else []
-    chat_history_summary = topic_data.get('chat_history_summary', []) if topic_data else []
+    chat_history = (topic_data.get('chat_history') or []) if topic_data else []
+    chat_history_summary = (topic_data.get('chat_history_summary') or []) if topic_data else []
 
     # Initialize summary if missing (for backward compatibility)
     if chat_history and not chat_history_summary:
@@ -216,7 +216,7 @@ def update_time(topic_name):
     if time_spent > 0:
         topic_data = load_topic(topic_name)
         if topic_data:
-             chat_history = topic_data.get('chat_history', [])
+             chat_history = topic_data.get('chat_history') or []
              save_chat_history(topic_name, chat_history, time_spent=time_spent)
              
     return '', 204
@@ -238,7 +238,7 @@ def chat(topic_name, step_index):
 
     if step_index == 9999:
         # Chat Mode Popup Logic
-        popup_history = topic_data.get('popup_chat_history', [])
+        popup_history = topic_data.get('popup_chat_history') or []
         popup_history.append({"role": "user", "content": user_question})
 
         from app.common.utils import get_user_context
@@ -260,20 +260,19 @@ def chat(topic_name, step_index):
             return {"error": str(error)}, 500
 
         popup_history.append({"role": "assistant", "content": answer})
-        topic_data['popup_chat_history'] = popup_history
-        save_topic(topic_name, topic_data)
+        save_chat_history(topic_name, topic_data.get('chat_history', []), popup_history=popup_history)
         return {"answer": answer}
 
-    if 'steps' not in topic_data:
+    if 'chapter_mode' not in topic_data:
         return {"error": "Topic has no steps defined"}, 400
 
-    if step_index < 0 or step_index >= len(topic_data['steps']):
+    if step_index < 0 or step_index >= len(topic_data['chapter_mode']):
         return {"error": "Step index out of range"}, 400
-    current_step_data = topic_data['steps'][step_index]
+    current_step_data = topic_data['chapter_mode'][step_index]
     teaching_material = current_step_data.get('teaching_material', '')
 
     # Load step-specific chat history
-    step_history = current_step_data.get('chat_history', [])
+    step_history = current_step_data.get('popup_chat_history') or []
     step_history.append({"role": "user", "content": user_question})
 
     from app.common.utils import get_user_context
@@ -297,7 +296,7 @@ def chat(topic_name, step_index):
     step_history.append({"role": "assistant", "content": answer})
 
     # Save back to topic data
-    current_step_data['chat_history'] = step_history
+    current_step_data['popup_chat_history'] = step_history
     if time_spent:
          current_step_data['time_spent'] = (current_step_data.get('time_spent', 0) or 0) + int(time_spent)
     # We must save the whole topic to persist the step update
