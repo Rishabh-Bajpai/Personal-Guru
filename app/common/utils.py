@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 import json
 import re
@@ -76,6 +77,7 @@ def call_llm(prompt_or_messages, is_json=False):
     api_url = f"{base_url}/chat/completions"
 
     try:
+        start_time = time.time()
         print(f"Calling LLM: {api_url}")
 
         if isinstance(prompt_or_messages, list):
@@ -108,8 +110,44 @@ def call_llm(prompt_or_messages, is_json=False):
 
         response_json = response.json()
         content = response_json['choices'][0]['message']['content']
+        
+        # Calculate latency
+        end_time = time.time()
+        latency_ms = int((end_time - start_time) * 1000)
 
-        logger.debug(f"LLM Response received: {len(content)} characters")
+        # Extract token usage if available
+        usage = response_json.get('usage', {})
+        input_tokens = usage.get('prompt_tokens', 0)
+        output_tokens = usage.get('completion_tokens', 0)
+
+        logger.debug(f"LLM Response received: {len(content)} characters. Latency: {latency_ms}ms")
+
+        # Database Logging Hook
+        try:
+            # Local imports to avoid circular dependency
+            from app.core.extensions import db
+            from app.core.models import AIModelPerformance
+            from flask_login import current_user
+
+            # Only log if user is authenticated and we are in a request context
+            if current_user and current_user.is_authenticated:
+                perf_log = AIModelPerformance(
+                    user_id=current_user.userid, # Use userid from Login
+                    model_type='LLM',
+                    model_name=LLM_MODEL_NAME,
+                    latency_ms=latency_ms,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens
+                )
+                db.session.add(perf_log)
+                db.session.commit()
+                logger.debug("Logged AI performance metrics to database.")
+
+        except Exception as db_err:
+            # We catch generic exception because this is non-critical logging
+            # and we don't want to fail the LLM call if DB logging fails
+            # (e.g. if outside of app context or db lock)
+            logger.warning(f"Failed to log AI performance: {db_err}")
 
         if is_json:
             # The content is a string of JSON, so parse it
