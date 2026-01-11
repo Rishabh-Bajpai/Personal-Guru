@@ -101,7 +101,7 @@ function initFlashcardMode(config) {
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    cards = data.flashcards || [];
+                    cards = data.flashcard_mode || data.flashcards || [];
                     if (cards.length === 0) { err.textContent = 'No flashcards generated.'; }
                     idx = 0;
                     renderCard(idx);

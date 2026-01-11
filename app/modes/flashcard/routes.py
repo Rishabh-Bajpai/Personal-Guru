@@ -15,7 +15,7 @@ def mode(topic_name):
         # Topic doesn't exist yet, allow user to generate content
         flashcards = []
     else:
-        flashcards = topic_data.get('flashcards', [])
+        flashcards = topic_data.get('flashcard_mode', [])
 
     return render_template(
         'flashcard/mode.html',
@@ -62,10 +62,10 @@ def generate_flashcards_route():
     # Persist flashcards
     topic_data = load_topic(topic_name) or {
         "name": topic_name, "plan": [], "steps": []}
-    topic_data['flashcards'] = cards
+    topic_data['flashcard_mode'] = cards
     save_topic(topic_name, topic_data)
 
-    return {"flashcards": cards}
+    return {"flashcard_mode": cards, "flashcards": cards}
 
 @flashcard_bp.route('/<topic_name>/update_time', methods=['POST'])
 def update_time(topic_name):
@@ -76,9 +76,9 @@ def update_time(topic_name):
         
     if time_spent > 0:
         topic_data = load_topic(topic_name)
-        if topic_data and topic_data.get('flashcards'):
-             if len(topic_data['flashcards']) > 0:
-                 topic_data['flashcards'][0]['time_spent'] = (topic_data['flashcards'][0].get('time_spent', 0) or 0) + time_spent
+        if topic_data and topic_data.get('flashcard_mode'):
+             if len(topic_data['flashcard_mode']) > 0:
+                 topic_data['flashcard_mode'][0]['time_spent'] = (topic_data['flashcard_mode'][0].get('time_spent', 0) or 0) + time_spent
                  save_topic(topic_name, topic_data)
              
     return '', 204
@@ -93,7 +93,7 @@ def update_progress(topic_name):
     # Expecting data['flashcards'] to be a list of {term: ..., time_spent: ...}
     updates = {item['term']: item.get('time_spent', 0) for item in data.get('flashcards', [])}
     
-    for card in topic_data.get('flashcards', []):
+    for card in topic_data.get('flashcard_mode', []):
         if card['term'] in updates:
             # Accumulate time
             card['time_spent'] = (card.get('time_spent', 0) or 0) + updates[card['term']]
@@ -107,7 +107,7 @@ def export_pdf(topic_name):
     if not topic_data:
         return "Topic not found", 404
 
-    flashcards = topic_data.get('flashcards', [])
+    flashcards = topic_data.get('flashcard_mode', [])
 
     html = render_template(
         'flashcard/export.html',

@@ -157,7 +157,7 @@ def save_topic(topic_name, data):
         # --- Handle Flashcards ---
         # Flashcards are tricky without IDs. We'll match by TERM.
         incoming_cards = data.get('flashcards', [])
-        existing_cards_map = {c.term: c for c in topic.flashcards}
+        existing_cards_map = {c.term: c for c in topic.flashcard_mode}
         seen_terms = set()
         
         for card_data in incoming_cards:
@@ -320,7 +320,7 @@ def load_topic(topic_name):
         "chat_history_summary": topic.chat_mode.history_summary if topic.chat_mode else [],
         "chapter_mode": [],
         "quiz_mode": None,
-        "flashcards": []
+        "flashcard_mode": []
     }
     
     
@@ -412,8 +412,8 @@ def load_topic(topic_name):
         data["last_quiz_result"] = latest_quiz.result
         
     # Flashcards
-    for card in topic.flashcards:
-        data["flashcards"].append({
+    for card in topic.flashcard_mode:
+        data["flashcard_mode"].append({
             "term": card.term,
             "definition": card.definition,
             "time_spent": card.time_spent or 0

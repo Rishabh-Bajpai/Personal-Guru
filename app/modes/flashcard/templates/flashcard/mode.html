@@ -44,7 +44,9 @@
 
 {% block scripts %}
 
-<div id="flashcard-data" data-flashcards='{{ flashcards|tojson|safe }}' data-topic="{{ topic_name }}">
+<div id="flashcard-data"
+    data-flashcards='{{ (flashcard_mode if flashcard_mode is defined else flashcards)|tojson|safe }}'
+    data-topic="{{ topic_name }}">
 </div>
 
 <script src="{{ url_for('flashcard.static', filename='mode.js') }}"></script>

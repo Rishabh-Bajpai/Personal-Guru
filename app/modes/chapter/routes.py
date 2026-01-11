@@ -434,12 +434,12 @@ def export_topic_pdf(topic_name):
             average_score=average_score)
 
     # Fallback to Flashcards if no plan but flashcards exist
-    elif topic_data.get('flashcards'):
+    elif topic_data.get('flashcard_mode'):
         html = render_template(
             'flashcard/export.html',
             topic_name=topic_name,
             flashcards=topic_data.get(
-                'flashcards',
+                'flashcard_mode',
                 []))
     else:
         return "No content to export", 404

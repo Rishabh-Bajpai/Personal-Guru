@@ -69,14 +69,14 @@ def index():
         data = load_topic(topic)
         if data:
             plan = data.get('plan')
-            flashcards = data.get('flashcards')
-            quiz = data.get('quiz')
+            flashcard_mode = data.get('flashcard_mode')
+            quiz = data.get('quiz_mode')
             chat_history = data.get('chat_history')
 
             topics_data.append({
                 'name': topic,
                 'has_plan': bool(plan),
-                'has_flashcards': bool(flashcards),
+                'has_flashcards': bool(flashcard_mode),
                 'has_quiz': bool(quiz),
                 'has_chat': bool(chat_history),
                 'has_reels': False  # Placeholder as reels aren't stored in topic currently
