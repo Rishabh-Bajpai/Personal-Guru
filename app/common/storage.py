@@ -500,6 +500,23 @@ def delete_topic(topic_name):
         if not topic:
             return  # Topic doesn't exist - silently return (original behavior)
 
+        # Delete related chat sessions, chapter modes, quiz modes, flashcard modes, and plan revisions
+        # before deleting the topic itself to avoid foreign key constraints.
+        if topic.chat_mode:
+            db.session.delete(topic.chat_mode)
+        
+        # Delete items in collections
+        for item in topic.chapter_mode:
+            db.session.delete(item)
+        for item in topic.flashcard_mode:
+            db.session.delete(item)
+        for item in topic.plan_revisions:
+            db.session.delete(item)
+
+        # QuizMode is a one-to-one relationship (uselist=False), so no loop needed
+        if topic.quiz_mode:
+            db.session.delete(topic.quiz_mode)
+
         db.session.delete(topic)
         db.session.commit()
         logger.info(f"Successfully deleted topic: {topic_name}")
