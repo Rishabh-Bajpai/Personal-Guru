@@ -8,6 +8,15 @@
 
 {% block scripts %}
 <script src="{{ url_for('quiz.static', filename='quiz.js') }}"></script>
+<script src="{{ url_for('common.static', filename='js/time_tracker.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        new TimeTracker({
+            updateUrl: "{{ url_for('quiz.update_time', topic_name=topic_name) }}",
+            topicName: "{{ topic_name }}"
+        });
+    });
+</script>
 {% endblock %}
 
 {% block content %}

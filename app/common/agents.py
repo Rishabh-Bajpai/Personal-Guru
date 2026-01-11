@@ -250,6 +250,55 @@ class PlannerAgent:
             # The response is expected to be a string representation of a list
             new_plan = ast.literal_eval(response)
             if isinstance(new_plan, list):
+                
+                # Database Hook for PlanRevision
+                try:
+                    from app.core.extensions import db
+                    from app.core.models import Topic, PlanRevision
+                    from flask_login import current_user
+                    
+                    if current_user and current_user.is_authenticated:
+                        # Find the topic to get its ID
+                        # Note: we assume topic_name is unique per user, or close enough for this context lookup
+                        topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
+                        
+                        if topic:
+                            # Deduplication check: Prevent logging if identical revision exists within last 30 seconds
+                            import datetime
+                            last_revision = PlanRevision.query.filter_by(
+                                topic_id=topic.id,
+                                user_id=current_user.userid
+                            ).order_by(PlanRevision.timestamp.desc()).first()
+                            
+                            is_duplicate = False
+                            if last_revision:
+                                # Check if identical request (reason + old_plan + new_plan) within short time
+                                time_diff = datetime.datetime.utcnow() - last_revision.timestamp
+                                
+                                if (last_revision.reason == (comment if comment else "Manual Revision") and
+                                    last_revision.old_plan_json == current_plan and
+                                    last_revision.new_plan_json == new_plan and 
+                                    time_diff.total_seconds() < 30):
+                                    is_duplicate = True
+                                    logger.info(f"Skipping duplicate PlanRevision for topic {topic_name}")
+
+                            if not is_duplicate:
+                                revision = PlanRevision(
+                                    topic_id=topic.id,
+                                    user_id=current_user.userid,
+                                    reason=comment if comment else "Manual Revision",
+                                    old_plan_json=current_plan,
+                                    new_plan_json=new_plan
+                                )
+                                db.session.add(revision)
+                                db.session.commit()
+                                logger.info(f"Logged PlanRevision for topic {topic_name}")
+                        else:
+                            logger.warning(f"Could not find topic {topic_name} to log PlanRevision")
+                            
+                except Exception as db_err:
+                     logger.warning(f"Failed to log PlanRevision: {db_err}")
+
                 return new_plan
             else:
                 raise LLMResponseError(

@@ -19,3 +19,4 @@ pytest-cov
 black
 flake8
 gunicorn==23.0.0
+psutil==6.1.1
