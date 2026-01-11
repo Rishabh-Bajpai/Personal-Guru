@@ -116,8 +116,8 @@ class User(TimestampMixin, db.Model):
     def to_context_string(self):
         """Generates a text description of the user profile for LLM context."""
         parts = []
-        if self.login and self.login.name: 
-            parts.append(f"Name: {self.login.name}")
+        if self.login: 
+            parts.append(f"Name: {self.login.display_name}")
         if self.age:
             parts.append(f"Age: {self.age}")
         if self.country:
@@ -250,6 +250,13 @@ class Login(UserMixin, TimestampMixin, db.Model):
     def get_id(self):
         return self.userid
 
+    @property
+    def display_name(self):
+        """Returns the name if set, otherwise 'Learner'."""
+        if self.name and self.name.strip():
+            return self.name
+        return "Learner"
+
     # Relationships
     installation = db.relationship('Installation', back_populates='logins')
     topics = db.relationship('Topic', back_populates='login', cascade='all, delete-orphan')
@@ -258,3 +265,11 @@ class Login(UserMixin, TimestampMixin, db.Model):
     llm_performances = db.relationship('AIModelPerformance', back_populates='login', cascade='all, delete-orphan')
     plan_revisions = db.relationship('PlanRevision', back_populates='login', cascade='all, delete-orphan')
     user_profile = db.relationship('User', back_populates='login', uselist=False)
+
+# class VectorEmbedding(db.Model):
+#     __tablename__ = 'vector_embeddings'
+#
+#     id = db.Column(db.Integer, primary_key=True)
+#     content = db.Column(db.Text, nullable=False)
+#     embedding = db.Column(Vector(1536)) # Assuming OpenAI Ada-002 dimension
+#     metadata_json = db.Column(JSONB)

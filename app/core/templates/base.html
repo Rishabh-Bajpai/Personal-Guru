@@ -21,7 +21,7 @@
     <div class="container">
         <div style="text-align: right; margin-bottom: 1rem;">
             {% if current_user.is_authenticated %}
-            <span style="margin-right: 15px; color: var(--text-color);">Hello, {{ current_user.username }}</span>
+            <span style="margin-right: 15px; color: var(--text-color);">Hello, {{ current_user.display_name }}</span>
             <a href="{{ url_for('main.user_profile') }}" class="button">Profile</a>
             <a href="{{ url_for('main.logout') }}" class="button">Logout</a>
             {% else %}
