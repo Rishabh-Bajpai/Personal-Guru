@@ -29,7 +29,7 @@ class Topic(TimestampMixin, db.Model):
     quizzes = db.relationship('QuizMode', backref='topic', uselist=False, cascade='all, delete-orphan')
     flashcards = db.relationship('FlashcardMode', backref='topic', cascade='all, delete-orphan')
     chat_mode = db.relationship('ChatMode', backref='topic', uselist=False, cascade='all, delete-orphan')
-    plan_revisions = db.relationship('PlanRevision', backref='topic', uselist=False, cascade='all, delete-orphan')
+    plan_revisions = db.relationship('PlanRevision', backref='topic', uselist=True, cascade='all, delete-orphan')
 
 class ChatMode(TimestampMixin, db.Model):
     __tablename__ = 'chat_mode'
@@ -89,7 +89,7 @@ class FlashcardMode(TimestampMixin, db.Model):
     time_spent = db.Column(db.Integer, default=0) # Duration in seconds
 
 
-class User(UserMixin, TimestampMixin, db.Model):
+class User(TimestampMixin, db.Model):
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -106,7 +106,7 @@ class User(UserMixin, TimestampMixin, db.Model):
     time_commitment = db.Column(db.String(100))
     preferred_format = db.Column(db.String(100))
 
-    #Relationship
+    # Relationship
     login = db.relationship('Login', back_populates='user_profile', uselist=False)
 
     def to_context_string(self):
