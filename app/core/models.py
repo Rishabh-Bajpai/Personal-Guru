@@ -25,7 +25,7 @@ class Topic(TimestampMixin, db.Model):
     )
     
     # Relationships
-    steps = db.relationship('ChapterMode', backref='topic', order_by='ChapterMode.step_index', cascade='all, delete-orphan')
+    chapter_mode = db.relationship('ChapterMode', backref='topic', order_by='ChapterMode.step_index', cascade='all, delete-orphan')
     quizzes = db.relationship('QuizMode', backref='topic', uselist=False, cascade='all, delete-orphan')
     flashcards = db.relationship('FlashcardMode', backref='topic', cascade='all, delete-orphan')
     chat_mode = db.relationship('ChatMode', backref='topic', uselist=False, cascade='all, delete-orphan')

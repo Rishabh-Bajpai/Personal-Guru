@@ -34,7 +34,7 @@ def mode(topic_name):
     # If topic exists and has a plan, go directly to learning
     if topic_data and topic_data.get('plan'):
         # Resume logic: find the last step with content
-        steps = topic_data.get('steps', [])
+        steps = topic_data.get('chapter_mode', [])
         resume_step_index = 0
         for i, step in enumerate(steps):
             # Check if step has content (teaching_material or questions)
@@ -61,7 +61,7 @@ def mode(topic_name):
     # Save the new plan
     topic_data = topic_data or {"name": topic_name}
     topic_data['plan'] = plan_steps
-    topic_data['steps'] = [{} for _ in plan_steps]
+    topic_data['chapter_mode'] = [{} for _ in plan_steps]
     save_topic(topic_name, topic_data)
 
     # Go directly to learning
@@ -90,7 +90,7 @@ def generate_plan():
     topic_data = load_topic(topic_name) or {"name": topic_name}
     topic_data['plan'] = plan_steps
     # Initialize steps structure
-    topic_data['steps'] = [{} for _ in plan_steps]
+    topic_data['chapter_mode'] = [{} for _ in plan_steps]
 
     save_topic(topic_name, topic_data)
 
@@ -130,8 +130,8 @@ def update_plan(topic_name):
 
     # Smart Update using helper
     topic_data['plan'] = new_plan
-    topic_data['steps'] = reconcile_plan_steps(
-        topic_data.get('steps', []),
+    topic_data['chapter_mode'] = reconcile_plan_steps(
+        topic_data.get('chapter_mode', []),
         current_plan,  # Original plan strings! We need them.
         new_plan
     )
@@ -168,7 +168,7 @@ def learn_topic(topic_name, step_index):
     if not 0 <= step_index < len(plan_steps):
         return "Invalid step index", 404
 
-    current_step_data = topic_data['steps'][step_index]
+    current_step_data = topic_data['chapter_mode'][step_index]
 
     if not current_step_data.get('teaching_material'):
         incorrect_questions = session.get('incorrect_questions')
@@ -217,7 +217,7 @@ def assess_step(topic_name, step_index):
     if not topic_data:
         return "Topic not found", 404
 
-    current_step_data = topic_data['steps'][step_index]
+    current_step_data = topic_data['chapter_mode'][step_index]
     questions = current_step_data.get('questions', {}).get('questions', [])
     user_answers = [request.form.get(f'option_{i}') for i in range(len(questions))]
     
@@ -280,8 +280,8 @@ def update_time(topic_name, step_index):
 
     if time_spent > 0:
         topic_data = load_topic(topic_name)
-        if topic_data and 'steps' in topic_data and 0 <= step_index < len(topic_data['steps']):
-            current_step_data = topic_data['steps'][step_index]
+        if topic_data and 'chapter_mode' in topic_data and 0 <= step_index < len(topic_data['chapter_mode']):
+            current_step_data = topic_data['chapter_mode'][step_index]
             current_step_data['time_spent'] = (current_step_data.get('time_spent', 0) or 0) + time_spent
             save_topic(topic_name, topic_data)
             
@@ -293,8 +293,8 @@ def reset_quiz(topic_name, step_index):
     if not topic_data:
         return "Topic not found", 404
 
-    if 0 <= step_index < len(topic_data['steps']):
-        current_step_data = topic_data['steps'][step_index]
+    if 0 <= step_index < len(topic_data['chapter_mode']):
+        current_step_data = topic_data['chapter_mode'][step_index]
         if 'user_answers' in current_step_data:
             del current_step_data['user_answers']
         if 'feedback' in current_step_data:
@@ -334,10 +334,10 @@ def generate_podcast_route(topic_name, step_index):
     if not topic_data:
         return {"error": "Topic not found"}, 404
 
-    if not 0 <= step_index < len(topic_data['steps']):
+    if not 0 <= step_index < len(topic_data['chapter_mode']):
         return {"error": "Invalid step index"}, 400
 
-    current_step_data = topic_data['steps'][step_index]
+    current_step_data = topic_data['chapter_mode'][step_index]
     teaching_material = current_step_data.get('teaching_material')
 
     if not teaching_material:
@@ -406,7 +406,7 @@ def export_topic(topic_name):
         return "Topic not found", 404
 
     markdown_content = f"# {topic_name}\n\n"
-    for i, step_data in enumerate(topic_data['steps']):
+    for i, step_data in enumerate(topic_data['chapter_mode']):
         markdown_content += f"## {topic_data['plan'][i]}\n\n"
         markdown_content += step_data.get('teaching_material', '') + "\n\n"
 
@@ -515,7 +515,7 @@ def _get_topic_data_and_score(topic_name):
 
     total_score = 0
     answered_questions = 0
-    for step in topic_data['steps']:
+    for step in topic_data['chapter_mode']:
         if 'teaching_material' in step:
             step['teaching_material'] = md.render(step['teaching_material'])
         if 'score' in step and step.get('user_answers'):

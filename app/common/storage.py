@@ -48,7 +48,7 @@ def save_topic(topic_name, data):
         incoming_steps = data.get('steps', [])
         
         # Existing steps map: index -> instance
-        existing_steps_map = {s.step_index: s for s in topic.steps}
+        existing_steps_map = {s.step_index: s for s in topic.chapter_mode}
         seen_indices = set()
         
         for i, step_data in enumerate(incoming_steps):
@@ -318,7 +318,7 @@ def load_topic(topic_name):
         "last_quiz_result": None, # Will populate from Quiz
         "chat_history": topic.chat_mode.history if topic.chat_mode else [],
         "chat_history_summary": topic.chat_mode.history_summary if topic.chat_mode else [],
-        "steps": [],
+        "chapter_mode": [],
         "quiz": None,
         "flashcards": []
     }
@@ -327,7 +327,7 @@ def load_topic(topic_name):
     # Initialize steps list matching the plan length
     plan = topic.study_plan or []
     # Create a map of existing steps by index
-    existing_steps = {s.step_index: s for s in topic.steps}
+    existing_steps = {s.step_index: s for s in topic.chapter_mode}
     
     steps_data = []
     # If we have a plan, we want to return a list of steps matching that plan
@@ -395,7 +395,7 @@ def load_topic(topic_name):
             steps_data.append({})
             
     data["plan"] = plan
-    data["steps"] = steps_data
+    data["chapter_mode"] = steps_data
         
     # QuizMode
     # Assuming one quiz per topic for now, similar to previous JSON usually

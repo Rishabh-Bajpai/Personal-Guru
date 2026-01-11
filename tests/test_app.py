@@ -52,7 +52,7 @@ def test_full_learning_flow(auth_client, mocker, logger):
 
     # Follow the redirect to /chapter/testing
     logger.step("Following redirect to /chapter/testing")
-    mocker.patch('app.modes.chapter.routes.load_topic', return_value={"name": topic_name, "plan": ["Step 1", "Step 2"], "steps": [{}, {}]})
+    mocker.patch('app.modes.chapter.routes.load_topic', return_value={"name": topic_name, "plan": ["Step 1", "Step 2"], "chapter_mode": [{}, {}]})
     response = auth_client.get(f'/chapter/{topic_name}')
     assert response.status_code == 302
     assert response.headers['Location'] == f'/chapter/learn/{topic_name}/0'
@@ -61,7 +61,7 @@ def test_full_learning_flow(auth_client, mocker, logger):
     topic_data = {
         "name": topic_name,
         "plan": ["Step 1", "Step 2"],
-        "steps": [
+        "chapter_mode": [
             {},
             {}
         ]
@@ -77,7 +77,7 @@ def test_full_learning_flow(auth_client, mocker, logger):
 
     # 3. User submits an answer
     logger.step("3. User submits an answer")
-    topic_data['steps'][0] = {"teaching_material": "## Step Content", "questions": {"questions": [{"question": "Q1?", "options": ["A", "B"], "correct_answer": "A"}]}}
+    topic_data['chapter_mode'][0] = {"teaching_material": "## Step Content", "questions": {"questions": [{"question": "Q1?", "options": ["A", "B"], "correct_answer": "A"}]}}
     mocker.patch('app.modes.chapter.routes.load_topic', return_value=topic_data)
     response = auth_client.post(f'/chapter/assess/{topic_name}/0', data={'option_0': 'A'})
     assert response.status_code == 200
@@ -85,8 +85,8 @@ def test_full_learning_flow(auth_client, mocker, logger):
 
     # 4. User continues to the next step
     logger.step("4. User continues to the next step")
-    topic_data['steps'][0]['user_answers'] = ['A']
-    topic_data['steps'][0]['completed'] = True
+    topic_data['chapter_mode'][0]['user_answers'] = ['A']
+    topic_data['chapter_mode'][0]['completed'] = True
     mocker.patch('app.modes.chapter.routes.load_topic', return_value=topic_data)
     response = auth_client.get(f'/chapter/learn/{topic_name}/1')
     assert response.status_code == 200
@@ -102,7 +102,7 @@ def test_full_learning_flow(auth_client, mocker, logger):
 
     # 6. User finishes the course
     logger.step("6. User finishes the course")
-    topic_data['steps'][1] = {"teaching_material": "## Step 2 Content", "questions": {"questions": [{"question": "Q2?", "options": ["C", "D"], "correct_answer": "C"}]}}
+    topic_data['chapter_mode'][1] = {"teaching_material": "## Step 2 Content", "questions": {"questions": [{"question": "Q2?", "options": ["C", "D"], "correct_answer": "C"}]}}
     mocker.patch('app.modes.chapter.routes.load_topic', return_value=topic_data)
     response = auth_client.post(f'/chapter/assess/{topic_name}/1', data={'option_0': 'C'})
     assert response.status_code == 302
@@ -121,7 +121,7 @@ def test_export_topic(auth_client, mocker, logger):
     topic_data = {
         "name": topic_name,
         "plan": ["Step 1"],
-        "steps": [{"teaching_material": "## Test Content"}]
+        "chapter_mode": [{"teaching_material": "## Test Content"}]
     }
     mocker.patch('app.modes.chapter.routes.load_topic', return_value=topic_data)
 

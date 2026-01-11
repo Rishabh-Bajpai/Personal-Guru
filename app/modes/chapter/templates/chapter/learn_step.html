@@ -47,7 +47,7 @@
         <div class="podcast-section" style="margin-bottom: 20px;">
             <div class="podcast-header">
                 <h3>AI Podcast</h3>
-                {% if topic.steps[step_index].podcast_audio_content %}
+                {% if topic.chapter_mode[step_index].podcast_audio_content %}
                 <button id="generate-podcast-btn" class="generate-podcast-btn" style="display: none;">
                     <span>Generate Podcast</span>
                 </button>
@@ -58,7 +58,7 @@
                 {% endif %}
             </div>
 
-            {% if topic.steps[step_index].podcast_audio_content %}
+            {% if topic.chapter_mode[step_index].podcast_audio_content %}
             <div id="podcast-player-container" class="podcast-player" style="display: flex;">
                 {% else %}
                 <div id="podcast-player-container" class="podcast-player" style="display: none;">
@@ -75,9 +75,9 @@
                         </div>
                         <span id="podcast-duration" class="podcast-time">0:00</span>
                     </div>
-                    {% if topic.steps[step_index].podcast_audio_content %}
+                    {% if topic.chapter_mode[step_index].podcast_audio_content %}
                     <audio id="podcast-audio" style="display: none;"
-                        src="data:audio/mp3;base64,{{ topic.steps[step_index].podcast_audio_content }}"></audio>
+                        src="data:audio/mp3;base64,{{ topic.chapter_mode[step_index].podcast_audio_content }}"></audio>
                     {% else %}
                     <audio id="podcast-audio" style="display: none;"></audio>
                     {% endif %}
@@ -137,20 +137,22 @@
                 {% else %}
 
                 <div class="quiz-results">
-                    {% if topic.steps[step_index].score is defined %}
-                    <h4>Your Results (Score: {{ topic.steps[step_index].score|round|int }}%)</h4>
+                    {% if topic.chapter_mode[step_index].score is defined %}
+                    <h4>Your Results (Score: {{ topic.chapter_mode[step_index].score|round|int }}%)</h4>
                     {% endif %}
 
                     {% for question in question_data.questions %}
                     <div class="question">
                         <p>{{ loop.index }}. {{ question.question }}</p>
 
-                        {% if topic.steps[step_index].feedback and topic.steps[step_index].feedback[loop.index0] %}
+                        {% if topic.chapter_mode[step_index].feedback and
+                        topic.chapter_mode[step_index].feedback[loop.index0] %}
                         <div
-                            class="feedback-item {{ 'correct' if topic.steps[step_index].feedback[loop.index0].is_correct else 'incorrect' }}">
-                            <strong>{{ 'Correct!' if topic.steps[step_index].feedback[loop.index0].is_correct else
+                            class="feedback-item {{ 'correct' if topic.chapter_mode[step_index].feedback[loop.index0].is_correct else 'incorrect' }}">
+                            <strong>{{ 'Correct!' if topic.chapter_mode[step_index].feedback[loop.index0].is_correct
+                                else
                                 'Incorrect.' }}</strong>
-                            {{ topic.steps[step_index].feedback[loop.index0].explanation }}
+                            {{ topic.chapter_mode[step_index].feedback[loop.index0].explanation }}
                         </div>
                         {% endif %}
 
@@ -160,8 +162,8 @@
                             <label for="option_{{ outer_loop_index }}_{{ loop.index0 }}">
                                 <input type="radio" id="option_{{ outer_loop_index }}_{{ loop.index0 }}"
                                     name="option_{{ outer_loop_index }}" value="{{ ['A', 'B', 'C', 'D'][loop.index0] }}"
-                                    disabled {% if topic.steps[step_index].user_answers and
-                                    topic.steps[step_index].user_answers[outer_loop_index]==['A', 'B' , 'C' , 'D'
+                                    disabled {% if topic.chapter_mode[step_index].user_answers and
+                                    topic.chapter_mode[step_index].user_answers[outer_loop_index]==['A', 'B' , 'C' , 'D'
                                     ][loop.index0] %}checked{% endif %}>
                                 {{ ['A', 'B', 'C', 'D'][loop.index0] }}) {{ option }}
                             </label>
