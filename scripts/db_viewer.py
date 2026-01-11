@@ -28,11 +28,17 @@ app = create_viewer_app()
 
 MODELS = {
     'Topic': models.Topic,
-    'StudyStep': models.StudyStep,
-    'Quiz': models.Quiz,
-    'Flashcard': models.Flashcard,
-    'ChatSession': models.ChatSession,
-    'User': models.User
+    'ChapterMode': models.ChapterMode,
+    'QuizMode': models.QuizMode,
+    'FlashcardMode': models.FlashcardMode,
+    'ChatMode': models.ChatMode,
+    'User': models.User,
+    'Installation': models.Installation,
+    'TelemetryLog': models.TelemetryLog,
+    'Feedback': models.Feedback,
+    'AIModelPerformance': models.AIModelPerformance,
+    'PlanRevision': models.PlanRevision,
+    'Login': models.Login
 }
 
 VIEWER_HTML = """
@@ -104,8 +110,8 @@ VIEWER_HTML = """
                         <th style="width: 30px; text-align: center; cursor: default;" onclick="event.stopPropagation()">
                             <input type="checkbox" id="selectAll">
                         </th>
-                        {% for col in columns %}
-                            <th onclick="sortTable({{ loop.index }})">{{ col }}</th>
+                        {% for header in headers %}
+                            <th onclick="sortTable({{ loop.index }})">{{ header }}</th>
                         {% endfor %}
                         <th style="cursor: default;">Actions</th>
                     </tr>
@@ -308,6 +314,14 @@ VIEWER_HTML = """
                 const th = table.querySelectorAll('th')[n];
                 th.classList.add(dir === 'asc' ? 'sorted-asc' : 'sorted-desc');
             }
+
+            // Numeric extraction helper for JS sorting
+            function getVal(td) {
+                let val = td.textContent.trim();
+                if (val === "" || val === "None" || val === "null") return -Infinity;
+                if (!isNaN(parseFloat(val)) && isFinite(val)) return parseFloat(val);
+                return val.toLowerCase();
+            }
         </script>
     {% else %}
         <p>Select a table to view data.</p>
@@ -396,7 +410,14 @@ def db_viewer(model_name=None):
             if 'JSON' in str(c.type):
                 json_cols.append(c.name)
 
-        items = model.query.all()
+        # Default sorting
+        query = model.query
+        if 'step_index' in columns:
+            query = query.order_by(model.step_index.asc())
+        elif 'id' in columns:
+            query = query.order_by(model.id.asc())
+        
+        items = query.all()
         rows = []
         for item in items:
             row = {}
@@ -407,10 +428,19 @@ def db_viewer(model_name=None):
             row['_pk_value'] = getattr(item, pk_name)
             rows.append(row)
             
+        # Custom aliases for headers
+        headers = []
+        for c in columns:
+            if c == 'time_spent':
+                headers.append('time_spent (seconds)')
+            else:
+                headers.append(c)
+
         return render_template_string(VIEWER_HTML, 
                                       models=MODELS.keys(), 
                                       current_model=model_name, 
-                                      columns=columns, 
+                                      columns=columns,  # Use original keys for data lookup
+                                      headers=headers,  # Use aliases for display
                                       rows=rows,
                                       json_cols=json_cols)
     

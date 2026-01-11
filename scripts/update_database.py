@@ -24,11 +24,17 @@ from app.core import models  # noqa: E402
 # List of models to check
 TARGET_MODELS = [
     models.Topic,
-    models.StudyStep,
-    models.Quiz,
-    models.Flashcard,
-    models.ChatSession,
-    models.User
+    models.ChapterMode,
+    models.QuizMode,
+    models.FlashcardMode,
+    models.ChatMode,
+    models.User,
+    models.Installation,
+    models.TelemetryLog,
+    models.Feedback,
+    models.AIModelPerformance,
+    models.PlanRevision,
+    models.Login
 ]
 
 def get_column_type(column):
@@ -42,14 +48,31 @@ def update_database():
     app = create_app()
     with app.app_context():
         logger.info("Starting database update...")
-        inspector = inspect(db.engine)
         
+        # 0. Pre-check for table renames (Manual Migrations)
+        inspector = inspect(db.engine)
+        existing_tables = inspector.get_table_names()
+        
+        if 'study_steps' in existing_tables and 'chapter_mode' not in existing_tables:
+            logger.info("Detected legacy table 'study_steps'. Renaming to 'chapter_mode'...")
+            try:
+                # Rename table
+                db.session.execute(text('ALTER TABLE study_steps RENAME TO chapter_mode'))
+                db.session.commit()
+                logger.info(" -> Table renamed successfully.")
+                
+                # Check consistency of ID sequence if necessary (usually auto-handled by serial)
+            except Exception as e:
+                logger.error(f" -> Failed to rename table: {e}")
+                db.session.rollback()
+
         # 1. Create missing tables (Standard SQLAlchemy)
         logger.info("Ensuring all tables exist...")
         db.create_all()
         
         # 2. Inspect and Update existing tables
         logger.info("Checking for schema updates...")
+        inspector = inspect(db.engine) # Re-inspect after create/rename
         
         for model in TARGET_MODELS:
             table_name = model.__tablename__
@@ -86,7 +109,62 @@ def update_database():
                         except Exception as e:
                             logger.error(f"      -> FAILED to drop column: {e}")
                             db.session.rollback()
-            
+
+            # Special check for 'feedback' column removal in ChapterMode (moved to table)
+            if table_name == 'chapter_mode':
+                 if 'feedback' in existing_col_map:
+                      logger.info("  [-] Dropping deprecated column: feedback (moved to Feedback table)")
+                      try:
+                          sql = text('ALTER TABLE "chapter_mode" DROP COLUMN "feedback"')
+                          db.session.execute(sql)
+                          db.session.commit()
+                          logger.info("      -> Dropped successfully.")
+                      except Exception as e:
+                          logger.error(f"      -> FAILED to drop column: {e}")
+                          db.session.rollback()
+
+            # Special check for 'installation_id' removal in Feedback (refactor to user-centric)
+            if table_name == 'feedback':
+                if 'installation_id' in existing_col_map:
+                     logger.info("  [-] Dropping deprecated column: installation_id (moved to User-Centric schema)")
+                     try:
+                         sql = text('ALTER TABLE "feedback" DROP COLUMN "installation_id"')
+                         db.session.execute(sql)
+                         db.session.commit()
+                         logger.info("      -> Dropped successfully.")
+                     except Exception as e:
+                         logger.error(f"      -> FAILED to drop column: {e}")
+                         db.session.rollback()
+
+            # Special check for deprecated 'name' and 'password_hash' columns in User table
+            if table_name == 'users':
+                for deprecated_col in ['name', 'password_hash']:
+                    if deprecated_col in existing_col_map:
+                        logger.info(f"  [-] Dropping deprecated column from users: {deprecated_col}")
+                        try:
+                            sql = text(f'ALTER TABLE "users" DROP COLUMN "{deprecated_col}"')
+                            db.session.execute(sql)
+                            db.session.commit()
+                            logger.info("      -> Dropped successfully.")
+                        except Exception as e:
+                            logger.error(f"      -> FAILED to drop column: {e}")
+                            db.session.rollback()
+
+            # Special check for renaming 'primary_language' -> 'languages' in User table
+            if table_name == 'users':
+                if 'primary_language' in existing_col_map and 'languages' not in existing_col_map:
+                    logger.info("  [~] Renaming column 'primary_language' to 'languages'")
+                    try:
+                        sql = text('ALTER TABLE "users" RENAME COLUMN "primary_language" TO "languages"')
+                        db.session.execute(sql)
+                        db.session.commit()
+                        logger.info("      -> Renamed successfully.")
+                        # Update local map to reflect change for subsequent steps
+                        existing_col_map['languages'] = existing_col_map.pop('primary_language')
+                        existing_col_map['languages']['name'] = 'languages'
+                    except Exception as e:
+                         logger.error(f"      -> FAILED to rename column: {e}")
+                         db.session.rollback()
             # Get model columns
             model_columns = model.__table__.columns
             
@@ -95,21 +173,19 @@ def update_database():
                 col_type = column.type
                 
                 if table_name == 'users':
-                     # Special check for User model change (id -> username)
-                     has_id = 'id' in existing_col_map
+                     # Special check for User model change (username -> id/login_id)
                      has_username = 'username' in existing_col_map
+                     has_id = 'id' in existing_col_map
                      
-                     if has_id and not has_username:
-                         logger.warning(" !! Detected old 'users' table schema (id PK). Dropping table to recreate with 'username' PK.")
+                     if has_username and not has_id:
+                         logger.warning(" !! Detected old 'users' table schema (username PK). Dropping table to recreate with 'id' PK/login_id.")
                          # Drop table
-                         sql = text('DROP TABLE "users"')
+                         sql = text('DROP TABLE "users" CASCADE')
                          db.session.execute(sql)
                          db.session.commit()
-                         # Remove from map so it gets created in step 1 logic? 
-                         # Actually step 1 ran already. We might need to run create_all() again or manually create it.
                          logger.info("    -> Table dropped. Re-running create_all...")
                          db.create_all()
-                         continue # Skip column inspection for this pass
+                         continue
                 
                 # Check if column exists
                 if col_name not in existing_col_map:
@@ -151,7 +227,35 @@ def update_database():
                              logger.error(f"      -> FAILED to convert column: {e}")
                              db.session.rollback()
                     
-                    # You can add more type checks here if needed
+                    
+                    # Special check for languages string -> json
+                    if col_name == 'languages' and 'VARCHAR' in existing_type_str and 'JSON' in model_type_str:
+                         logger.info(f"  [~] Converting column {col_name} from String to JSON")
+                         try:
+                             # Convert string "English" to JSON list ["English"]
+                             # Postgres specific: using json_build_array or manual formatting
+                             # Fallback logic: if empty, '[]', else '["' + val + '"]'
+                             # Note: SQL injection risk minimal here as we use columns but content might need escaping if raw string concat.
+                             # Safer: USING json_build_array(languages) 
+                             sql = text(f'ALTER TABLE "{table_name}" ALTER COLUMN "{col_name}" TYPE JSON USING json_build_array("{col_name}")')
+                             db.session.execute(sql)
+                             db.session.commit()
+                             logger.info("      -> Converted successfully.")
+                         except Exception as e:
+                             logger.error(f"      -> FAILED to convert column: {e}")
+                             db.session.rollback()
+
+                    # Special check for VARCHAR(36) -> VARCHAR(100) expansion (for userid)
+                    if 'VARCHAR(36)' in existing_type_str and 'VARCHAR(100)' in model_type_str:
+                         logger.info(f"  [~] Expanding column {col_name} from VARCHAR(36) to VARCHAR(100)")
+                         try:
+                             sql = text(f'ALTER TABLE "{table_name}" ALTER COLUMN "{col_name}" TYPE VARCHAR(100)')
+                             db.session.execute(sql)
+                             db.session.commit()
+                             logger.info("      -> Expanded successfully.")
+                         except Exception as e:
+                             logger.error(f"      -> FAILED to expand column: {e}")
+                             db.session.rollback()
                     
         logger.info("✓ Database update complete!")
 

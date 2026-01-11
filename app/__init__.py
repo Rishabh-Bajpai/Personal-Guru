@@ -24,11 +24,10 @@ def create_app(config_class=Config):
     sess.init_app(app)  # Initialize server-side sessions
     login_manager.init_app(app)
 
-    from app.core.models import User
-
+    from app.core.models import Login
     @login_manager.user_loader
-    def load_user(username):
-        return User.query.get(username)
+    def load_user(userid):
+        return Login.query.get(userid)
 
     # Register Blueprints
     from app.modes.chapter import chapter_bp

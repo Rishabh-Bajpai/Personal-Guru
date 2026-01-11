@@ -67,6 +67,39 @@ def generate_flashcards_route():
 
     return {"flashcards": cards}
 
+@flashcard_bp.route('/<topic_name>/update_time', methods=['POST'])
+def update_time(topic_name):
+    try:
+        time_spent = int(request.form.get('time_spent', 0))
+    except (ValueError, TypeError):
+        time_spent = 0
+        
+    if time_spent > 0:
+        topic_data = load_topic(topic_name)
+        if topic_data and topic_data.get('flashcards'):
+             if len(topic_data['flashcards']) > 0:
+                 topic_data['flashcards'][0]['time_spent'] = (topic_data['flashcards'][0].get('time_spent', 0) or 0) + time_spent
+                 save_topic(topic_name, topic_data)
+             
+    return '', 204
+
+@flashcard_bp.route('/<topic_name>/update_progress', methods=['POST'])
+def update_progress(topic_name):
+    data = request.json
+    topic_data = load_topic(topic_name)
+    if not topic_data:
+        return {"error": "Topic not found"}, 404
+        
+    # Expecting data['flashcards'] to be a list of {term: ..., time_spent: ...}
+    updates = {item['term']: item.get('time_spent', 0) for item in data.get('flashcards', [])}
+    
+    for card in topic_data.get('flashcards', []):
+        if card['term'] in updates:
+            # Accumulate time
+            card['time_spent'] = (card.get('time_spent', 0) or 0) + updates[card['term']]
+            
+    save_topic(topic_name, topic_data)
+    return {"status": "success"}
 
 @flashcard_bp.route('/<topic_name>/export/pdf')
 def export_pdf(topic_name):
