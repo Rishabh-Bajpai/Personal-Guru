@@ -137,7 +137,7 @@ def save_topic(topic_name, data):
              q_data = data.get('quiz')
              if q_data:
                  # Check existing quizzes
-                 existing_quiz = topic.quizzes if topic.quizzes else None
+                 existing_quiz = topic.quiz_mode if topic.quiz_mode else None
                  
                  if existing_quiz:
                      existing_quiz.questions = q_data.get('questions')
@@ -319,7 +319,7 @@ def load_topic(topic_name):
         "chat_history": topic.chat_mode.history if topic.chat_mode else [],
         "chat_history_summary": topic.chat_mode.history_summary if topic.chat_mode else [],
         "chapter_mode": [],
-        "quiz": None,
+        "quiz_mode": None,
         "flashcards": []
     }
     
@@ -399,10 +399,10 @@ def load_topic(topic_name):
         
     # QuizMode
     # Assuming one quiz per topic for now, similar to previous JSON usually
-    if topic.quizzes:
+    if topic.quiz_mode:
         # Quiz is 1-to-1
-        latest_quiz = topic.quizzes 
-        data["quiz"] = {
+        latest_quiz = topic.quiz_mode 
+        data["quiz_mode"] = {
             "questions": latest_quiz.questions,
             "score": latest_quiz.score,
             "date": latest_quiz.created_at.isoformat() if latest_quiz.created_at else None,

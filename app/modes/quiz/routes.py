@@ -33,7 +33,7 @@ def generate_quiz(topic_name, count):
     # Save quiz to topic data
     topic_data = load_topic(topic_name) or {
         "name": topic_name, "plan": [], "steps": []}
-    topic_data['quiz'] = quiz_data
+    topic_data['quiz_mode'] = quiz_data
     save_topic(topic_name, topic_data)
 
     session['quiz_questions'] = quiz_data.get('questions', [])
@@ -49,8 +49,8 @@ def mode(topic_name):
     topic_data = load_topic(topic_name)
 
     # If quiz exists in saved data, use it
-    if topic_data and topic_data.get('quiz'):
-        quiz_data = topic_data['quiz']
+    if topic_data and topic_data.get('quiz_mode'):
+        quiz_data = topic_data['quiz_mode']
         session['quiz_questions'] = quiz_data.get('questions', [])
         return render_template(
             'quiz/mode.html',
@@ -127,10 +127,10 @@ def submit_quiz(topic_name):
         }
 
         # Ensure the score is also saved to the Quiz table
-        if topic_data.get('quiz'):
-            topic_data['quiz']['score'] = score
+        if topic_data.get('quiz_mode'):
+            topic_data['quiz_mode']['score'] = score
             # Store time for this attempt (matches last_quiz_result behavior)
-            topic_data['quiz']['time_spent'] = time_spent
+            topic_data['quiz_mode']['time_spent'] = time_spent
 
         save_topic(topic_name, topic_data)
 
@@ -149,9 +149,9 @@ def update_time(topic_name):
 
     if time_spent > 0:
         topic_data = load_topic(topic_name)
-        if topic_data and topic_data.get('quiz'):
-            existing_time = topic_data['quiz'].get('time_spent', 0) or 0
-            topic_data['quiz']['time_spent'] = max(existing_time, time_spent)
+        if topic_data and topic_data.get('quiz_mode'):
+            existing_time = topic_data['quiz_mode'].get('time_spent', 0) or 0
+            topic_data['quiz_mode']['time_spent'] = max(existing_time, time_spent)
             save_topic(topic_name, topic_data)
     return '', 204
 

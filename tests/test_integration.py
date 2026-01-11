@@ -267,7 +267,7 @@ def test_quiz_result_persistence(logger, app):
             # Verify DB
             t = Topic.query.filter_by(name=topic_name).first()
             assert t is not None
-            q = t.quizzes
+            q = t.quiz_mode
             assert q is not None
             assert q.result is not None
             assert q.result['score'] == 90
