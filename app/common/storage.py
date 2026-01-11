@@ -133,10 +133,11 @@ def save_topic(topic_name, data):
                 db.session.delete(step)
             
         # --- Handle QuizMode ---
-        # "quiz" key in JSON
-        if 'quiz' in data:
-             q_data = data.get('quiz')
-             if q_data:
+        # --- Handle QuizMode ---
+        # "quiz" key in JSON (legacy), "quiz_mode" is new standard
+        q_data = data.get('quiz_mode') or data.get('quiz')
+        if q_data:
+             if True: # preserving indentation block
                  # Check existing quizzes
                  existing_quiz = topic.quiz_mode if topic.quiz_mode else None
                  
