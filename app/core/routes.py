@@ -132,9 +132,18 @@ def signup():
         if login_check:
             return render_template('signup.html', error='Username already exists')
             
-        # Check for installation context
-        installation = Installation.query.first()
-        inst_id = installation.installation_id if installation else None
+        # Determine installation context explicitly
+        installations = Installation.query.all()
+        if len(installations) == 0:
+            inst_id = None
+        elif len(installations) == 1:
+            inst_id = installations[0].installation_id
+        else:
+            # Multiple installations detected; avoid arbitrary association
+            return render_template(
+                'signup.html',
+                error='Multiple installations are configured. Please contact the administrator.'
+            )
         
         uid = Login.generate_userid(inst_id)
         
@@ -167,7 +176,8 @@ def user_profile():
     user = current_user.user_profile
         
     if request.method == 'POST':
-        user.login.name = request.form.get('name')
+        if user.login is not None:
+            user.login.name = request.form.get('name')
         user.age = request.form.get('age') or None
         user.country = request.form.get('country')
         

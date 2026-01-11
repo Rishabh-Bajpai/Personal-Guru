@@ -52,7 +52,6 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         new TimeTracker({
-            // I need to add this route to flashcard/routes.py first
             updateUrl: "{{ url_for('flashcard.update_time', topic_name=topic_name) }}",
             topicName: "{{ topic_name }}"
         });

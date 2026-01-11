@@ -146,13 +146,13 @@ def update_time(topic_name):
         time_spent = int(request.form.get('time_spent', 0))
     except (ValueError, TypeError):
         time_spent = 0
-        
+
     if time_spent > 0:
         topic_data = load_topic(topic_name)
         if topic_data and topic_data.get('quiz'):
-             topic_data['quiz']['time_spent'] = (topic_data['quiz'].get('time_spent', 0) or 0) + time_spent
-             save_topic(topic_name, topic_data)
-             
+            existing_time = topic_data['quiz'].get('time_spent', 0) or 0
+            topic_data['quiz']['time_spent'] = max(existing_time, time_spent)
+            save_topic(topic_name, topic_data)
     return '', 204
 
 @quiz_bp.route('/<topic_name>/export/pdf')
