@@ -427,3 +427,46 @@ def test_validation_error_handling(client_no_auth):
             
             assert response.status_code == 400
             assert b"Please check your input and try again" in response.data
+
+def test_get_system_info(mocker):
+    """Test get_system_info utility across different scenarios."""
+    from app.common.utils import get_system_info
+    
+    # Mock basic system deps
+    mocker.patch('app.common.utils.os.cpu_count', return_value=8)
+    mock_psutil = mocker.patch('app.common.utils.psutil')
+    mock_psutil.virtual_memory.return_value.total = 16 * 1024**3 # 16GB
+    mocker.patch('app.common.utils.platform.platform', return_value="Linux-Test")
+    mocker.patch('app.common.utils.os.path.exists', side_effect=lambda x: x == '/.dockerenv') # Simulate Docker
+    
+    # 1. Test NVIDIA GPU path
+    mock_run = mocker.patch('app.common.utils.subprocess.run')
+    mock_run.return_value.returncode = 0
+    mock_run.return_value.stdout = "GPU 0: NVIDIA Test (UUID: 123)"
+    
+    info = get_system_info()
+    assert info['cpu_cores'] == 8
+    assert info['ram_gb'] == 16
+    assert info['install_method'] == 'docker'
+    assert info['gpu_model'] == "GPU 0: NVIDIA Test (UUID: 123)"
+    assert info['os_version'] == "Linux-Test"
+    
+    # 2. Test AMD GPU path (NVIDIA fails, AMD succeeds)
+    def side_effect_amd(cmd, **kwargs):
+        res = MagicMock()
+        if 'nvidia-smi' in cmd:
+            res.returncode = 1
+        elif 'rocm-smi' in cmd:
+            res.returncode = 0
+            res.stdout = "AMD Radeon Test"
+        return res
+        
+    mock_run.side_effect = side_effect_amd
+    info = get_system_info()
+    assert info['gpu_model'] == "AMD AMD Radeon Test"
+    
+    # 3. Test No GPU
+    mock_run.side_effect = FileNotFoundError
+    info = get_system_info()
+    assert info['gpu_model'] == "Unknown"
+

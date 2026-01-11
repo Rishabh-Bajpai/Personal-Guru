@@ -6,6 +6,8 @@ import re
 import tempfile
 import subprocess
 import logging
+import platform
+import psutil
 from dotenv import load_dotenv
 from openai import OpenAI
 from app.core.exceptions import (
@@ -618,3 +620,84 @@ Text to summarize:
         print(f"Summarization failed: {e}")
         # Return first 300 chars as backup
         return text[:300] + "..." if len(text) > 300 else text
+
+def get_system_info():
+    """
+    Gather system information for Installation record.
+    Returns a dict with cpu_cores, ram_gb, gpu_model, os_version, install_method.
+    """
+    info = {
+        'cpu_cores': os.cpu_count(),
+        'ram_gb': round(psutil.virtual_memory().total / (1024**3)),
+        'os_version': platform.platform(),
+        'install_method': 'local',  # Default
+        'gpu_model': 'Unknown' 
+    }
+    
+    # Check for Docker
+    if os.path.exists('/.dockerenv'):
+        info['install_method'] = 'docker'
+        
+    # GPU Detection (cross-platform, multi-vendor)
+    gpu_detected = False
+    
+    # Try NVIDIA (nvidia-smi)
+    if not gpu_detected:
+        try:
+            result = subprocess.run(['nvidia-smi', '-L'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0 and result.stdout.strip():
+                info['gpu_model'] = result.stdout.strip().split('\n')[0]
+                gpu_detected = True
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            pass
+    
+    # Try AMD (rocm-smi)
+    if not gpu_detected:
+        try:
+            result = subprocess.run(['rocm-smi', '--showproductname'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0 and result.stdout.strip():
+                model_name = result.stdout.strip().split('\n')[0]
+                info['gpu_model'] = f"AMD {model_name}"
+                gpu_detected = True
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            pass
+    
+    # Try Intel (Linux)
+    if not gpu_detected and platform.system() == 'Linux':
+        try:
+            result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                for line in result.stdout.split('\n'):
+                    if 'VGA' in line or 'Display' in line or '3D' in line:
+                        if 'Intel' in line:
+                            info['gpu_model'] = line.split(':')[-1].strip()
+                            gpu_detected = True
+                            break
+                        elif 'AMD' in line or 'ATI' in line:
+                            info['gpu_model'] = line.split(':')[-1].strip()
+                            gpu_detected = True
+                            break
+                        elif 'NVIDIA' in line:
+                            info['gpu_model'] = line.split(':')[-1].strip()
+                            gpu_detected = True
+                            break
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            pass
+    
+    # Try macOS (Apple Silicon / discrete GPU)
+    if not gpu_detected and platform.system() == 'Darwin':
+        try:
+            result = subprocess.run(
+                ['system_profiler', 'SPDisplaysDataType'],
+                capture_output=True, text=True, timeout=10
+            )
+            if result.returncode == 0:
+                for line in result.stdout.split('\n'):
+                    if 'Chipset Model:' in line or 'Chip:' in line:
+                        info['gpu_model'] = line.split(':')[-1].strip()
+                        gpu_detected = True
+                        break
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            pass
+        
+    return info

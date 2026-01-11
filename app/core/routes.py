@@ -135,7 +135,23 @@ def signup():
         # Determine installation context explicitly
         installations = Installation.query.all()
         if len(installations) == 0:
-            inst_id = None
+            # First time setup - Create Installation
+            from app.common.utils import get_system_info
+            import uuid
+            
+            sys_info = get_system_info()
+            inst_id = str(uuid.uuid4())
+            
+            new_inst = Installation(
+                installation_id=inst_id,
+                cpu_cores=sys_info['cpu_cores'],
+                ram_gb=sys_info['ram_gb'],
+                gpu_model=sys_info['gpu_model'],
+                os_version=sys_info['os_version'],
+                install_method=sys_info['install_method']
+            )
+            db.session.add(new_inst)
+            db.session.commit()
         elif len(installations) == 1:
             inst_id = installations[0].installation_id
         else:
