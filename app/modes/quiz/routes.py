@@ -33,7 +33,7 @@ def generate_quiz(topic_name, count):
     # Save quiz to topic data
     topic_data = load_topic(topic_name) or {
         "name": topic_name, "plan": [], "steps": []}
-    topic_data['quiz'] = quiz_data
+    topic_data['quiz_mode'] = quiz_data
     save_topic(topic_name, topic_data)
 
     session['quiz_questions'] = quiz_data.get('questions', [])
@@ -49,8 +49,8 @@ def mode(topic_name):
     topic_data = load_topic(topic_name)
 
     # If quiz exists in saved data, use it
-    if topic_data and topic_data.get('quiz'):
-        quiz_data = topic_data['quiz']
+    if topic_data and topic_data.get('quiz_mode'):
+        quiz_data = topic_data['quiz_mode']
         session['quiz_questions'] = quiz_data.get('questions', [])
         return render_template(
             'quiz/mode.html',
@@ -68,6 +68,12 @@ def submit_quiz(topic_name):
     questions = session.get('quiz_questions', [])
     num_correct = 0
     feedback_results = []
+    
+    # Capture time spent
+    try:
+        time_spent = int(request.form.get('time_spent', 0))
+    except ValueError:
+        time_spent = 0
 
     for i, question in enumerate(questions):
         user_answer_index = user_answers_indices[i]
@@ -116,12 +122,15 @@ def submit_quiz(topic_name):
             'topic_name': topic_name,
             'score': score,
             'feedback_results': feedback_results,
-            'date': datetime.date.today().isoformat()
+            'date': datetime.date.today().isoformat(),
+            'time_spent': time_spent
         }
 
         # Ensure the score is also saved to the Quiz table
-        if topic_data.get('quiz'):
-            topic_data['quiz']['score'] = score
+        if topic_data.get('quiz_mode'):
+            topic_data['quiz_mode']['score'] = score
+            # Store time for this attempt (matches last_quiz_result behavior)
+            topic_data['quiz_mode']['time_spent'] = time_spent
 
         save_topic(topic_name, topic_data)
 
@@ -131,6 +140,20 @@ def submit_quiz(topic_name):
                            score=score,
                            feedback_results=feedback_results)
 
+@quiz_bp.route('/<topic_name>/update_time', methods=['POST'])
+def update_time(topic_name):
+    try:
+        time_spent = int(request.form.get('time_spent', 0))
+    except (ValueError, TypeError):
+        time_spent = 0
+
+    if time_spent > 0:
+        topic_data = load_topic(topic_name)
+        if topic_data and topic_data.get('quiz_mode'):
+            existing_time = topic_data['quiz_mode'].get('time_spent', 0) or 0
+            topic_data['quiz_mode']['time_spent'] = max(existing_time, time_spent)
+            save_topic(topic_name, topic_data)
+    return '', 204
 
 @quiz_bp.route('/<topic_name>/export/pdf')
 def export_quiz_pdf(topic_name):

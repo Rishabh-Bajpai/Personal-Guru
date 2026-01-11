@@ -1,10 +1,11 @@
 import pytest
 import time
+import functools
 from unittest.mock import patch
+from app.common.utils import call_llm, LLM_BASE_URL, LLM_MODEL_NAME
 from unittest.mock import MagicMock
 from app.core.models import Topic
 from app.core.exceptions import LLMResponseError
-from app.common.utils import call_llm
 from app.modes.quiz.agent import QuizAgent
 from app.common.agents import PlannerAgent, FeedbackAgent
 from app.modes.chapter.agent import ChapterTeachingAgent, AssessorAgent
@@ -12,6 +13,15 @@ from app.modes.flashcard.agent import FlashcardTeachingAgent
 
 # Mark all tests in this file as 'integration'
 pytestmark = pytest.mark.integration
+
+def requires_llm(func):
+    """Decorator to fail test if LLM config is missing."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if not LLM_BASE_URL or not LLM_MODEL_NAME:
+            pytest.fail("Test failed: LLM environment variables (LLM_BASE_URL, LLM_MODEL_NAME) not set")
+        return func(*args, **kwargs)
+    return wrapper
 
 def retry_agent_call(func, *args, max_retries=3, **kwargs):
     """Helper to retry agent calls that might fail due to LLM flakiness."""
@@ -26,6 +36,7 @@ def retry_agent_call(func, *args, max_retries=3, **kwargs):
             time.sleep(1) # Brief pause
     return None, last_error
 
+@requires_llm
 def test_call_llm(logger):
     """Test that the LLM call function is working."""
     logger.section("test_call_llm")
@@ -38,7 +49,7 @@ def test_call_llm(logger):
     assert isinstance(response, str)
     assert len(response) > 0
 
-
+@requires_llm
 def test_quiz_agent(logger):
     """Test that the QuizAgent can generate a quiz."""
     logger.section("test_quiz_agent")
@@ -61,6 +72,7 @@ def test_quiz_agent(logger):
     assert len(quiz["questions"]) == 2
 
 
+@requires_llm
 def test_planner_agent(logger):
     """Test that the PlannerAgent can generate a study plan."""
     logger.section("test_planner_agent")
@@ -75,6 +87,7 @@ def test_planner_agent(logger):
     assert len(plan) > 0
 
 
+@requires_llm
 def test_feedback_agent(logger):
     """Test that the FeedbackAgent can generate feedback."""
     logger.section("test_feedback_agent")
@@ -119,6 +132,7 @@ def test_chapter_teaching_agent(logger):
     assert material == "Mocked Teaching Material"
 
 
+@requires_llm
 def test_flashcard_teaching_agent(logger):
     """Test that the FlashcardTeachingAgent can generate flashcards."""
     logger.section("test_flashcard_teaching_agent")
@@ -133,6 +147,9 @@ def test_flashcard_teaching_agent(logger):
     assert len(flashcards) > 0
 
 
+
+
+@requires_llm
 def test_assessor_agent(logger):
     """Test that the AssessorAgent can generate a question."""
     logger.section("test_assessor_agent")
@@ -157,7 +174,7 @@ def test_assessor_agent(logger):
 
 
 def test_chat_session_persistence(logger, app):
-    """Test that chat history is saved to ChatSession table."""
+    """Test that chat history is saved to ChatMode table."""
     logger.section("test_chat_session_persistence")
     from app.core.models import Topic, User, db
     from app.common.storage import save_chat_history
@@ -165,18 +182,29 @@ def test_chat_session_persistence(logger, app):
     with app.app_context():
         # Ensure user exists (created in conftest auth_client logic or manually here)
         # Since we use app_context, creating fresh.
-        if not db.session.get(User, 'testuser'):
-            u = User(username='testuser')
-            u.set_password('password')
-            db.session.add(u)
+        from app.core.models import Login
+        if not Login.query.filter_by(username='testuser').first():
+            import uuid
+            uid = str(uuid.uuid4())
+            login = Login(userid=uid, username='testuser', name='Test User')
+            login.set_password('password')
+            db.session.add(login)
+            
+            user = User(login_id=uid)
+            db.session.add(user)
             db.session.commit()
             
         # Mock current_user
         from unittest.mock import patch
         
+        # Get real ID
+        real_login = Login.query.filter_by(username='testuser').first()
+        real_uid = real_login.userid
+
         # Patching current_user in app.common.storage module scope
         with patch('app.common.storage.current_user') as mock_user:
             mock_user.is_authenticated = True
+            mock_user.userid = real_uid
             mock_user.username = 'testuser'
             
             topic_name = "Session Test"
@@ -187,11 +215,11 @@ def test_chat_session_persistence(logger, app):
             # Verify
             t = Topic.query.filter_by(name=topic_name).first()
             assert t is not None
-            assert t.chat_session is not None
-            assert len(t.chat_session.history) == 1
-            assert t.chat_session.history[0]['content'] == "Hi"
+            assert t.chat_mode is not None
+            assert len(t.chat_mode.history) == 1
+            assert t.chat_mode.history[0]['content'] == "Hi"
             
-            logger.info("ChatSession persistence verified.")
+            logger.info("ChatMode persistence verified.")
 
 def test_quiz_result_persistence(logger, app):
     """Test that quiz result is saved to Quiz table."""
@@ -201,14 +229,25 @@ def test_quiz_result_persistence(logger, app):
     
     with app.app_context():
         # Ensure user exists
-        if not db.session.get(User, 'testuser'):
-            u = User(username='testuser')
-            u.set_password('password')
-            db.session.add(u)
+        from app.core.models import Login
+        if not Login.query.filter_by(username='testuser').first():
+            import uuid
+            uid = str(uuid.uuid4())
+            login = Login(userid=uid, username='testuser', name='Test User')
+            login.set_password('password')
+            db.session.add(login)
+            
+            user = User(login_id=uid)
+            db.session.add(user)
             db.session.commit()
+            
+        # Get real ID
+        real_login = Login.query.filter_by(username='testuser').first()
+        real_uid = real_login.userid
             
         with patch('app.common.storage.current_user') as mock_user:
             mock_user.is_authenticated = True
+            mock_user.userid = real_uid
             mock_user.username = 'testuser'
             
             topic_name = "Quiz Persistence Test"
@@ -228,9 +267,8 @@ def test_quiz_result_persistence(logger, app):
             # Verify DB
             t = Topic.query.filter_by(name=topic_name).first()
             assert t is not None
-            assert len(t.quizzes) == 1
-            idx = -1
-            q = t.quizzes[idx]
+            q = t.quiz_mode
+            assert q is not None
             assert q.result is not None
             assert q.result['score'] == 90
             assert q.result['details'] == "Great job"
@@ -369,13 +407,13 @@ def test_chat_summary_integration(auth_client, app):
         from app.core.models import Topic
         topic = Topic.query.filter_by(name=topic_name).first()
         assert topic is not None
-        assert topic.chat_session is not None
+        assert topic.chat_mode is not None
         # Should be empty initially
-        assert len(topic.chat_session.history) == 1 # Welcome message
+        assert len(topic.chat_mode.history) == 1 # Welcome message
         # history_summary defaults to None in DB if just added, or [] via load_topic logic
-        # But accessing model directly (topic.chat_session.history_summary) gives raw value.
+        # But accessing model directly (topic.chat_mode.history_summary) gives raw value.
         # It should be None or empty.
-        val = topic.chat_session.history_summary
+        val = topic.chat_mode.history_summary
         assert val is None or len(val) == 0
     
     # Mock LLM to return distinct answers and summaries
@@ -396,7 +434,7 @@ def test_chat_summary_integration(auth_client, app):
         
     with app.app_context():
         topic = Topic.query.filter_by(name=topic_name).first()
-        session = topic.chat_session
+        session = topic.chat_mode
         
         print(f"History: {len(session.history)}")
         summary_len = len(session.history_summary) if session.history_summary else 0
@@ -437,7 +475,7 @@ def test_chat_context_construction(auth_client, app):
 
     with app.app_context():
         topic = Topic.query.filter_by(name=topic_name).first()
-        sess = topic.chat_session
+        sess = topic.chat_mode
         # History: W(0), U0(1), A0(2), U1(3), A1(4), U2(5), A2(6), U3(7), A3(8) = 9 messages
         assert len(sess.history) == 9 
         assert sess.history_summary and len(sess.history_summary) == 9

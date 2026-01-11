@@ -49,6 +49,16 @@ document.addEventListener('DOMContentLoaded', () => {
             this.style.height = 'auto';
             this.style.height = Math.min(this.scrollHeight, 200) + 'px';
         });
+
+        // Disable input and button on submit
+        planForm.addEventListener('submit', function () {
+            const btn = document.getElementById('plan-modification-button');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = 'Updating Plan...';
+            }
+            planInput.disabled = true;
+        });
     }
 });
 
@@ -295,7 +305,12 @@ function setupPodcast() {
         }
     });
 
-    function initPlayer(url) {
+    // Check if audio already exists (reloaded from DB)
+    if (audio.src && audio.src.length > 0 && audio.src !== window.location.href) {
+        initPlayer(audio.src, false);
+    }
+
+    function initPlayer(url, autoplay = true) {
         audio.src = url;
         audio.load();
 
@@ -311,7 +326,11 @@ function setupPodcast() {
         };
 
         // Auto-play
-        togglePlay();
+        if (autoplay) {
+            togglePlay();
+        } else {
+            updatePlayIcon(false);
+        }
     }
 
     function togglePlay() {

@@ -1,8 +1,12 @@
 from app.core.extensions import db
-from app.core.models import Topic, StudyStep, Quiz, Flashcard
+from app.core.models import Topic, ChapterMode, QuizMode, FlashcardMode, Feedback
 import logging
-from sqlalchemy.exc import IntegrityError, OperationalError
+import datetime
+import os
+import base64
+
 from flask_login import current_user
+from sqlalchemy.exc import IntegrityError, OperationalError
 from app.core.exceptions import (
     AuthenticationError,
     DatabaseOperationError,
@@ -27,94 +31,187 @@ def save_topic(topic_name, data):
                 debug_info={"topic_name": topic_name}
             )
 
-        # Create/update topic
-        topic = Topic.query.filter_by(
-            name=topic_name,
-            user_id=current_user.username).first()
+        topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
         if not topic:
-            topic = Topic(name=topic_name, user_id=current_user.username)
+            topic = Topic(name=topic_name, user_id=current_user.userid)
             db.session.add(topic)
-
-        # Update fields
-        # Note: We rely on the JSON structure provided by the app
-        # Fix: App uses 'plan', Model uses 'study_plan'
-        topic.study_plan = data.get('plan', [])
-        # topic.last_quiz_result = data.get('last_quiz_result') # MOVED to Quiz
-        # table
-
-        # Handle ChatSession (Main Topic Chat + Popup Chat)
-        if not topic.chat_session:
-            from app.core.models import ChatSession
-            topic.chat_session = ChatSession(topic=topic, history=[], chat_history=[])
-            db.session.add(topic.chat_session)
+            db.session.flush()
         
-        # We generally expect main chat history to be managed by save_chat_history,
-        # but popup history is part of the topic context in this mode.
-        if 'popup_chat_history' in data:
-             # Ensure we update the mutable JSON
-             # We use a temporary variable to modify and then reassign or flag modified
-             topic.chat_session.chat_history = data['popup_chat_history']
-             from sqlalchemy.orm.attributes import flag_modified
-             flag_modified(topic.chat_session, 'chat_history')
-             db.session.add(topic.chat_session)
-
-        # Clear existing children to rebuild (simple strategy for full replace)
-        # For efficiency, could compare, but this ensures consistency with "overwrite" behavior of JSON
-        # However, deleting and re-creating might change IDs.
-        # Let's try to update in place if possible, or just delete all children for now.
-        # Given the app likely dumps the whole state, deleting children is
-        # safer for consistency.
-
-        # Delete existing relationships
-        StudyStep.query.filter_by(topic_id=topic.id).delete()
-        Quiz.query.filter_by(topic_id=topic.id).delete()
-        Flashcard.query.filter_by(topic_id=topic.id).delete()
-
-        # Steps
+        # Update topic fields
+        topic.study_plan = data.get('plan', []) 
+        
+        # Explicitly update modified_at when saving
+        topic.modified_at = datetime.datetime.utcnow()
+        
+        # --- Handle ChapterMode (Steps) ---
         plan = data.get('plan', [])
-        for i, step_data in enumerate(data.get('steps', [])):
+        # Support both 'steps' (legacy/API) and 'chapter_mode' (storage sync)
+        incoming_steps = data.get('chapter_mode') or data.get('steps') or []
+        
+        # Existing steps map: index -> instance
+        existing_steps_map = {s.step_index: s for s in topic.chapter_mode}
+        seen_indices = set()
+        
+        for i, step_data in enumerate(incoming_steps):
+            step_index = step_data.get('step_index', i)
+            seen_indices.add(step_index)
+            
             step_title = step_data.get('title')
             if not step_title and plan and i < len(plan):
                 step_title = plan[i]
-
-            step = StudyStep(
-                topic=topic,
-                # Ensure this is in JSON or default to index
-                step_index=step_data.get('step_index', i),
-                title=step_title,
-                # Fix: App uses 'teaching_material', Model uses 'content'
-                content=step_data.get(
-                    'teaching_material') or step_data.get('content'),
-                questions=step_data.get('questions'),
-                user_answers=step_data.get('user_answers'),
-                feedback=step_data.get('feedback'),
-                score=step_data.get('score'),
-                chat_history=step_data.get('chat_history')
-            )
-            db.session.add(step)
-
-        # Quiz
-        # "quiz" key in JSON
-        if 'quiz' in data:
-            q_data = data.get('quiz')
-            if q_data:
-                quiz = Quiz(
-                    topic=topic,
-                    questions=q_data.get('questions'),
-                    score=q_data.get('score'),
-                    # Storing the result here
-                    result=data.get('last_quiz_result')
+                
+            content = step_data.get('teaching_material') or step_data.get('content')
+            
+            if step_index in existing_steps_map:
+                # Update existing
+                step = existing_steps_map[step_index]
+                step.title = step_title
+                step.content = content
+                if step_data.get('podcast_audio_path'):
+                    step.podcast_audio_path = step_data.get('podcast_audio_path')
+                step.questions = step_data.get('questions')
+                step.user_answers = step_data.get('user_answers')
+                step.score = step_data.get('score')
+                step.popup_chat_history = step_data.get('popup_chat_history') or step_data.get('chat_history')
+                step.time_spent = step_data.get('time_spent', 0)
+                db.session.add(step)
+            else:
+                # Create new
+                step = ChapterMode(
+                    topic_id=topic.id,
+                    step_index=step_index,
+                    title=step_title,
+                    content=content,
+                    podcast_audio_path=step_data.get('podcast_audio_path'),
+                    questions=step_data.get('questions'),
+                    user_answers=step_data.get('user_answers'),
+                    score=step_data.get('score'),
+                    popup_chat_history=step_data.get('popup_chat_history') or step_data.get('chat_history'),
+                    time_spent=step_data.get('time_spent', 0)
                 )
-                db.session.add(quiz)
+                db.session.add(step)
+            
+            # --- Handle Feedback (Moved to dedicated table) ---
+            # content_reference for this step: topic_{id}_step_{index}
+            # Note: Topic ID might not be available if topic is new and flush not called?
+            # We need to ensure topic is flushed.
+            db.session.flush()
+            content_ref = f"topic_{topic.id}_step_{step_index}"
+            
+            # Delete existing feedback for this step/user to overwrite with current state
+            Feedback.query.filter_by(
+                user_id=current_user.userid, 
+                content_reference=content_ref
+            ).delete()
+            
+            feedbacks_data = step_data.get('feedback')
+            if feedbacks_data:
+                # normalize to list
+                if not isinstance(feedbacks_data, list):
+                    feedbacks_data = [feedbacks_data]
+                
+                for fb_item in feedbacks_data:
+                    # fb_item might be string or dict
+                    comment = fb_item
+                    rating = None
+                    if isinstance(fb_item, dict):
+                        comment = fb_item.get('comment')
+                        rating = fb_item.get('rating')
+                    
+                    new_fb = Feedback(
+                        user_id=current_user.userid,
+                        feedback_type='in_place',
+                        content_reference=content_ref,
+                        comment=comment,
+                        rating=rating
+                    )
+                    db.session.add(new_fb)
+        
+        # Delete removed steps
+        for idx, step in existing_steps_map.items():
+            if idx not in seen_indices:
+                db.session.delete(step)
+            
+        # --- Handle QuizMode ---
+        # --- Handle QuizMode ---
+        # "quiz" key in JSON (legacy), "quiz_mode" is new standard
+        q_data = data.get('quiz_mode') or data.get('quiz')
+        if q_data:
+             if True: # preserving indentation block
+                 # Check existing quizzes
+                 existing_quiz = topic.quiz_mode if topic.quiz_mode else None
+                 
+                 if existing_quiz:
+                     existing_quiz.questions = q_data.get('questions')
+                     existing_quiz.score = q_data.get('score')
+                     existing_quiz.result = data.get('last_quiz_result')
+                     existing_quiz.time_spent = q_data.get('time_spent', 0)
+                 else:
+                     quiz = QuizMode(
+                         topic_id=topic.id,
+                         questions=q_data.get('questions'),
+                         score=q_data.get('score'),
+                         result=data.get('last_quiz_result'), 
+                         time_spent=q_data.get('time_spent', 0)
+                     )
+                     db.session.add(quiz)
 
-        # Flashcards
-        for card_data in data.get('flashcards', []):
-            card = Flashcard(
-                topic=topic,
-                term=card_data.get('term'),
-                definition=card_data.get('definition')
-            )
-            db.session.add(card)
+        # --- Handle Flashcards ---
+        # Flashcards are tricky without IDs. We'll match by TERM.
+        incoming_cards = data.get('flashcards', [])
+        existing_cards_map = {c.term: c for c in topic.flashcard_mode}
+        seen_terms = set()
+        
+        for card_data in incoming_cards:
+            term = card_data.get('term')
+            if not term: 
+                continue
+            seen_terms.add(term)
+            
+            if term in existing_cards_map:
+                # Update
+                card = existing_cards_map[term]
+                card.definition = card_data.get('definition')
+                card.time_spent = card_data.get('time_spent', 0)
+            else:
+                # Create
+                card = FlashcardMode(
+                    topic_id=topic.id,
+                    term=term,
+                    definition=card_data.get('definition'),
+                    time_spent=card_data.get('time_spent', 0)
+                )
+                db.session.add(card)
+        
+        # Delete removed flashcards
+        for term, card in existing_cards_map.items():
+            if term not in seen_terms:
+                db.session.delete(card)
+
+        # --- Handle ChatMode ---
+        # Ensure we save history and popup_history if they are in the data
+        if 'chat_history' in data or 'popup_chat_history' in data:
+            from app.core.models import ChatMode
+            if not topic.chat_mode:
+                chat_session = ChatMode(topic_id=topic.id)
+                db.session.add(chat_session)
+            else:
+                chat_session = topic.chat_mode
+            
+            from sqlalchemy.orm.attributes import flag_modified
+            if 'chat_history' in data:
+                chat_session.history = data['chat_history']
+                flag_modified(chat_session, 'history')
+            if 'chat_history_summary' in data:
+                chat_session.history_summary = data['chat_history_summary']
+                flag_modified(chat_session, 'history_summary')
+            if 'popup_chat_history' in data:
+                chat_session.popup_chat_history = data['popup_chat_history']
+                flag_modified(chat_session, 'popup_chat_history')
+            if 'chat_time_spent' in data:
+                chat_session.time_spent = data['chat_time_spent']
+            
+            db.session.add(chat_session)
 
         db.session.commit()
 
@@ -154,8 +251,7 @@ def save_topic(topic_name, data):
             debug_info={"topic_name": topic_name}
         )
 
-
-def save_chat_history(topic_name, history, history_summary=None):
+def save_chat_history(topic_name, history, history_summary=None, time_spent=0, popup_history=None):
     """
     Save chat history and optional summary for a topic.
     """
@@ -169,21 +265,22 @@ def save_chat_history(topic_name, history, history_summary=None):
                 debug_info={"topic_name": topic_name}
             )
 
-        topic = Topic.query.filter_by(
-            name=topic_name,
-            user_id=current_user.username).first()
+        topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
         if not topic:
-            topic = Topic(name=topic_name, user_id=current_user.username)
+            topic = Topic(name=topic_name, user_id=current_user.userid)
             db.session.add(topic)
             db.session.flush()  # Ensure ID exists
 
-        from app.core.models import ChatSession
+        from app.core.models import ChatMode
 
-        if not topic.chat_session:
-            chat_session = ChatSession(topic=topic, history=[])
+        if not topic.chat_mode:
+            chat_session = ChatMode(topic_id=topic.id, history=[])
             db.session.add(chat_session)
         else:
-            chat_session = topic.chat_session
+            chat_session = topic.chat_mode
+
+        if time_spent > 0:
+            chat_session.time_spent = (chat_session.time_spent or 0) + time_spent
 
         # Update history
         from sqlalchemy.orm.attributes import flag_modified
@@ -193,6 +290,10 @@ def save_chat_history(topic_name, history, history_summary=None):
         if history_summary is not None:
              chat_session.history_summary = list(history_summary)
              flag_modified(chat_session, 'history_summary')
+
+        if popup_history is not None:
+             chat_session.popup_chat_history = list(popup_history)
+             flag_modified(chat_session, 'popup_chat_history')
 
         db.session.add(chat_session)
 
@@ -228,101 +329,133 @@ def load_topic(topic_name):
     Load topic data from PostgreSQL and reconstruct dictionary structure.
     Returns None if topic doesn't exist or user not authenticated (normal behavior for new topics).
     """
-    logger = logging.getLogger(__name__)
+    logging.getLogger(__name__)
 
+    topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
+    if not topic:
+        return None
+        
+    # User requested Modified At to update when opened ("any time")
     try:
-        if not current_user.is_authenticated:
-            return None  # Return None for unauthenticated - original behavior
-
-        topic = Topic.query.filter_by(
-            name=topic_name,
-            user_id=current_user.username).first()
-        if not topic:
-            return None  # Topic doesn't exist yet - normal case for new topics
-
-        data = {
-            "name": topic.name,
-            "plan": topic.study_plan or [],  # Map model 'study_plan' back to app 'plan'
-            "last_quiz_result": None,  # Will populate from Quiz
-            "chat_history": topic.chat_session.history if topic.chat_session else [],
-            "chat_history_summary": (topic.chat_session.history_summary if topic.chat_session else []) or [],
-            "popup_chat_history": (topic.chat_session.chat_history if topic.chat_session else []) or [],
-            "steps": [],
-            "quiz": None,
-            "flashcards": []
-        }
-
-        # Initialize steps list matching the plan length
-        plan = topic.study_plan or []
-        # Create a map of existing steps by index
-        existing_steps = {s.step_index: s for s in topic.steps}
-
-        steps_data = []
-        # If we have a plan, we want to return a list of steps matching that
-        # plan
-        for i in range(len(plan)):
-            step_model = existing_steps.get(i)
-            if step_model:
-                steps_data.append({
-                    "step_index": step_model.step_index,
-                    "title": step_model.title,
-                    "content": step_model.content,
-                    "questions": step_model.questions,
-                    "user_answers": step_model.user_answers,
-                    "feedback": step_model.feedback,
-                    "score": step_model.score,
-                    "chat_history": step_model.chat_history or [],
-                    # Include derived fields if needed, e.g. teaching_material is actually 'content' in model?
-                    # In model: content = db.Column(db.Text) # Markdown content
-                    # In app: key is 'teaching_material'
-                    "teaching_material": step_model.content
-                })
-            else:
-                # Placeholder for steps not yet started/saved
-                steps_data.append({})
-
-        data["plan"] = plan
-        data["steps"] = steps_data
-
-        # Quiz
-        # Assuming one quiz per topic for now, similar to previous JSON usually
-        if topic.quizzes:
-            # Check if models.py defined strict 1-to-many. It did.
-            # But if the app treats it as a single object...
-            # I'll take the latest one.
-            latest_quiz = topic.quizzes[-1]
-            data["quiz"] = {
-                "questions": latest_quiz.questions,
-                "score": latest_quiz.score,
-                "date": latest_quiz.created_at.isoformat() if latest_quiz.created_at else None}
-            # Populate last_quiz_result from the quiz
-            data["last_quiz_result"] = latest_quiz.result
-
-        # Flashcards
-        for card in topic.flashcards:
-            data["flashcards"].append({
-                "term": card.term,
-                "definition": card.definition
+        topic.modified_at = datetime.datetime.utcnow()
+        db.session.commit()
+    except Exception as e:
+        logging.warning(f"Failed to update modify time on read for {topic_name}: {e}")
+        # Don't block loading
+        
+    data = {
+        "name": topic.name,
+        "plan": topic.study_plan or [], # Map model 'study_plan' back to app 'plan'
+        "last_quiz_result": None, # Will populate from Quiz
+        "chat_history": (topic.chat_mode.history or []) if topic.chat_mode else [],
+        "chat_history_summary": (topic.chat_mode.history_summary or []) if topic.chat_mode else [],
+        "popup_chat_history": (topic.chat_mode.popup_chat_history or []) if topic.chat_mode else [],
+        "chapter_mode": [],
+        "quiz_mode": None,
+        "flashcard_mode": []
+    }
+    
+    
+    # Initialize steps list matching the plan length
+    plan = topic.study_plan or []
+    # Create a map of existing steps by index
+    existing_steps = {s.step_index: s for s in topic.chapter_mode}
+    
+    steps_data = []
+    # If we have a plan, we want to return a list of steps matching that plan
+    for i in range(len(plan)):
+        step_model = existing_steps.get(i)
+        if step_model:
+            steps_data.append({
+                "step_index": step_model.step_index,
+                "title": step_model.title,
+                "content": step_model.content,
+                "questions": step_model.questions,
+                "user_answers": step_model.user_answers,
+                "score": step_model.score,
+                "popup_chat_history": step_model.popup_chat_history or [],
+                "time_spent": step_model.time_spent or 0,
+                # Include derived fields if needed, e.g. teaching_material is actually 'content' in model?
+                # In model: content = db.Column(db.Text) # Markdown content
+                # In app: key is 'teaching_material'
+                "teaching_material": step_model.content,
+                "podcast_audio_path": step_model.podcast_audio_path,
+                "podcast_audio_content": None
             })
 
-        return data
+            # Load audio content if path exists
+            if step_model.podcast_audio_path:
+                audio_path = step_model.podcast_audio_path
+                logging.info(f"DEBUG: Processing audio for step {step_model.step_index}. Raw path: {audio_path}")
+                
+                # If path doesn't exist as is, check if it's relative to app/static
+                if not os.path.exists(audio_path):
+                     # Try resolving relative to app/static
+                     # Assuming project root is cwd. app/static is standard.
+                     # We can also rely on flask static folder if available context, but here we are in storage.
+                     candidate_path = os.path.join(os.getcwd(), 'app', 'static', os.path.basename(audio_path))
+                     logging.info(f"DEBUG: Path not found. Trying candidate: {candidate_path}")
+                     if os.path.exists(candidate_path):
+                         audio_path = candidate_path
+                         logging.info("DEBUG: Candidate found!")
+                     else:
+                         logging.debug("DEBUG: Candidate also not found.")
 
-    except OperationalError as e:
-        logger.error(f"Database connection error loading topic: {e}")
-        raise DatabaseConnectionError(
-            "Unable to connect to database",
-            error_code="DB105",
-            debug_info={"operation": "load_topic", "original_error": str(e)}
-        )
-    except Exception as e:
-        logger.error(f"Error loading topic {topic_name}: {e}", exc_info=True)
-        raise DatabaseOperationError(
-            f"Failed to load topic: {str(e)}",
-            operation="load_topic",
-            error_code="DB106",
-            debug_info={"topic_name": topic_name}
-        )
+                if os.path.exists(audio_path):
+                    try:
+                        with open(audio_path, 'rb') as audio_file:
+                            encoded_string = base64.b64encode(audio_file.read()).decode('utf-8')
+                            steps_data[-1]["podcast_audio_content"] = encoded_string
+                            logging.info(f"DEBUG: Successfully loaded and encoded audio for step {step_model.step_index}")
+                    except Exception as e:
+                         logging.warning(f"Failed to load audio file for topic {topic_name} step {step_model.step_index}: {e}")
+                else:
+                    logging.warning(f"Audio file not found at path: {step_model.podcast_audio_path} or resolved path {audio_path}")
+            
+            # Populate feedback from Feedback table
+            content_ref = f"topic_{topic.id}_step_{step_model.step_index}"
+            feedbacks = Feedback.query.filter_by(
+                user_id=current_user.userid, 
+                content_reference=content_ref
+            ).all()
+            
+            # Format back to list of strings or dicts as expected by frontend
+            # Assuming simple strings for now or dicts if rating present
+            steps_data[-1]['feedback'] = [f.comment for f in feedbacks]
+        else:
+            # Placeholder for steps not yet started/saved
+            steps_data.append({})
+            
+    data["plan"] = plan
+    data["chapter_mode"] = steps_data
+        
+    # QuizMode
+    # Assuming one quiz per topic for now, similar to previous JSON usually
+    if topic.quiz_mode:
+        # Quiz is 1-to-1
+        latest_quiz = topic.quiz_mode 
+        data["quiz_mode"] = {
+            "questions": latest_quiz.questions,
+            "score": latest_quiz.score,
+            "date": latest_quiz.created_at.isoformat() if latest_quiz.created_at else None,
+            "time_spent": latest_quiz.time_spent or 0
+        }
+        # Populate last_quiz_result from the quiz
+        data["last_quiz_result"] = latest_quiz.result
+        
+    # Flashcards
+    for card in topic.flashcard_mode:
+        data["flashcard_mode"].append({
+            "term": card.term,
+            "definition": card.definition,
+            "time_spent": card.time_spent or 0
+        })
+        
+    # Chat Mode time
+    if topic.chat_mode:
+        data["chat_time_spent"] = topic.chat_mode.time_spent or 0
 
+    return data
 
 def get_all_topics():
     """Get all topics for the current authenticated user."""
@@ -334,7 +467,7 @@ def get_all_topics():
 
         topics = Topic.query.with_entities(
             Topic.name).filter_by(
-            user_id=current_user.username).all()
+            user_id=current_user.userid).all()
         return [t.name for t in topics]
 
     except OperationalError as e:
@@ -353,7 +486,6 @@ def get_all_topics():
             error_code="DB108"
         )
 
-
 def delete_topic(topic_name):
     """Delete a topic and all its related  data."""
     logger = logging.getLogger(__name__)
@@ -364,7 +496,7 @@ def delete_topic(topic_name):
 
         topic = Topic.query.filter_by(
             name=topic_name,
-            user_id=current_user.username).first()
+            user_id=current_user.userid).first()
         if not topic:
             return  # Topic doesn't exist - silently return (original behavior)
 

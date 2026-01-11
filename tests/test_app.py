@@ -52,7 +52,7 @@ def test_full_learning_flow(auth_client, mocker, logger):
 
     # Follow the redirect to /chapter/testing
     logger.step("Following redirect to /chapter/testing")
-    mocker.patch('app.modes.chapter.routes.load_topic', return_value={"name": topic_name, "plan": ["Step 1", "Step 2"], "steps": [{}, {}]})
+    mocker.patch('app.modes.chapter.routes.load_topic', return_value={"name": topic_name, "plan": ["Step 1", "Step 2"], "chapter_mode": [{}, {}]})
     response = auth_client.get(f'/chapter/{topic_name}')
     assert response.status_code == 302
     assert response.headers['Location'] == f'/chapter/learn/{topic_name}/0'
@@ -61,7 +61,7 @@ def test_full_learning_flow(auth_client, mocker, logger):
     topic_data = {
         "name": topic_name,
         "plan": ["Step 1", "Step 2"],
-        "steps": [
+        "chapter_mode": [
             {},
             {}
         ]
@@ -77,7 +77,7 @@ def test_full_learning_flow(auth_client, mocker, logger):
 
     # 3. User submits an answer
     logger.step("3. User submits an answer")
-    topic_data['steps'][0] = {"teaching_material": "## Step Content", "questions": {"questions": [{"question": "Q1?", "options": ["A", "B"], "correct_answer": "A"}]}}
+    topic_data['chapter_mode'][0] = {"teaching_material": "## Step Content", "questions": {"questions": [{"question": "Q1?", "options": ["A", "B"], "correct_answer": "A"}]}}
     mocker.patch('app.modes.chapter.routes.load_topic', return_value=topic_data)
     response = auth_client.post(f'/chapter/assess/{topic_name}/0', data={'option_0': 'A'})
     assert response.status_code == 200
@@ -85,8 +85,8 @@ def test_full_learning_flow(auth_client, mocker, logger):
 
     # 4. User continues to the next step
     logger.step("4. User continues to the next step")
-    topic_data['steps'][0]['user_answers'] = ['A']
-    topic_data['steps'][0]['completed'] = True
+    topic_data['chapter_mode'][0]['user_answers'] = ['A']
+    topic_data['chapter_mode'][0]['completed'] = True
     mocker.patch('app.modes.chapter.routes.load_topic', return_value=topic_data)
     response = auth_client.get(f'/chapter/learn/{topic_name}/1')
     assert response.status_code == 200
@@ -102,7 +102,7 @@ def test_full_learning_flow(auth_client, mocker, logger):
 
     # 6. User finishes the course
     logger.step("6. User finishes the course")
-    topic_data['steps'][1] = {"teaching_material": "## Step 2 Content", "questions": {"questions": [{"question": "Q2?", "options": ["C", "D"], "correct_answer": "C"}]}}
+    topic_data['chapter_mode'][1] = {"teaching_material": "## Step 2 Content", "questions": {"questions": [{"question": "Q2?", "options": ["C", "D"], "correct_answer": "C"}]}}
     mocker.patch('app.modes.chapter.routes.load_topic', return_value=topic_data)
     response = auth_client.post(f'/chapter/assess/{topic_name}/1', data={'option_0': 'C'})
     assert response.status_code == 302
@@ -121,7 +121,7 @@ def test_export_topic(auth_client, mocker, logger):
     topic_data = {
         "name": topic_name,
         "plan": ["Step 1"],
-        "steps": [{"teaching_material": "## Test Content"}]
+        "chapter_mode": [{"teaching_material": "## Test Content"}]
     }
     mocker.patch('app.modes.chapter.routes.load_topic', return_value=topic_data)
 
@@ -427,3 +427,46 @@ def test_validation_error_handling(client_no_auth):
             
             assert response.status_code == 400
             assert b"Please check your input and try again" in response.data
+
+def test_get_system_info(mocker):
+    """Test get_system_info utility across different scenarios."""
+    from app.common.utils import get_system_info
+    
+    # Mock basic system deps
+    mocker.patch('app.common.utils.os.cpu_count', return_value=8)
+    mock_psutil = mocker.patch('app.common.utils.psutil')
+    mock_psutil.virtual_memory.return_value.total = 16 * 1024**3 # 16GB
+    mocker.patch('app.common.utils.platform.platform', return_value="Linux-Test")
+    mocker.patch('app.common.utils.os.path.exists', side_effect=lambda x: x == '/.dockerenv') # Simulate Docker
+    
+    # 1. Test NVIDIA GPU path
+    mock_run = mocker.patch('app.common.utils.subprocess.run')
+    mock_run.return_value.returncode = 0
+    mock_run.return_value.stdout = "GPU 0: NVIDIA Test (UUID: 123)"
+    
+    info = get_system_info()
+    assert info['cpu_cores'] == 8
+    assert info['ram_gb'] == 16
+    assert info['install_method'] == 'docker'
+    assert info['gpu_model'] == "GPU 0: NVIDIA Test (UUID: 123)"
+    assert info['os_version'] == "Linux-Test"
+    
+    # 2. Test AMD GPU path (NVIDIA fails, AMD succeeds)
+    def side_effect_amd(cmd, **kwargs):
+        res = MagicMock()
+        if 'nvidia-smi' in cmd:
+            res.returncode = 1
+        elif 'rocm-smi' in cmd:
+            res.returncode = 0
+            res.stdout = "AMD Radeon Test"
+        return res
+        
+    mock_run.side_effect = side_effect_amd
+    info = get_system_info()
+    assert info['gpu_model'] == "AMD AMD Radeon Test"
+    
+    # 3. Test No GPU
+    mock_run.side_effect = FileNotFoundError
+    info = get_system_info()
+    assert info['gpu_model'] == "Unknown"
+
