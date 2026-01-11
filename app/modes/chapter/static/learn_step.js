@@ -49,6 +49,16 @@ document.addEventListener('DOMContentLoaded', () => {
             this.style.height = 'auto';
             this.style.height = Math.min(this.scrollHeight, 200) + 'px';
         });
+
+        // Disable input and button on submit
+        planForm.addEventListener('submit', function () {
+            const btn = document.getElementById('plan-modification-button');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = 'Updating Plan...';
+            }
+            planInput.disabled = true;
+        });
     }
 });
 
