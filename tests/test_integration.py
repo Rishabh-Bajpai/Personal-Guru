@@ -1,5 +1,6 @@
 import pytest
 import time
+import functools
 from unittest.mock import patch
 from app.common.utils import call_llm, LLM_BASE_URL, LLM_MODEL_NAME
 from unittest.mock import MagicMock
@@ -15,7 +16,6 @@ pytestmark = pytest.mark.integration
 
 def requires_llm(func):
     """Decorator to fail test if LLM config is missing."""
-    import functools
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         if not LLM_BASE_URL or not LLM_MODEL_NAME:

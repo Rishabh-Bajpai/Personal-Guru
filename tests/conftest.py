@@ -68,10 +68,6 @@ def auth_client(client, app):
     from app.core.models import User
     
     with app.app_context():
-        # Create test user
-        # Check if exists first to be safe (though db dropped per test)
-        if not User.query.first(): # Check if empty
-             pass 
              
         from app.core.models import Login
         if not Login.query.filter_by(username='testuser').first():
