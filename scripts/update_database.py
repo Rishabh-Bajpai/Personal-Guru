@@ -181,6 +181,22 @@ def update_database():
                     except Exception as e:
                          logger.error(f"      -> FAILED to rename column: {e}")
                          db.session.rollback()
+
+            # Special check for renaming 'password' -> 'password_hash' in Login table
+            if table_name == 'logins':
+                if 'password' in existing_col_map and 'password_hash' not in existing_col_map:
+                    logger.info("  [~] Renaming column 'password' to 'password_hash'")
+                    try:
+                        sql = text('ALTER TABLE "logins" RENAME COLUMN "password" TO "password_hash"')
+                        db.session.execute(sql)
+                        db.session.commit()
+                        logger.info("      -> Renamed successfully.")
+                        # Update local map
+                        existing_col_map['password_hash'] = existing_col_map.pop('password')
+                        existing_col_map['password_hash']['name'] = 'password_hash'
+                    except Exception as e:
+                         logger.error(f"      -> FAILED to rename column: {e}")
+                         db.session.rollback()
             if table_name == 'users':
                  # Special check for User model change (username -> id/login_id)
                  has_username = 'username' in existing_col_map
@@ -229,7 +245,7 @@ def update_database():
                                          username=old_username,
                                          name=u.get('name'),
                                          # Map hash to password
-                                         password=u.get('password_hash')
+                                         password_hash=u.get('password_hash')
                                      )
                                      
                                      # Create User (Profile)

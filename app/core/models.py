@@ -230,7 +230,7 @@ class Login(UserMixin, TimestampMixin, db.Model):
     userid = db.Column(db.String(100), primary_key=True) 
     username = db.Column(db.String(100), unique=True, nullable=False)
     name = db.Column(db.String(100))
-    password = db.Column(db.String(255))
+    password_hash = db.Column(db.String(255))
     installation_id = db.Column(db.String(36), db.ForeignKey('installations.installation_id'))
 
     @staticmethod
@@ -242,10 +242,10 @@ class Login(UserMixin, TimestampMixin, db.Model):
         return base_id
 
     def set_password(self, password):
-        self.password = generate_password_hash(password)
+        self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        return check_password_hash(self.password, password)
+        return check_password_hash(self.password_hash, password)
 
     def get_id(self):
         return self.userid
