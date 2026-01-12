@@ -74,7 +74,7 @@ body.dark-mode {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 380px;
+    width: 480px;
     max-width: 90vw;
     border: 1px solid var(--chat-border);
     border-radius: 12px;
@@ -109,7 +109,7 @@ body.dark-mode {
 
 .chat-window {
     padding: 16px;
-    height: 400px;
+    height: 500px;
     display: flex;
     flex-direction: column;
     background: transparent;

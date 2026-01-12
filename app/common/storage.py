@@ -43,60 +43,94 @@ def save_topic(topic_name, data):
         # Explicitly update modified_at when saving
         topic.modified_at = datetime.datetime.utcnow()
         
-        # --- Handle ChapterMode (Steps) ---
-        plan = data.get('plan', [])
-        # Support both 'steps' (legacy/API) and 'chapter_mode' (storage sync)
-        incoming_steps = data.get('chapter_mode') or data.get('steps') or []
+        # --- Handle Chapter Mode (Steps) ---
+        incoming_msg_data = data.get('chapter_mode', [])
+        # Support legacy 'steps' key if 'chapter_mode' is missing
+        if not incoming_msg_data:
+            incoming_msg_data = data.get('steps') or []
         
-        # Existing steps map: index -> instance
-        existing_steps_map = {s.step_index: s for s in topic.chapter_mode}
-        seen_indices = set()
+        # Maps for ID-based and Index-based lookup
+        existing_steps_by_id = {s.id: s for s in topic.chapter_mode}
+        existing_steps_by_index = {s.step_index: s for s in topic.chapter_mode}
         
-        for i, step_data in enumerate(incoming_steps):
-            step_index = step_data.get('step_index', i)
-            seen_indices.add(step_index)
+        # Track processed IDs to know what to delete/keep
+        # Note: ChapterMode relation is 'cascade="all, delete-orphan"', so we need to be careful.
+        # But here we are iterating incoming data.
+        
+        processed_step_ids = set()
+        
+        for step_data in incoming_msg_data:
+            step_index = step_data.get('step_index')
+            step_id = step_data.get('id')
             
-            step_title = step_data.get('title')
-            if not step_title and plan and i < len(plan):
-                step_title = plan[i]
-                
-            content = step_data.get('teaching_material') or step_data.get('content')
+            # 1. Match by ID
+            step = None
+            if step_id and step_id in existing_steps_by_id:
+                step = existing_steps_by_id[step_id]
             
-            if step_index in existing_steps_map:
+            # 2. Fallback: Match by Index (e.g. initial creation or simple list update)
+            # Only if index is provided and no ID match
+            if not step and step_index is not None and step_index in existing_steps_by_index:
+                 step = existing_steps_by_index[step_index]
+
+            if step:
                 # Update existing
-                step = existing_steps_map[step_index]
-                step.title = step_title
-                step.content = content
-                if step_data.get('podcast_audio_path'):
-                    step.podcast_audio_path = step_data.get('podcast_audio_path')
-                step.questions = step_data.get('questions')
-                step.user_answers = step_data.get('user_answers')
-                step.score = step_data.get('score')
-                step.popup_chat_history = step_data.get('popup_chat_history') or step_data.get('chat_history')
-                step.time_spent = step_data.get('time_spent', 0)
-                db.session.add(step)
+                step.title = step_data.get('title', step.title)
+                step.content = step_data.get('content') or step_data.get('teaching_material') or step.content
+                
+                if 'questions' in step_data:
+                    step.questions = step_data['questions']
+                
+                if 'user_answers' in step_data:
+                    logging.info(f"DEBUG: Updating user_answers for step {step.step_index}. New value: {step_data['user_answers']}")
+                    step.user_answers = step_data['user_answers']
+                
+                if 'score' in step_data:
+                    step.score = step_data['score']
+                    
+                step.popup_chat_history = step_data.get('popup_chat_history', step.popup_chat_history)
+                
+                # Only update time_spent if valid positive integer
+                inc_time = step_data.get('time_spent')
+                if isinstance(inc_time, int) and inc_time >= 0:
+                    step.time_spent = inc_time
+                
+                # Ensure step_index is correct (in case of reorder)
+                if step_index is not None:
+                     step.step_index = step_index
+                     
+                step.podcast_audio_path = step_data.get('podcast_audio_path', step.podcast_audio_path)
+                
+                processed_step_ids.add(step.id)
             else:
-                # Create new
+                # Create New
+                # Ensure we have required index
+                if step_index is None:
+                     # Auto-assign next index? Or strict error?
+                     # Let's assume index is required or max+1
+                     current_max = max([s.step_index for s in topic.chapter_mode] + [-1])
+                     step_index = current_max + 1
+
                 step = ChapterMode(
                     topic_id=topic.id,
                     step_index=step_index,
-                    title=step_title,
-                    content=content,
-                    podcast_audio_path=step_data.get('podcast_audio_path'),
+                    title=step_data.get('title'),
+                    content=step_data.get('content') or step_data.get('teaching_material'),
                     questions=step_data.get('questions'),
                     user_answers=step_data.get('user_answers'),
                     score=step_data.get('score'),
-                    popup_chat_history=step_data.get('popup_chat_history') or step_data.get('chat_history'),
-                    time_spent=step_data.get('time_spent', 0)
+                    popup_chat_history=step_data.get('popup_chat_history'),
+                    time_spent=step_data.get('time_spent', 0),
+                    podcast_audio_path=step_data.get('podcast_audio_path')
                 )
                 db.session.add(step)
-            
+                
             # --- Handle Feedback (Moved to dedicated table) ---
             # content_reference for this step: topic_{id}_step_{index}
             # Note: Topic ID might not be available if topic is new and flush not called?
             # We need to ensure topic is flushed.
             db.session.flush()
-            content_ref = f"topic_{topic.id}_step_{step_index}"
+            content_ref = f"topic_{topic.id}_step_{step.step_index}"
             
             # Delete existing feedback for this step/user to overwrite with current state
             Feedback.query.filter_by(
@@ -128,11 +162,10 @@ def save_topic(topic_name, data):
                     db.session.add(new_fb)
         
         # Delete removed steps
-        for idx, step in existing_steps_map.items():
-            if idx not in seen_indices:
-                db.session.delete(step)
+        for s in topic.chapter_mode:
+            if s.id not in processed_step_ids and s not in db.session.new:
+                db.session.delete(s)
             
-        # --- Handle QuizMode ---
         # --- Handle QuizMode ---
         # "quiz" key in JSON (legacy), "quiz_mode" is new standard
         q_data = data.get('quiz_mode') or data.get('quiz')
@@ -157,36 +190,58 @@ def save_topic(topic_name, data):
                      db.session.add(quiz)
 
         # --- Handle Flashcards ---
-        # Flashcards are tricky without IDs. We'll match by TERM.
-        incoming_cards = data.get('flashcards', [])
-        existing_cards_map = {c.term: c for c in topic.flashcard_mode}
-        seen_terms = set()
+        incoming_cards = data.get('flashcard_mode') or data.get('flashcards') or []
+        
+        # Maps for ID-based and Term-based lookup
+        existing_cards_by_id = {c.id: c for c in topic.flashcard_mode}
+        existing_cards_by_term = {c.term: c for c in topic.flashcard_mode}
+        
+        # Track which existing cards are kept/updated
+        processed_ids = set()
         
         for card_data in incoming_cards:
             term = card_data.get('term')
             if not term: 
                 continue
-            seen_terms.add(term)
             
-            if term in existing_cards_map:
-                # Update
-                card = existing_cards_map[term]
-                card.definition = card_data.get('definition')
-                card.time_spent = card_data.get('time_spent', 0)
+            card_id = card_data.get('id')
+            matched_card = None
+
+            # 1. Try match by ID
+            if card_id and card_id in existing_cards_by_id:
+                matched_card = existing_cards_by_id[card_id]
+            
+            # 2. Fallback: match by Term if ID mismatch or missing (e.g. generated but not saved yet)
+            if not matched_card and term in existing_cards_by_term:
+                matched_card = existing_cards_by_term[term]
+                
+            if matched_card:
+                # Update existing
+                matched_card.definition = card_data.get('definition', matched_card.definition)
+                # Ensure we don't accidentally reset time_spent if not provided in update (though it should be)
+                # But if provided as 0, we might want to allow it? Usually time accumulates.
+                # Assuming incoming data is the "current state".
+                val_time = card_data.get('time_spent')
+                if val_time is not None:
+                    matched_card.time_spent = val_time
+                
+                processed_ids.add(matched_card.id)
             else:
-                # Create
-                card = FlashcardMode(
+                # Create new
+                new_card = FlashcardMode(
                     topic_id=topic.id,
                     term=term,
                     definition=card_data.get('definition'),
                     time_spent=card_data.get('time_spent', 0)
                 )
-                db.session.add(card)
-        
+                db.session.add(new_card)
+                # Note: valid new_card.id won't exist until flush, but it's fine for this loop
+
         # Delete removed flashcards
-        for term, card in existing_cards_map.items():
-            if term not in seen_terms:
-                db.session.delete(card)
+        # If it wasn't processed (updated), it means it's not in the new list, so delete it.
+        for c in topic.flashcard_mode:
+            if c.id not in processed_ids and c not in db.session.new:
+                db.session.delete(c)
 
         # --- Handle ChatMode ---
         # Ensure we save history and popup_history if they are in the data
@@ -368,6 +423,7 @@ def load_topic(topic_name):
         if step_model:
             steps_data.append({
                 "step_index": step_model.step_index,
+                "id": step_model.id,
                 "title": step_model.title,
                 "content": step_model.content,
                 "questions": step_model.questions,
@@ -448,7 +504,8 @@ def load_topic(topic_name):
         data["flashcard_mode"].append({
             "term": card.term,
             "definition": card.definition,
-            "time_spent": card.time_spent or 0
+            "time_spent": card.time_spent or 0,
+            "id": card.id
         })
         
     # Chat Mode time
@@ -499,6 +556,23 @@ def delete_topic(topic_name):
             user_id=current_user.userid).first()
         if not topic:
             return  # Topic doesn't exist - silently return (original behavior)
+
+        # Delete related chat sessions, chapter modes, quiz modes, flashcard modes, and plan revisions
+        # before deleting the topic itself to avoid foreign key constraints.
+        if topic.chat_mode:
+            db.session.delete(topic.chat_mode)
+        
+        # Delete items in collections
+        for item in topic.chapter_mode:
+            db.session.delete(item)
+        for item in topic.flashcard_mode:
+            db.session.delete(item)
+        for item in topic.plan_revisions:
+            db.session.delete(item)
+
+        # QuizMode is a one-to-one relationship (uselist=False), so no loop needed
+        if topic.quiz_mode:
+            db.session.delete(topic.quiz_mode)
 
         db.session.delete(topic)
         db.session.commit()

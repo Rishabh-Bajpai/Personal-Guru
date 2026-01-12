@@ -90,13 +90,26 @@ def update_progress(topic_name):
     if not topic_data:
         return {"error": "Topic not found"}, 404
         
-    # Expecting data['flashcards'] to be a list of {term: ..., time_spent: ...}
-    updates = {item['term']: item.get('time_spent', 0) for item in data.get('flashcards', [])}
+    # Re-reading logic:
+    # incoming data['flashcards'] is list of {term:..., time_spent:...}
+    # Let's map incoming by ID and Term
+    incoming_by_id = {}
+    incoming_by_term = {}
+    for item in data.get('flashcards', []):
+        if 'id' in item:
+            incoming_by_id[item['id']] = item.get('time_spent', 0)
+        if 'term' in item:
+            incoming_by_term[item['term']] = item.get('time_spent', 0)
     
     for card in topic_data.get('flashcard_mode', []):
-        if card['term'] in updates:
-            # Accumulate time
-            card['time_spent'] = (card.get('time_spent', 0) or 0) + updates[card['term']]
+        added_time = 0
+        if card.get('id') in incoming_by_id:
+            added_time = incoming_by_id[card['id']]
+        elif card.get('term') in incoming_by_term:
+            added_time = incoming_by_term[card['term']]
+            
+        if added_time > 0:
+            card['time_spent'] = (card.get('time_spent', 0) or 0) + added_time
             
     save_topic(topic_name, topic_data)
     return {"status": "success"}
