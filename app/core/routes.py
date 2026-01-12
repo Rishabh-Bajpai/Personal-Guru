@@ -37,6 +37,17 @@ def index():
                 topics=topics_data,
                 error="Please enter a topic name.")
 
+        # Telemetry Hook: Topic Created/Opened (Intent)
+        try:
+            from app.common.utils import log_telemetry
+            log_telemetry(
+                event_type='topic_created' if topic_name not in get_all_topics() else 'topic_opened',
+                triggers={'source': 'web_ui', 'action': 'form_submit'},
+                payload={'topic_name': topic_name, 'mode': mode}
+            )
+        except Exception:
+            pass
+
         if mode:
             if mode == 'chapter':
                 return redirect(url_for('chapter.mode', topic_name=topic_name))
@@ -62,6 +73,8 @@ def index():
                     'index.html',
                     topics=get_all_topics(),
                     error=f"Mode {mode} not available")
+
+
 
     topics = get_all_topics()
     topics_data = []
@@ -111,6 +124,18 @@ def login():
                 'login.html', error='Invalid username or password')
 
         login_user(user)
+
+        # Telemetry Hook: User Login
+        try:
+            from app.common.utils import log_telemetry
+            log_telemetry(
+                event_type='user_login',
+                triggers={'source': 'web_ui', 'action': 'form_submit'},
+                payload={'method': 'password'}
+            )
+        except Exception:
+            pass
+
         return redirect(url_for('main.index'))
 
     return render_template('login.html')
@@ -173,6 +198,21 @@ def signup():
         db.session.commit()
         
         login_user(new_login)
+
+        # Telemetry Hook: User Signup
+        try:
+            from app.common.utils import log_telemetry
+            log_telemetry(
+                event_type='user_signup',
+                triggers={'source': 'web_ui', 'action': 'form_submit'},
+                payload={
+                    'installation_id': inst_id,
+                    'install_method': sys_info['install_method']
+                }
+            )
+        except Exception:
+            pass
+
         return redirect(url_for('main.user_profile'))
         
     return render_template('signup.html')
@@ -224,6 +264,18 @@ def user_profile():
 def delete_topic_route(topic_name):
     from app.common.storage import delete_topic
     delete_topic(topic_name)
+
+    # Telemetry Hook: Topic Deleted
+    try:
+        from app.common.utils import log_telemetry
+        log_telemetry(
+            event_type='topic_deleted',
+            triggers={'source': 'web_ui', 'action': 'click_delete'},
+            payload={'topic_name': topic_name}
+        )
+    except Exception:
+        pass
+
     return redirect(url_for('main.index'))
 
 

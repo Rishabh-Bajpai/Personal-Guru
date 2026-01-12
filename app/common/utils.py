@@ -698,6 +698,54 @@ Text to summarize:
         # Return first 300 chars as backup
         return text[:300] + "..." if len(text) > 300 else text
 
+
+def log_telemetry(event_type, triggers, payload):
+    """
+    Logs a telemetry event to the database.
+    
+    Args:
+        event_type (str): The type of event (e.g., 'user_login', 'quiz_submitted').
+        triggers (dict): What triggered the event (e.g., {'source': 'web_ui', 'action': 'click'}).
+        payload (dict): The data payload for the event.
+    """
+    import logging
+    import uuid
+    from flask import session
+    from flask_login import current_user
+    from app.core.extensions import db
+    from app.core.models import TelemetryLog
+    
+    logger = logging.getLogger(__name__)
+
+    try:
+        # Require authenticated user for linking
+        if not current_user.is_authenticated:
+            # We could log anonymous events if needed, but schema requires user_id
+            return
+
+        # Ensure session_id exists
+        if 'telemetry_session_id' not in session:
+            session['telemetry_session_id'] = str(uuid.uuid4())
+        
+        session_id = session['telemetry_session_id']
+        
+        log_entry = TelemetryLog(
+            user_id=current_user.userid,
+            session_id=session_id,
+            event_type=event_type,
+            triggers=triggers,
+            payload=payload
+        )
+        
+        db.session.add(log_entry)
+        db.session.commit()
+        logger.debug(f"Telemetry logged: {event_type}")
+
+    except Exception as e:
+        # Log error but fail silently to avoid interrupting user flow
+        logger.error(f"Failed to log telemetry: {e}")
+
+
 def get_system_info():
     """
     Gather system information for Installation record.

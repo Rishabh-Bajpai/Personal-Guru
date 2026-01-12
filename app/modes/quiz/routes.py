@@ -134,6 +134,23 @@ def submit_quiz(topic_name):
 
         save_topic(topic_name, topic_data)
 
+        # Telemetry Hook: Quiz Submitted
+        try:
+            from app.common.utils import log_telemetry
+            log_telemetry(
+                event_type='quiz_submitted',
+                triggers={'source': 'web_ui', 'action': 'click_submit'},
+                payload={
+                    'topic': topic_name,
+                    'score': score,
+                    'q_count': len(questions),
+                    'time_spent': time_spent
+                }
+            )
+        except Exception:
+            pass  # Logging failure should not block the flow
+            pass
+
     session.pop('quiz_questions', None)
     return render_template('quiz/feedback.html',
                            topic_name=topic_name,

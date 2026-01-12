@@ -152,6 +152,19 @@ def update_database():
                          logger.error(f"      -> FAILED to drop column: {e}")
                          db.session.rollback()
 
+            # Special check for 'installation_id' removal in TelemetryLog
+            if table_name == 'telemetry_logs':
+                if 'installation_id' in existing_col_map:
+                     logger.info("  [-] Dropping deprecated column: installation_id from telemetry_logs")
+                     try:
+                         sql = text('ALTER TABLE "telemetry_logs" DROP COLUMN "installation_id"')
+                         db.session.execute(sql)
+                         db.session.commit()
+                         logger.info("      -> Dropped successfully.")
+                     except Exception as e:
+                         logger.error(f"      -> FAILED to drop column: {e}")
+                         db.session.rollback()
+
             # Special check for deprecated 'name' and 'password_hash' columns in User table
             if table_name == 'users':
                 for deprecated_col in ['name', 'password_hash']:
