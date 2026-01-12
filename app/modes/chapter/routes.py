@@ -1,5 +1,6 @@
 from flask import render_template, request, session, redirect, url_for, make_response
 import os
+import base64
 from . import chapter_bp
 from app.common.storage import load_topic, save_topic
 from app.common.agents import FeedbackAgent, PlannerAgent
@@ -350,16 +351,30 @@ def generate_podcast_route(topic_name, step_index):
     user_background = get_user_context()
 
     # Define output path
-    filename = f"podcast_{topic_name}_{step_index}.mp3"
-    # Ensure filename is safe
+    step_id = current_step_data.get('id')
+    
+    # Fallback if ID is missing (e.g. not flushed yet), though load_topic should have it if it existed.
+    # If it's a new step that hasn't been saved to DB, it might not have an ID.
+    # But current_step_data comes from load_topic, which comes from DB.
+    # Logic in storage: if step exists in DB, it has ID.
+    if not step_id:
+         # Try to save to ensure ID? save_topic does flush.
+         # But wait, load_topic gets data from DB. 
+         # If I just generated the topic, it should be in DB.
+         # Let's rely on user_id and topic name + step index if id missing?
+         # The Requirement says: <step_id (ChapterMode's id)>
+         return {"error": "Step ID not found. Please refresh the page and try again."}, 500
+
+    from flask_login import current_user
     import werkzeug
-    filename = werkzeug.utils.secure_filename(filename)
+    filename = werkzeug.utils.secure_filename(f"podcast_{current_user.userid}_{step_id}.mp3")
+    
+    # New Path: <cwd>/data/audio/
+    audio_dir = os.path.join(os.getcwd(), 'data', 'audio')
+    if not os.path.exists(audio_dir):
+        os.makedirs(audio_dir)
 
-    static_dir = os.path.join(os.getcwd(), 'app', 'static')
-    if not os.path.exists(static_dir):
-        os.makedirs(static_dir)
-
-    output_path = os.path.join(static_dir, filename)
+    output_path = os.path.join(audio_dir, filename)
 
     # Refactored Logic
     # 1. Generate Script
@@ -372,20 +387,24 @@ def generate_podcast_route(topic_name, step_index):
     # 2. Generate Audio
     from app.common.utils import generate_podcast_audio
     try:
-        success = generate_podcast_audio(transcript, output_path)
+        success, error_msg = generate_podcast_audio(transcript, output_path)
+        if not success:
+             return {"error": f"Audio generation failed: {error_msg}"}, 500
     except Exception as error:
         return {"error": f"Audio generation failed: {error}"}, 500
 
-    if not success:
-        return {"error": "Audio generation failed"}, 500
-
-    audio_url = url_for('static', filename=filename)
+    # 3. Read and Encode
+    try:
+        with open(output_path, 'rb') as audio_file:
+            encoded_string = base64.b64encode(audio_file.read()).decode('utf-8')
+    except Exception as e:
+        return {"error": f"Failed to encode audio: {e}"}, 500
     
     # Save the podcast path to the step
     current_step_data['podcast_audio_path'] = output_path
     save_topic(topic_name, topic_data)
     
-    return {"audio_url": audio_url}
+    return {"audio_url": f"data:audio/mp3;base64,{encoded_string}"}
 
 
 @chapter_bp.route('/complete/<topic_name>')

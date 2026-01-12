@@ -368,6 +368,7 @@ def load_topic(topic_name):
         if step_model:
             steps_data.append({
                 "step_index": step_model.step_index,
+                "id": step_model.id,
                 "title": step_model.title,
                 "content": step_model.content,
                 "questions": step_model.questions,
