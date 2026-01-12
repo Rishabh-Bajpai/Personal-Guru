@@ -204,6 +204,8 @@ class AIModelPerformance(TimestampMixin, db.Model):
     output_tokens = db.Column(db.Integer)
     timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
+    # Relationships
+    login = db.relationship('Login', back_populates='ai_model_performances')
 
 
 class PlanRevision(TimestampMixin, db.Model):
