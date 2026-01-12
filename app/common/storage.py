@@ -158,7 +158,7 @@ def save_topic(topic_name, data):
 
         # --- Handle Flashcards ---
         # Flashcards are tricky without IDs. We'll match by TERM.
-        incoming_cards = data.get('flashcards', [])
+        incoming_cards = data.get('flashcard_mode') or data.get('flashcards') or []
         existing_cards_map = {c.term: c for c in topic.flashcard_mode}
         seen_terms = set()
         
