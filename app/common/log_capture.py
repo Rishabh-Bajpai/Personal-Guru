@@ -5,7 +5,6 @@ import queue
 import atexit
 import datetime
 import logging
-from flask import current_app
 
 class LogCapture:
     """
@@ -139,7 +138,6 @@ class LogCapture:
                 # Avoid circular imports
                 from app.core.models import TelemetryLog, Installation
                 from app.core.extensions import db
-                import uuid
 
                 # We need an installation ID. Since this is background, we can't reliably get current_user.
                 # We'll use the first installation found or a system sentinel.

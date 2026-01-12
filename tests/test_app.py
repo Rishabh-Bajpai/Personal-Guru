@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from app.common.utils import summarize_text
-from app.core.models import User, Login, Topic, ChatMode, ChapterMode, QuizMode, FlashcardMode, TelemetryLog, Installation
+from app.core.models import TelemetryLog
 from app.core.exceptions import TopicNotFoundError, ValidationError
 from app.common.config_validator import validate_config
 
@@ -611,7 +611,7 @@ def test_log_capture_threading():
         assert log_entry.event_type == 'terminal_log'
         assert log_entry.installation_id == "test_install_id"
         assert len(log_entry.payload['logs']) >= 2
-        assert "Log 1" in [l['message'].strip() for l in log_entry.payload['logs']]
+        assert "Log 1" in [log_item['message'].strip() for log_item in log_entry.payload['logs']]
         
         # Cleanup
         capture.stop()
