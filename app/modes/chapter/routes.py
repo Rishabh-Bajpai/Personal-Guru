@@ -11,6 +11,7 @@ from weasyprint import HTML
 import datetime
 from app.common.agents import CodeExecutionAgent
 from app.common.sandbox import Sandbox
+from app.common.utils import log_telemetry
 
 # Instantiate agents
 teacher = ChapterTeachingAgent()
@@ -19,6 +20,18 @@ assessor = AssessorAgent()
 feedback_agent = FeedbackAgent()
 md = MarkdownIt()
 podcast_agent = PodcastAgent()
+
+
+def _log_plan_generated(topic_name: str, plan_steps: list) -> None:
+    """Log telemetry event for plan generation."""
+    try:
+        log_telemetry(
+            event_type='topic_plan_generated',
+            triggers={'source': 'web_ui', 'action': 'auto'},
+            payload={'topic_name': topic_name, 'steps_count': len(plan_steps)}
+        )
+    except Exception:
+        pass # Telemetry failures must not block user flow; ignore logging errors.
 
 
 @chapter_bp.route('/<topic_name>')
@@ -65,6 +78,8 @@ def mode(topic_name):
     topic_data['chapter_mode'] = [{} for _ in plan_steps]
     save_topic(topic_name, topic_data)
 
+    _log_plan_generated(topic_name, plan_steps)
+
     # Go directly to learning
     return redirect(
         url_for(
@@ -94,6 +109,8 @@ def generate_plan():
     topic_data['chapter_mode'] = [{} for _ in plan_steps]
 
     save_topic(topic_name, topic_data)
+
+    _log_plan_generated(topic_name, plan_steps)
 
     return {"status": "success", "plan": plan_steps}
 
@@ -140,6 +157,16 @@ def update_plan(topic_name):
     # I have current_plan already (line 94).
 
     save_topic(topic_name, topic_data)
+
+    # Telemetry Hook: Plan Updated
+    try:
+        log_telemetry(
+            event_type='topic_plan_updated',
+            triggers={'source': 'web_ui', 'action': 'user_request'},
+            payload={'topic_name': topic_name, 'comment_length': len(comment)}
+        )
+    except Exception:
+        pass # Telemetry failures must not block user flow; ignore logging errors.
 
     return redirect(
         url_for(
@@ -258,6 +285,21 @@ def assess_step(topic_name, step_index):
         session['incorrect_questions'] = incorrect_questions
 
     save_topic(topic_name, topic_data)
+
+    # Telemetry Hook: Step Assessed
+    try:     
+        log_telemetry(
+            event_type='chapter_step_assessed',
+            triggers={'source': 'web_ui', 'action': 'click_next'},
+            payload={
+                'topic': topic_name,
+                'step_index': step_index,
+                'score': score,
+                'time_spent': time_spent
+            }
+        )
+    except Exception:
+        pass # Telemetry failures must not block user flow; ignore logging errors.
 
     if step_index == len(topic_data['plan']) - 1:
         return redirect(
@@ -419,6 +461,20 @@ def generate_podcast_route(topic_name, step_index):
     current_step_data['podcast_audio_path'] = output_path
     save_topic(topic_name, topic_data)
     
+    # Telemetry Hook: Podcast Generated
+    try:
+        log_telemetry(
+            event_type='content_generated',
+            triggers={'source': 'web_ui', 'action': 'click_podcast'},
+            payload={
+                'topic': topic_name, 
+                'step_index': step_index,
+                'content_type': 'podcast'
+            }
+        )
+    except Exception:
+        pass # Telemetry failures must not block user flow; ignore logging errors.
+
     return {"audio_url": f"data:audio/mp3;base64,{encoded_string}"}
 
 

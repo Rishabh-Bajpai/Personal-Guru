@@ -470,3 +470,64 @@ def test_get_system_info(mocker):
     info = get_system_info()
     assert info['gpu_model'] == "Unknown"
 
+
+def test_log_telemetry(mocker):
+    """Test the log_telemetry utility function."""
+    from app.common.utils import log_telemetry
+    from app.core.models import TelemetryLog
+    
+    # Mock current_user
+    mock_user = MagicMock()
+    mock_user.is_authenticated = True
+    mock_user.userid = 'test_user_123'
+    
+    # Mock db and session where they are defined/imported
+    # log_telemetry imports them inside the function, so we patch the source
+    mock_db = mocker.patch('app.core.extensions.db')
+    
+    # Mock flask session
+    # We need to mock the dict behavior of session
+    mock_session = {}
+    mocker.patch('flask.session', mock_session)
+    
+    # Mock flask_login.current_user
+    mocker.patch('flask_login.current_user', mock_user)
+    
+    # 1. Test successful logging
+    log_telemetry(
+        event_type='unit_test_event',
+        triggers={'source': 'test'},
+        payload={'data': 'value'}
+    )
+    
+    # Verify db.session.add was called with a TelemetryLog object
+    assert mock_db.session.add.called
+    args, _ = mock_db.session.add.call_args
+    log_entry = args[0]
+    
+    assert isinstance(log_entry, TelemetryLog)
+    assert log_entry.user_id == 'test_user_123'
+    assert log_entry.event_type == 'unit_test_event'
+    assert log_entry.triggers == {'source': 'test'}
+    assert log_entry.payload == {'data': 'value'}
+    assert 'telemetry_session_id' in mock_session
+    assert log_entry.session_id == mock_session['telemetry_session_id']
+    
+    assert mock_db.session.commit.called
+    
+    # 2. Test unauthenticated user (should skip)
+    mock_user.is_authenticated = False
+    mock_db.session.add.reset_mock()
+    
+    log_telemetry('should_not_log', {}, {})
+    assert not mock_db.session.add.called
+
+    # 3. Test exception handling (should fail silently)
+    mock_user.is_authenticated = True
+    mock_db.session.add.side_effect = Exception("DB Error")
+    
+    try:
+            log_telemetry('fail_event', {}, {})
+    except Exception:
+            pytest.fail("log_telemetry raised exception instead of failing silently")
+
