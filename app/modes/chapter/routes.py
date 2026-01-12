@@ -334,7 +334,9 @@ def generate_audio_route(step_index):
         return {"error": "No text provided"}, 400
 
     try:
-        audio_filename = generate_audio(teaching_material, step_index)
+        audio_filename, error = generate_audio(teaching_material, step_index)
+        if error:
+            return {"error": f"Audio generation failed: {error}"}, 500
     except Exception as error:
         print(f"DEBUG: Audio Generation Error for step {step_index}: {error}")
         return {"error": str(error)}, 500
