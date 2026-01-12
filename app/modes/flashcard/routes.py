@@ -96,8 +96,10 @@ def update_progress(topic_name):
     incoming_by_id = {}
     incoming_by_term = {}
     for item in data.get('flashcards', []):
-        if 'id' in item: incoming_by_id[item['id']] = item.get('time_spent', 0)
-        if 'term' in item: incoming_by_term[item['term']] = item.get('time_spent', 0)
+        if 'id' in item:
+            incoming_by_id[item['id']] = item.get('time_spent', 0)
+        if 'term' in item:
+            incoming_by_term[item['term']] = item.get('time_spent', 0)
     
     for card in topic_data.get('flashcard_mode', []):
         added_time = 0

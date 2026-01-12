@@ -7,8 +7,8 @@ from dotenv import load_dotenv
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 load_dotenv()
 
-from app import create_app, db
-from sqlalchemy import text
+from app import create_app, db  # noqa: E402
+from sqlalchemy import text  # noqa: E402
 
 def clear_database():
     """
