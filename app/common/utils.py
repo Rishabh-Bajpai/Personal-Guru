@@ -305,6 +305,7 @@ def generate_audio(text, step_index):
     Generates audio from text using the configured OpenAI-compatible TTS (Kokoro).
     Supports long text by chunking and merging.
     """
+    start_time = time.time()
     static_dir = os.path.join(os.getcwd(), 'app', 'static')
     if not os.path.exists(static_dir):
         os.makedirs(static_dir)
@@ -403,6 +404,30 @@ def generate_audio(text, step_index):
         if result.returncode != 0:
             return None, f"ffmpeg merge failed: {result.stderr.decode()}"
 
+        # --- Logging Hook for TTS ---
+        try:
+            end_time = time.time()
+            latency_ms = int((end_time - start_time) * 1000)
+            from app.core.extensions import db
+            from app.core.models import AIModelPerformance
+            from flask_login import current_user
+
+            if current_user and current_user.is_authenticated:
+                # Use total text length as proxy for input tokens
+                input_len = len(text)
+                perf_log = AIModelPerformance(
+                    user_id=current_user.userid,
+                    model_type='TTS',
+                    model_name='tts-1', # Hardcoded as per implementation
+                    latency_ms=latency_ms,
+                    input_tokens=input_len,
+                    output_tokens=0 # Audio output doesn't measure in tokens easily
+                )
+                db.session.add(perf_log)
+                db.session.commit()
+        except Exception as e:
+             logging.warning(f"Failed to log TTS performance: {e}")
+
         return f"step_{step_index}.wav", None
 
     except Exception as e:
@@ -464,6 +489,7 @@ def generate_podcast_audio(transcript, output_filename):
     """
     Generates a full podcast audio file from a transcript using OpenAI-compatible TTS.
     """
+    start_time = time.time()
     # 1. Parse Transcript
     lines = []
     print("Parsing transcript...")
@@ -558,6 +584,31 @@ def generate_podcast_audio(transcript, output_filename):
             print(f"ffmpeg error: {result.stderr.decode()}")
             return False, f"ffmpeg merge failed: {result.stderr.decode()}"
 
+        # --- Logging Hook for Podcast TTS ---
+        try:
+            end_time = time.time()
+            latency_ms = int((end_time - start_time) * 1000)
+            from app.core.extensions import db
+            from app.core.models import AIModelPerformance
+            from flask_login import current_user
+            
+            # Calculate approx input length from lines
+            total_chars = sum(len(txt) for _, txt in lines)
+
+            if current_user and current_user.is_authenticated:
+                perf_log = AIModelPerformance(
+                    user_id=current_user.userid,
+                    model_type='TTS',
+                    model_name='tts-1',
+                    latency_ms=latency_ms,
+                    input_tokens=total_chars,
+                    output_tokens=0 
+                )
+                db.session.add(perf_log)
+                db.session.commit()
+        except Exception as e:
+             logging.warning(f"Failed to log Podcast TTS performance: {e}")
+
         return True, None
 
     except Exception as e:
@@ -574,6 +625,7 @@ def transcribe_audio(audio_file_path):
     """
     Transcribes audio using an OpenAI-compatible STT service (e.g., speaches).
     """
+    start_time = time.time()
     if not STT_BASE_URL:
         return None, "STT service not configured"
 
@@ -587,6 +639,31 @@ def transcribe_audio(audio_file_path):
                 file=audio_file,
                 response_format="text"
             )
+
+        # --- Logging Hook for STT ---
+        try:
+            end_time = time.time()
+            latency_ms = int((end_time - start_time) * 1000)
+            from app.core.extensions import db
+            from app.core.models import AIModelPerformance
+            from flask_login import current_user
+            
+            # Use transcript length as proxy for output tokens
+            output_len = len(transcript)
+
+            if current_user and current_user.is_authenticated:
+                perf_log = AIModelPerformance(
+                    user_id=current_user.userid,
+                    model_type='STT',
+                    model_name='Systran/faster-whisper-medium.en',
+                    latency_ms=latency_ms,
+                    input_tokens=0, # Audio input difficult to measure in tokens
+                    output_tokens=output_len 
+                )
+                db.session.add(perf_log)
+                db.session.commit()
+        except Exception as e:
+             logging.warning(f"Failed to log STT performance: {e}")
 
         return transcript
     except Exception as e:
