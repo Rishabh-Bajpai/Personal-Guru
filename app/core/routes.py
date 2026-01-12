@@ -199,14 +199,15 @@ def signup():
 
         # Telemetry Hook: User Signup
         try:
-            telemetry_payload = {'installation_id': inst_id}
+            telemetry_payload = {}
             if 'sys_info' in locals():
                 telemetry_payload['install_method'] = sys_info['install_method']
 
             log_telemetry(
                 event_type='user_signup',
                 triggers={'source': 'web_ui', 'action': 'form_submit'},
-                payload=telemetry_payload
+                payload=telemetry_payload,
+                installation_id=inst_id
             )
         except Exception:
             pass # Telemetry failures must not block user flow; ignore logging errors.

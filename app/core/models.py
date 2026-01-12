@@ -161,13 +161,15 @@ class Installation(TimestampMixin, db.Model):
 
     # Relationships
     logins = db.relationship('Login', back_populates='installation', cascade='all, delete-orphan')
+    telemetry_logs = db.relationship('TelemetryLog', back_populates='installation', cascade='all, delete-orphan')
 
 # TelemetryLog: Stores user action events for analytics
 class TelemetryLog(TimestampMixin, db.Model):
     __tablename__ = 'telemetry_logs'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
+    user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=True)
+    installation_id = db.Column(db.String(36), db.ForeignKey('installations.installation_id'), nullable=False)
     session_id = db.Column(db.String(36), nullable=False)  # UUID
     event_type = db.Column(db.String(100), nullable=False)
     triggers = db.Column(JSON, nullable=False) # event triggers like 'user_action', 'auto_save', etc.
@@ -176,7 +178,7 @@ class TelemetryLog(TimestampMixin, db.Model):
 
     # Relationships
     login = db.relationship('Login', back_populates='telemetry_logs')
-
+    installation = db.relationship('Installation', back_populates='telemetry_logs')
 
 class Feedback(TimestampMixin, db.Model):
     __tablename__ = 'feedback'

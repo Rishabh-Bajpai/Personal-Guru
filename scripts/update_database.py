@@ -152,18 +152,58 @@ def update_database():
                          logger.error(f"      -> FAILED to drop column: {e}")
                          db.session.rollback()
 
-            # Special check for 'installation_id' removal in TelemetryLog
+            # Usage: TelemetryLog Schema Updates
             if table_name == 'telemetry_logs':
-                if 'installation_id' in existing_col_map:
-                     logger.info("  [-] Dropping deprecated column: installation_id from telemetry_logs")
+                # 1. Ensure installation_id exists
+                if 'installation_id' not in existing_col_map:
+                     logger.info("  [+] Adding missing column: installation_id to telemetry_logs")
                      try:
-                         sql = text('ALTER TABLE "telemetry_logs" DROP COLUMN "installation_id"')
+                         # Add as nullable first
+                         sql = text('ALTER TABLE "telemetry_logs" ADD COLUMN "installation_id" VARCHAR(36)')
                          db.session.execute(sql)
+                         
+                         # Backfill attempts from user_id joining logins
+                         logger.info("      -> Backfilling installation_id from logins...")
+                         sql_backfill = text("""
+                            UPDATE telemetry_logs
+                            SET installation_id = logins.installation_id
+                            FROM logins
+                            WHERE telemetry_logs.user_id = logins.userid
+                            AND telemetry_logs.installation_id IS NULL
+                         """)
+                         db.session.execute(sql_backfill)
+                         
+                         # Delete any rows that still have NULL installation_id (orphans) to allow NOT NULL constraint
+                         sql_clean = text('DELETE FROM telemetry_logs WHERE installation_id IS NULL')
+                         db.session.execute(sql_clean)
+
+                         # Set NOT NULL
+                         sql_const = text('ALTER TABLE "telemetry_logs" ALTER COLUMN "installation_id" SET NOT NULL')
+                         db.session.execute(sql_const)
+                         
+                         # Add FK Constraint
+                         sql_fk = text('ALTER TABLE "telemetry_logs" ADD CONSTRAINT fk_telemetry_installation FOREIGN KEY (installation_id) REFERENCES installations(installation_id)')
+                         db.session.execute(sql_fk)
+                         
                          db.session.commit()
-                         logger.info("      -> Dropped successfully.")
+                         logger.info("      -> Added and constrained successfully.")
                      except Exception as e:
-                         logger.error(f"      -> FAILED to drop column: {e}")
+                         logger.error(f"      -> FAILED to add column: {e}")
                          db.session.rollback()
+
+                # 2. Ensure user_id is nullable
+                if 'user_id' in existing_col_map:
+                    # We can't easily check if it's nullable via Inspector in this script style without detailed reflection, 
+                    # but we can try to ALTER it to DROP NOT NULL blindly or check logic.
+                    # For simplicity, we just run the ALTER. Postgres allows this even if already nullable.
+                    try:
+                        logger.info("  [*] Altering user_id to be NULLABLE")
+                        sql = text('ALTER TABLE "telemetry_logs" ALTER COLUMN "user_id" DROP NOT NULL')
+                        db.session.execute(sql)
+                        db.session.commit()
+                    except Exception as e:
+                        logger.warning(f"      -> Could not alter user_id: {e}")
+                        db.session.rollback()
 
             # Special check for deprecated 'name' and 'password_hash' columns in User table
             if table_name == 'users':
