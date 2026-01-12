@@ -281,11 +281,24 @@ def update_time(topic_name, step_index):
         time_spent = 0
 
     if time_spent > 0:
-        topic_data = load_topic(topic_name)
-        if topic_data and 'chapter_mode' in topic_data and 0 <= step_index < len(topic_data['chapter_mode']):
-            current_step_data = topic_data['chapter_mode'][step_index]
-            current_step_data['time_spent'] = (current_step_data.get('time_spent', 0) or 0) + time_spent
-            save_topic(topic_name, topic_data)
+        # Prevent race condition: Use direct DB update instead of load_topic/save_topic
+        # load_topic gets a snapshot. If another request (e.g. assess_step) updates 
+        # user_answers in parallel, save_topic (which overwrites everything) would 
+        # revert user_answers to the stale snapshot state (None).
+        
+        from app.core.models import Topic, ChapterMode
+        from flask_login import current_user
+        from app.core.extensions import db
+        
+        # We need to find the specific step. 
+        # Note: step_index isn't unique globally, only per topic.
+        
+        topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
+        if topic:
+             step = ChapterMode.query.filter_by(topic_id=topic.id, step_index=step_index).first()
+             if step:
+                 step.time_spent = (step.time_spent or 0) + time_spent
+                 db.session.commit()
             
     return '', 204
 
@@ -298,13 +311,13 @@ def reset_quiz(topic_name, step_index):
     if 0 <= step_index < len(topic_data['chapter_mode']):
         current_step_data = topic_data['chapter_mode'][step_index]
         if 'user_answers' in current_step_data:
-            del current_step_data['user_answers']
+            current_step_data['user_answers'] = None
         if 'feedback' in current_step_data:
-            del current_step_data['feedback']
+            current_step_data['feedback'] = None
         if 'popup_chat_history' in current_step_data:
-            del current_step_data['popup_chat_history']
+            current_step_data['popup_chat_history'] = None
         if 'score' in current_step_data:
-            del current_step_data['score']
+            current_step_data['score'] = None
         save_topic(topic_name, topic_data)
 
     return redirect(
