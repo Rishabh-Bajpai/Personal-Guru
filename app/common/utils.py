@@ -698,6 +698,71 @@ Text to summarize:
         # Return first 300 chars as backup
         return text[:300] + "..." if len(text) > 300 else text
 
+
+def log_telemetry(event_type: str, triggers: dict, payload: dict, installation_id: str = None) -> None:
+    """
+    Logs a telemetry event to the database.
+    Fails silently on errors to avoid disrupting the user experience.
+    
+    Args:
+        event_type (str): The type of event (e.g., 'user_login', 'quiz_submitted').
+        triggers (dict): What triggered the event (e.g., {'source': 'web_ui', 'action': 'click'}).
+        payload (dict): The data payload for the event.
+        installation_id (str, optional): The installation ID. If None, attempts to resolve from current_user or DB.
+    """   
+    import uuid
+    from flask import session
+    from flask_login import current_user
+    from app.core.extensions import db
+    from app.core.models import TelemetryLog, Installation
+    
+    logger = logging.getLogger(__name__)
+
+    try:
+        # Resolve User ID (Nullable)
+        user_id = None
+        if current_user and current_user.is_authenticated:
+            user_id = current_user.userid
+            # If installation_id not provided, try to get from user
+            if not installation_id:
+                installation_id = current_user.installation_id
+
+        # Resolve Installation ID (Non-Nullable)
+        if not installation_id:
+             # Try to find any installation record (assuming single-tenant / personal use)
+             inst_record = Installation.query.first()
+             if inst_record:
+                installation_id = inst_record.installation_id
+        
+        # If we still don't have an installation_id, we cannot log (Constraint Violation)
+        if not installation_id:
+            logger.debug(f"Skipping telemetry {event_type}: No installation_id found.")
+            return
+
+        # Ensure session_id exists
+        if 'telemetry_session_id' not in session:
+            session['telemetry_session_id'] = str(uuid.uuid4())
+        
+        session_id = session['telemetry_session_id']
+        
+        log_entry = TelemetryLog(
+            user_id=user_id,
+            installation_id=installation_id,
+            session_id=session_id,
+            event_type=event_type,
+            triggers=triggers,
+            payload=payload
+        )
+        
+        db.session.add(log_entry)
+        db.session.commit()
+        logger.debug(f"Telemetry logged: {event_type}")
+
+    except Exception as e:
+        # Log error but fail silently to avoid interrupting user flow
+        logger.error(f"Failed to log telemetry: {e}")
+
+
 def get_system_info():
     """
     Gather system information for Installation record.

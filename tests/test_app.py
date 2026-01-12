@@ -470,3 +470,92 @@ def test_get_system_info(mocker):
     info = get_system_info()
     assert info['gpu_model'] == "Unknown"
 
+
+def test_log_telemetry(mocker):
+    """Test the log_telemetry utility function."""
+    from app.common.utils import log_telemetry
+    from app.core.models import TelemetryLog
+    
+    # Mock current_user
+    mock_user = MagicMock()
+    mock_user.is_authenticated = True
+    mock_user.userid = 'test_user_123'
+    mock_user.installation_id = 'inst_123'
+    
+    # Mock db and session where they are defined/imported
+    # log_telemetry imports them inside the function, so we patch the source
+    mock_db = mocker.patch('app.core.extensions.db')
+    
+    # Mock flask session
+    # We need to mock the dict behavior of session
+    mock_session = {}
+    mocker.patch('flask.session', mock_session)
+    
+    # Mock flask_login.current_user
+    mocker.patch('flask_login.current_user', mock_user)
+
+    # Mock Installation model for fallback
+    mock_installation_cls = mocker.patch('app.core.models.Installation')
+    
+    # 1. Test successful logging (User has installation_id)
+    log_telemetry(
+        event_type='unit_test_event',
+        triggers={'source': 'test'},
+        payload={'data': 'value'}
+    )
+    
+    # Verify db.session.add was called with a TelemetryLog object
+    assert mock_db.session.add.called
+    args, _ = mock_db.session.add.call_args
+    log_entry = args[0]
+    
+    assert isinstance(log_entry, TelemetryLog)
+    assert log_entry.user_id == 'test_user_123'
+    assert log_entry.installation_id == 'inst_123'
+    assert log_entry.event_type == 'unit_test_event'
+    assert log_entry.triggers == {'source': 'test'}
+    assert log_entry.payload == {'data': 'value'}
+    assert 'telemetry_session_id' in mock_session
+    assert log_entry.session_id == mock_session['telemetry_session_id']
+    
+    assert mock_db.session.commit.called
+    
+    # 2. Test explicit installation_id (overrides user)
+    mock_db.session.add.reset_mock()
+    log_telemetry('explicit_event', {}, {}, installation_id='explicit_inst_999')
+    args, _ = mock_db.session.add.call_args
+    log_entry = args[0]
+    assert log_entry.installation_id == 'explicit_inst_999'
+
+    # 3. Test unauthenticated user BUT with installation lookup
+    mock_user.is_authenticated = False
+    mock_db.session.add.reset_mock()
+    
+    # Mock Installation.query.first()
+    mock_inst_record = MagicMock()
+    mock_inst_record.installation_id = 'fallback_inst_456'
+    mock_installation_cls.query.first.return_value = mock_inst_record
+    
+    log_telemetry('anon_event', {}, {})
+    assert mock_db.session.add.called
+    args, _ = mock_db.session.add.call_args
+    log_entry = args[0]
+    assert log_entry.user_id is None
+    assert log_entry.installation_id == 'fallback_inst_456'
+
+    # 4. Test missing installation_id (should skip)
+    mock_installation_cls.query.first.return_value = None
+    mock_db.session.add.reset_mock()
+    log_telemetry('skip_event', {}, {})
+    assert not mock_db.session.add.called
+
+    # 5. Test exception handling (should fail silently)
+    # Restore auth user for easy path
+    mock_user.is_authenticated = True
+    mock_db.session.add.side_effect = Exception("DB Error")
+    
+    try:
+         log_telemetry('fail_event', {}, {})
+    except Exception:
+         pytest.fail("log_telemetry raised exception instead of failing silently")
+
