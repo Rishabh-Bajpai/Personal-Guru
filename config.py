@@ -21,3 +21,4 @@ class Config:
     
     # App Settings
     USER_BACKGROUND = os.environ.get('USER_BACKGROUND', 'a beginner')
+    ENABLE_TELEMETRY_LOGGING = os.environ.get('ENABLE_TELEMETRY_LOGGING', 'True').lower() == 'true'

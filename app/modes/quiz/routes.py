@@ -53,10 +53,22 @@ def mode(topic_name):
     if topic_data and topic_data.get('quiz_mode'):
         quiz_data = topic_data['quiz_mode']
         session['quiz_questions'] = quiz_data.get('questions', [])
+
+        # Telemetry Hook: Quiz Viewed
+        try:
+            log_telemetry(
+                event_type='quiz_viewed',
+                triggers={'source': 'web_ui', 'action': 'navigation'},
+                payload={'topic': topic_name}
+            )
+        except Exception:
+            pass # Telemetry failures must not block user flow; ignore logging errors.
+
         return render_template(
             'quiz/mode.html',
             topic_name=topic_name,
             quiz_data=quiz_data)
+
 
     # Otherwise show the quiz count selector
     return render_template('quiz/select.html', topic_name=topic_name)

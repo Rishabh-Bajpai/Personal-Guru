@@ -1,9 +1,13 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from app.common.utils import summarize_text
+from app.core.models import User, Login, Topic, ChatMode, ChapterMode, QuizMode, FlashcardMode, TelemetryLog, Installation
 from app.core.exceptions import TopicNotFoundError, ValidationError
 from app.common.config_validator import validate_config
+
 from app.setup_app import create_setup_app
+from app.common.log_capture import LogCapture
+import time
 
 # Mark all tests in this file as 'unit'
 pytestmark = pytest.mark.unit
@@ -558,4 +562,59 @@ def test_log_telemetry(mocker):
          log_telemetry('fail_event', {}, {})
     except Exception:
          pytest.fail("log_telemetry raised exception instead of failing silently")
+
+def test_log_capture_threading():
+    """Test that log capture correctly buffers and flushes logs using background thread."""
+    # Mock app and database session
+    mock_app = MagicMock()
+    mock_app.app_context.return_value.__enter__.return_value = None
+    
+    # Mock Installation query
+    mock_installation = MagicMock()
+    mock_installation.installation_id = "test_install_id"
+    
+    # We need to mock the imports inside LogCapture._flush to avoid side effects
+    # but since they are local imports, we can mock the whole function or the db access.
+    # A better integration test is to use the real class but mock the database write.
+    
+    with patch('app.core.models.Installation') as mock_inst_cls, \
+         patch('app.core.extensions.db.session') as mock_session:
+         
+        mock_inst_cls.query.first.return_value = mock_installation
+        
+        # Initialize LogCapture with short flush interval
+        # We must be careful not to create a second singleton if one exists, 
+        # but for testing we might want a fresh one. 
+        # The singleton pattern in LogCapture.__new__ might make testing tricky.
+        # Let's reset the singleton for the test.
+        LogCapture._instance = None
+        
+        capture = LogCapture(None) # don't attach to real app to avoid interfering with other tests
+        capture.app = mock_app # attach mock app manually
+        capture.flush_interval = 0.5 # fast flush
+        capture.batch_size = 10 # ensure all logs fit in one batch
+        
+        # 1. Test Buffering
+        print("Log 1")
+        print("Log 2")
+        
+        # Wait for flush (should trigger by batch size or time)
+        time.sleep(1.0)
+        
+        # Verify database interaction
+        # We expect at least one TelemetryLog to be added
+        assert mock_session.add.called
+        args, _ = mock_session.add.call_args
+        log_entry = args[0]
+        
+        assert isinstance(log_entry, TelemetryLog)
+        assert log_entry.event_type == 'terminal_log'
+        assert log_entry.installation_id == "test_install_id"
+        assert len(log_entry.payload['logs']) >= 2
+        assert "Log 1" in [l['message'].strip() for l in log_entry.payload['logs']]
+        
+        # Cleanup
+        capture.stop()
+        LogCapture._instance = None # Reset for other tests
+
 

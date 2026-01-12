@@ -24,6 +24,11 @@ def create_app(config_class=Config):
     sess.init_app(app)  # Initialize server-side sessions
     login_manager.init_app(app)
 
+    # Initialize Telemetry Log Capture
+    if app.config.get('ENABLE_TELEMETRY_LOGGING', True):
+        from app.common.log_capture import LogCapture
+        LogCapture(app)
+
     from app.core.models import Login
     @login_manager.user_loader
     def load_user(userid):
