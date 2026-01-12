@@ -204,8 +204,6 @@ class AIModelPerformance(TimestampMixin, db.Model):
     output_tokens = db.Column(db.Integer)
     timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-    # Relationships
-    login = db.relationship('Login', back_populates='llm_performances')
 
 
 class PlanRevision(TimestampMixin, db.Model):
@@ -262,7 +260,7 @@ class Login(UserMixin, TimestampMixin, db.Model):
     topics = db.relationship('Topic', back_populates='login', cascade='all, delete-orphan')
     feedbacks = db.relationship('Feedback', back_populates='login', cascade='all, delete-orphan')
     telemetry_logs = db.relationship('TelemetryLog', back_populates='login', cascade='all, delete-orphan')
-    llm_performances = db.relationship('AIModelPerformance', back_populates='login', cascade='all, delete-orphan')
+    ai_model_performances = db.relationship('AIModelPerformance', back_populates='login', cascade='all, delete-orphan')
     plan_revisions = db.relationship('PlanRevision', back_populates='login', cascade='all, delete-orphan')
     user_profile = db.relationship('User', back_populates='login', uselist=False, cascade='all, delete-orphan')
 
