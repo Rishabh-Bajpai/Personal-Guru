@@ -5,6 +5,7 @@ from app.common.agents import FeedbackAgent
 from .agent import QuizAgent
 from weasyprint import HTML
 import datetime
+from app.common.utils import log_telemetry
 
 quiz_agent = QuizAgent()
 feedback_agent = FeedbackAgent()
@@ -136,7 +137,6 @@ def submit_quiz(topic_name):
 
         # Telemetry Hook: Quiz Submitted
         try:
-            from app.common.utils import log_telemetry
             log_telemetry(
                 event_type='quiz_submitted',
                 triggers={'source': 'web_ui', 'action': 'click_submit'},
@@ -149,7 +149,6 @@ def submit_quiz(topic_name):
             )
         except Exception:
             pass  # Logging failure should not block the flow
-            pass
 
     session.pop('quiz_questions', None)
     return render_template('quiz/feedback.html',

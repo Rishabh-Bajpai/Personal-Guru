@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for
 from app.common.storage import get_all_topics, load_topic
+from app.common.utils import log_telemetry
 from flask_login import login_user, logout_user, login_required, current_user
 import os
 
@@ -39,14 +40,13 @@ def index():
 
         # Telemetry Hook: Topic Created/Opened (Intent)
         try:
-            from app.common.utils import log_telemetry
             log_telemetry(
                 event_type='topic_created' if topic_name not in get_all_topics() else 'topic_opened',
                 triggers={'source': 'web_ui', 'action': 'form_submit'},
                 payload={'topic_name': topic_name, 'mode': mode}
             )
         except Exception:
-            pass
+            pass # Telemetry failures must not block user flow; ignore logging errors.
 
         if mode:
             if mode == 'chapter':
@@ -73,7 +73,6 @@ def index():
                     'index.html',
                     topics=get_all_topics(),
                     error=f"Mode {mode} not available")
-
 
 
     topics = get_all_topics()
@@ -127,14 +126,13 @@ def login():
 
         # Telemetry Hook: User Login
         try:
-            from app.common.utils import log_telemetry
             log_telemetry(
                 event_type='user_login',
                 triggers={'source': 'web_ui', 'action': 'form_submit'},
                 payload={'method': 'password'}
             )
         except Exception:
-            pass
+            pass # Telemetry failures must not block user flow; ignore logging errors.
 
         return redirect(url_for('main.index'))
 
@@ -201,17 +199,17 @@ def signup():
 
         # Telemetry Hook: User Signup
         try:
-            from app.common.utils import log_telemetry
+            telemetry_payload = {'installation_id': inst_id}
+            if 'sys_info' in locals():
+                telemetry_payload['install_method'] = sys_info['install_method']
+
             log_telemetry(
                 event_type='user_signup',
                 triggers={'source': 'web_ui', 'action': 'form_submit'},
-                payload={
-                    'installation_id': inst_id,
-                    'install_method': sys_info['install_method']
-                }
+                payload=telemetry_payload
             )
         except Exception:
-            pass
+            pass # Telemetry failures must not block user flow; ignore logging errors.
 
         return redirect(url_for('main.user_profile'))
         
@@ -267,14 +265,13 @@ def delete_topic_route(topic_name):
 
     # Telemetry Hook: Topic Deleted
     try:
-        from app.common.utils import log_telemetry
         log_telemetry(
             event_type='topic_deleted',
             triggers={'source': 'web_ui', 'action': 'click_delete'},
             payload={'topic_name': topic_name}
         )
     except Exception:
-        pass
+        pass # Telemetry failures must not block user flow; ignore logging errors.
 
     return redirect(url_for('main.index'))
 

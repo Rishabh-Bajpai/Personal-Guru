@@ -3,6 +3,7 @@ from app.common.prompts import get_code_execution_prompt
 import re
 import json
 from app.core.exceptions import LLMResponseError
+import logging
 
 
 class CodeExecutionAgent:
@@ -173,7 +174,6 @@ class PlannerAgent:
         Raises:
             LLMResponseError: If LLM fails to generate a valid plan
         """
-        import logging
         logger = logging.getLogger(__name__)
         logger.info(f"Generating study plan for topic: {topic}")
 
@@ -225,7 +225,6 @@ class PlannerAgent:
         Raises:
             LLMResponseError: If LLM returns invalid plan format
         """
-        import logging
         logger = logging.getLogger(__name__)
         logger.info(f"Updating study plan for topic: {topic_name}")
 

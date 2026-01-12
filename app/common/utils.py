@@ -707,8 +707,7 @@ def log_telemetry(event_type, triggers, payload):
         event_type (str): The type of event (e.g., 'user_login', 'quiz_submitted').
         triggers (dict): What triggered the event (e.g., {'source': 'web_ui', 'action': 'click'}).
         payload (dict): The data payload for the event.
-    """
-    import logging
+    """   
     import uuid
     from flask import session
     from flask_login import current_user
