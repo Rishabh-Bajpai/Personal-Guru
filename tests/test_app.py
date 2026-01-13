@@ -587,15 +587,20 @@ def test_log_capture_threading():
         # but for testing we might want a fresh one. 
         # The singleton pattern in LogCapture.__new__ might make testing tricky.
         # Let's reset the singleton for the test.
-        LogCapture._instance = None
-        
-        # Configure flush interval and batch size before initializing LogCapture
-        LogCapture.flush_interval = 0.5  # fast flush
-        LogCapture.batch_size = 10  # ensure all logs fit in one batch
+        # Reset singleton for test, enabling thread safety
+        with LogCapture._lock:
+            LogCapture._instance = None
         
         capture = LogCapture(None) # don't attach to real app to avoid interfering with other tests
         capture.app = mock_app # attach mock app manually
         
+        # Configure instance properties (worker loop picks these up dynamically)
+        capture.flush_interval = 0.5
+        capture.batch_size = 10
+        
+        # Verify worker thread started
+        assert capture.worker_thread.is_alive()
+
         # 1. Test Buffering
         print("Log 1")
         print("Log 2")
@@ -617,6 +622,7 @@ def test_log_capture_threading():
         
         # Cleanup
         capture.stop()
-        LogCapture._instance = None # Reset for other tests
+        with LogCapture._lock:
+            LogCapture._instance = None # Reset for other tests
 
 

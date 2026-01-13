@@ -158,6 +158,7 @@ class LogCapture:
                 # Avoid circular imports
                 from app.core.models import TelemetryLog, Installation
                 from app.core.extensions import db
+                from sqlalchemy.exc import OperationalError
 
                 # We need an installation ID. Since this is background, we can't reliably get current_user.
                 # We'll use the first installation found or a system sentinel.
@@ -178,12 +179,15 @@ class LogCapture:
                 db.session.add(log_entry)
                 db.session.commit()
                 
-        except Exception as e:
+        except OperationalError as e:
             # Suppress "no such table" errors which happen during startup/setup
             # This avoids noise when logging happens before DB initialization
             if "no such table" in str(e):
                 return
+            # Log other operational errors
+            self.original_stderr.write(f"LogCapture Flush Failed (Operational): {e}\n")
 
+        except Exception as e:
             # Fallback to original stderr if DB fails
             self.original_stderr.write(f"LogCapture Flush Failed: {e}\n")
 
@@ -191,14 +195,15 @@ class LogCapture:
         """Stops the worker thread and restores streams."""
         self.stop_event.set()
         
-        # Restore streams
-        sys.stdout = self.original_stdout
-        sys.stderr = self.original_stderr
-        
         if self.worker_thread:
+            # Wait for worker to finish processing
             self.worker_thread.join(timeout=2.0)
             if self.worker_thread.is_alive():
                 logging.getLogger(__name__).warning(
                     "LogCapture worker thread did not terminate within the 2.0 second timeout; "
                     "some buffered logs may not have been flushed."
                 )
+
+        # Restore streams
+        sys.stdout = self.original_stdout
+        sys.stderr = self.original_stderr
