@@ -84,9 +84,14 @@ class LogCapture:
 
             def flush(self):
                 original_stream.flush()
-                
+
             def isatty(self):
                 return getattr(original_stream, 'isatty', lambda: False)()
+
+            @property
+            def encoding(self):
+                """Expose the encoding of the underlying stream, if available."""
+                return getattr(original_stream, 'encoding', None)
                 
         return StreamWrapper()
 
