@@ -222,6 +222,19 @@ def learn_topic(topic_name, step_index):
         save_topic(topic_name, topic_data)
         session.pop('incorrect_questions', None)
 
+    # Telemetry Hook: Step Viewed
+    try:
+        log_telemetry(
+            event_type='chapter_step_viewed',
+            triggers={'source': 'web_ui', 'action': 'navigation'},
+            payload={
+                'topic': topic_name,
+                'step_index': step_index
+            }
+        )
+    except Exception:
+        pass # Telemetry failures must not block user flow; ignore logging errors.
+
     show_assessment = current_step_data.get(
         'questions') and not current_step_data.get('user_answers')
     return render_template(
