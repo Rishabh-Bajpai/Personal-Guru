@@ -589,10 +589,12 @@ def test_log_capture_threading():
         # Let's reset the singleton for the test.
         LogCapture._instance = None
         
+        # Configure flush interval and batch size before initializing LogCapture
+        LogCapture.flush_interval = 0.5  # fast flush
+        LogCapture.batch_size = 10  # ensure all logs fit in one batch
+        
         capture = LogCapture(None) # don't attach to real app to avoid interfering with other tests
         capture.app = mock_app # attach mock app manually
-        capture.flush_interval = 0.5 # fast flush
-        capture.batch_size = 10 # ensure all logs fit in one batch
         
         # 1. Test Buffering
         print("Log 1")
