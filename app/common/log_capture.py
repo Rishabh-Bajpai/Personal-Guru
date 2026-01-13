@@ -30,30 +30,40 @@ class LogCapture:
     def __init__(self, app=None):
         if self._initialized:
             return
-            
+
         self.app = app
         self.queue = queue.Queue()
         self.original_stdout = sys.stdout
         self.original_stderr = sys.stderr
         self.stop_event = threading.Event()
         self.worker_thread = None
-        
+
         # Configuration
         self.batch_size = 100
         self.flush_interval = 5  # seconds
-        
-        # Install hooks
-        sys.stdout = self._make_stream_wrapper(self.original_stdout, 'stdout')
-        sys.stderr = self._make_stream_wrapper(self.original_stderr, 'stderr')
-        
-        # Start background worker
-        self._start_worker()
-        
-        # cleanup on exit
-        atexit.register(self.stop)
-        
-        self._initialized = True
 
+        try:
+            # Install hooks
+            sys.stdout = self._make_stream_wrapper(self.original_stdout, 'stdout')
+            sys.stderr = self._make_stream_wrapper(self.original_stderr, 'stderr')
+
+            # Start background worker
+            self._start_worker()
+
+            # cleanup on exit
+            atexit.register(self.stop)
+
+            self._initialized = True
+        except Exception:
+            # If initialization fails after streams have been wrapped,
+            # restore the original streams to avoid leaving the system
+            # in a broken state.
+            sys.stdout = self.original_stdout
+            sys.stderr = self.original_stderr
+            # Ensure partially initialized worker state does not linger.
+            self.worker_thread = None
+            # Propagate the error to the caller.
+            raise
     def _make_stream_wrapper(self, original_stream, stream_name):
         """Creates a wrapper that writes to both original stream and queue."""
         capture_instance = self
