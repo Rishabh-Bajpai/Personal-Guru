@@ -8,16 +8,18 @@ from .services.logger import SessionLogger
 active_sessions = {}
 
 
-@reel_bp.route('/<topic_name>')
+@reel_bp.route("/<topic_name>")
 def mode(topic_name):
-    return render_template('reel/mode.html', topic_name=topic_name)
+    """Render the reel mode interface for searching and viewing videos."""
+    return render_template("reel/mode.html", topic_name=topic_name)
 
 
-@reel_bp.route('/api/search', methods=['POST'])
+@reel_bp.route("/api/search", methods=["POST"])
 def search_reels():
+    """Search for relevant YouTube Shorts/Reels based on a topic."""
     try:
         data = request.get_json()
-        topic = data.get('topic', '').strip()
+        topic = data.get("topic", "").strip()
 
         if not topic:
             return {"error": "Topic is required"}, 400
@@ -40,26 +42,24 @@ def search_reels():
         # Store session for event tracking
         active_sessions[session_logger.session_id] = session_logger
 
-        return {
-            'reels': validated_videos,
-            'session_id': session_logger.session_id
-        }
+        return {"reels": validated_videos, "session_id": session_logger.session_id}
 
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         return {"error": str(e)}, 500
 
 
-@reel_bp.route('/api/video-event', methods=['POST'])
+@reel_bp.route("/api/video-event", methods=["POST"])
 def video_event():
     """Track video play/skip events."""
     try:
         data = request.get_json()
-        session_id = data.get('session_id')
-        video_id = data.get('video_id')
+        session_id = data.get("session_id")
+        video_id = data.get("video_id")
         # 'played', 'skipped', 'auto_skipped'
-        event_type = data.get('event_type')
+        event_type = data.get("event_type")
 
         if not all([session_id, video_id, event_type]):
             return {"error": "Missing required fields"}, 400

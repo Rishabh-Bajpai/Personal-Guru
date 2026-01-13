@@ -10,11 +10,11 @@ csrf = CSRFProtect()
 sess = Session()
 
 login_manager = LoginManager()
-login_manager.login_view = 'main.login'
+login_manager.login_view = "main.login"
 
 
 def create_app(config_class=Config):
-    app = Flask(__name__, template_folder='core/templates')
+    app = Flask(__name__, template_folder="core/templates")
     app.config.from_object(config_class)
 
     # Initialize Flask extensions
@@ -25,11 +25,13 @@ def create_app(config_class=Config):
     login_manager.init_app(app)
 
     # Initialize Telemetry Log Capture
-    if app.config.get('ENABLE_TELEMETRY_LOGGING', True):
+    if app.config.get("ENABLE_TELEMETRY_LOGGING", True):
         from app.common.log_capture import LogCapture
+
         LogCapture(app)
 
     from app.core.models import Login
+
     @login_manager.user_loader
     def load_user(userid):
         return Login.query.get(userid)
@@ -42,30 +44,33 @@ def create_app(config_class=Config):
     from app.modes.chat import chat_bp
     from app.common import common_bp
 
-    app.register_blueprint(chapter_bp, url_prefix='/chapter')
-    app.register_blueprint(quiz_bp, url_prefix='/quiz')
-    app.register_blueprint(flashcard_bp, url_prefix='/flashcards')
-    app.register_blueprint(reel_bp, url_prefix='/reels')
-    app.register_blueprint(chat_bp, url_prefix='/chat')
-    app.register_blueprint(common_bp, url_prefix='/common')
+    app.register_blueprint(chapter_bp, url_prefix="/chapter")
+    app.register_blueprint(quiz_bp, url_prefix="/quiz")
+    app.register_blueprint(flashcard_bp, url_prefix="/flashcards")
+    app.register_blueprint(reel_bp, url_prefix="/reels")
+    app.register_blueprint(chat_bp, url_prefix="/chat")
+    app.register_blueprint(common_bp, url_prefix="/common")
 
     # Global Routes (Home, Background, etc.)
     # Global Routes (Home, Background, etc.)
 
     from .core.routes import main_bp
+
     app.register_blueprint(main_bp)
 
     @app.before_request
     def require_login():
         from flask_login import current_user
+
         if not current_user.is_authenticated:
             # List of endpoints accessible without login
             # 'main.login', 'main.signup', 'static'
-            if request.endpoint and request.endpoint not in [
-                'main.login',
-                'main.signup',
-                    'static'] and not request.endpoint.startswith('static'):
-                return redirect(url_for('main.login'))
+            if (
+                request.endpoint
+                and request.endpoint not in ["main.login", "main.signup", "static"]
+                and not request.endpoint.startswith("static")
+            ):
+                return redirect(url_for("main.login"))
 
     # ========================================================================
     # Global Error Handlers
@@ -77,15 +82,18 @@ def create_app(config_class=Config):
         AuthenticationError,
         ResourceNotFoundError,
         DatabaseError,
-        LLMError
+        LLMError,
     )
 
     logger = logging.getLogger(__name__)
 
     def is_json_request():
         """Check if the request expects a JSON response."""
-        return request.is_json or request.path.startswith(
-            '/api/') or 'application/json' in request.headers.get('Accept', '')
+        return (
+            request.is_json
+            or request.path.startswith("/api/")
+            or "application/json" in request.headers.get("Accept", "")
+        )
 
     @app.errorhandler(PersonalGuruException)
     def handle_app_exception(error):
@@ -94,19 +102,27 @@ def create_app(config_class=Config):
         error.log(logger, endpoint=request.endpoint or request.path)
 
         if is_json_request():
-            return jsonify({
-                'error': error.user_message,
-                'error_code': error.error_code,
-                'status': 'error'
-            }), error.http_status
+            return (
+                jsonify(
+                    {
+                        "error": error.user_message,
+                        "error_code": error.error_code,
+                        "status": "error",
+                    }
+                ),
+                error.http_status,
+            )
         else:
             # Render error template with user-friendly message
-            return render_template(
-                'error.html',
-                error_code=error.error_code,
-                error_message=error.user_message,
-                http_status=error.http_status
-            ), error.http_status
+            return (
+                render_template(
+                    "error.html",
+                    error_code=error.error_code,
+                    error_message=error.user_message,
+                    http_status=error.http_status,
+                ),
+                error.http_status,
+            )
 
     @app.errorhandler(ValidationError)
     def handle_validation_error(error):
@@ -114,19 +130,27 @@ def create_app(config_class=Config):
         error.log(logger, endpoint=request.endpoint or request.path)
 
         if is_json_request():
-            return jsonify({
-                'error': error.user_message,
-                'error_code': error.error_code,
-                'field': error.debug_info.get('field'),
-                'status': 'validation_error'
-            }), 400
+            return (
+                jsonify(
+                    {
+                        "error": error.user_message,
+                        "error_code": error.error_code,
+                        "field": error.debug_info.get("field"),
+                        "status": "validation_error",
+                    }
+                ),
+                400,
+            )
         else:
-            return render_template(
-                'error.html',
-                error_code=error.error_code,
-                error_message=error.user_message,
-                http_status=400
-            ), 400
+            return (
+                render_template(
+                    "error.html",
+                    error_code=error.error_code,
+                    error_message=error.user_message,
+                    http_status=400,
+                ),
+                400,
+            )
 
     @app.errorhandler(AuthenticationError)
     def handle_auth_error(error):
@@ -134,14 +158,19 @@ def create_app(config_class=Config):
         error.log(logger, endpoint=request.endpoint or request.path)
 
         if is_json_request():
-            return jsonify({
-                'error': error.user_message,
-                'error_code': error.error_code,
-                'status': 'unauthorized'
-            }), 401
+            return (
+                jsonify(
+                    {
+                        "error": error.user_message,
+                        "error_code": error.error_code,
+                        "status": "unauthorized",
+                    }
+                ),
+                401,
+            )
         else:
             # Redirect to login page
-            return redirect(url_for('main.login'))
+            return redirect(url_for("main.login"))
 
     @app.errorhandler(ResourceNotFoundError)
     def handle_not_found(error):
@@ -149,18 +178,26 @@ def create_app(config_class=Config):
         error.log(logger, endpoint=request.endpoint or request.path)
 
         if is_json_request():
-            return jsonify({
-                'error': error.user_message,
-                'error_code': error.error_code,
-                'status': 'not_found'
-            }), 404
+            return (
+                jsonify(
+                    {
+                        "error": error.user_message,
+                        "error_code": error.error_code,
+                        "status": "not_found",
+                    }
+                ),
+                404,
+            )
         else:
-            return render_template(
-                'error.html',
-                error_code=error.error_code,
-                error_message=error.user_message,
-                http_status=404
-            ), 404
+            return (
+                render_template(
+                    "error.html",
+                    error_code=error.error_code,
+                    error_message=error.user_message,
+                    http_status=404,
+                ),
+                404,
+            )
 
     @app.errorhandler(DatabaseError)
     def handle_database_error(error):
@@ -168,20 +205,28 @@ def create_app(config_class=Config):
         error.log(logger, endpoint=request.endpoint or request.path)
 
         if is_json_request():
-            return jsonify({
-                'error': error.user_message,
-                'error_code': error.error_code,
-                'status': 'database_error',
-                'retry': error.should_retry
-            }), 500
+            return (
+                jsonify(
+                    {
+                        "error": error.user_message,
+                        "error_code": error.error_code,
+                        "status": "database_error",
+                        "retry": error.should_retry,
+                    }
+                ),
+                500,
+            )
         else:
-            return render_template(
-                'error.html',
-                error_code=error.error_code,
-                error_message=error.user_message,
-                can_retry=error.should_retry,
-                http_status=500
-            ), 500
+            return (
+                render_template(
+                    "error.html",
+                    error_code=error.error_code,
+                    error_message=error.user_message,
+                    can_retry=error.should_retry,
+                    http_status=500,
+                ),
+                500,
+            )
 
     @app.errorhandler(LLMError)
     def handle_llm_error(error):
@@ -189,20 +234,28 @@ def create_app(config_class=Config):
         error.log(logger, endpoint=request.endpoint or request.path)
 
         if is_json_request():
-            return jsonify({
-                'error': error.user_message,
-                'error_code': error.error_code,
-                'status': 'service_unavailable',
-                'retry': error.should_retry
-            }), 503
+            return (
+                jsonify(
+                    {
+                        "error": error.user_message,
+                        "error_code": error.error_code,
+                        "status": "service_unavailable",
+                        "retry": error.should_retry,
+                    }
+                ),
+                503,
+            )
         else:
-            return render_template(
-                'error.html',
-                error_code=error.error_code,
-                error_message=error.user_message,
-                can_retry=error.should_retry,
-                http_status=503
-            ), 503
+            return (
+                render_template(
+                    "error.html",
+                    error_code=error.error_code,
+                    error_message=error.user_message,
+                    can_retry=error.should_retry,
+                    http_status=503,
+                ),
+                503,
+            )
 
     @app.errorhandler(404)
     def handle_404(error):
@@ -210,17 +263,25 @@ def create_app(config_class=Config):
         logger.warning(f"404 Not Found: {request.path}")
 
         if is_json_request():
-            return jsonify({
-                'error': 'The requested resource was not found.',
-                'status': 'not_found'
-            }), 404
+            return (
+                jsonify(
+                    {
+                        "error": "The requested resource was not found.",
+                        "status": "not_found",
+                    }
+                ),
+                404,
+            )
         else:
-            return render_template(
-                'error.html',
-                error_code='404',
-                error_message='The page you are looking for does not exist.',
-                http_status=404
-            ), 404
+            return (
+                render_template(
+                    "error.html",
+                    error_code="404",
+                    error_message="The page you are looking for does not exist.",
+                    http_status=404,
+                ),
+                404,
+            )
 
     @app.errorhandler(500)
     def handle_500(error):
@@ -228,16 +289,28 @@ def create_app(config_class=Config):
         logger.error(f"500 Internal Server Error: {str(error)}", exc_info=True)
 
         if is_json_request():
-            return jsonify({
-                'error': 'An internal server error occurred. Please try again later.',
-                'status': 'error'
-            }), 500
+            return (
+                jsonify(
+                    {
+                        "error": (
+                            "An internal server error occurred. Please try again later."
+                        ),
+                        "status": "error",
+                    }
+                ),
+                500,
+            )
         else:
-            return render_template(
-                'error.html',
-                error_code='500',
-                error_message='We encountered a technical problem. Please try again later.',
-                http_status=500
-            ), 500
+            return (
+                render_template(
+                    "error.html",
+                    error_code="500",
+                    error_message=(
+                        "We encountered a technical problem. Please try again later."
+                    ),
+                    http_status=500,
+                ),
+                500,
+            )
 
     return app

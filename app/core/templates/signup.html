@@ -1,40 +1,49 @@
-{% extends "base.html" %}
-
-{% block title %}Sign Up - Personal Guru{% endblock %}
-
+{% extends "base.html" %} {% block title %}Sign Up - Personal Guru{% endblock %}
 {% block styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
-{% endblock %}
-
-{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}" />
+{% endblock %} {% block content %}
 <div class="auth-container">
-    <div class="auth-header">
-        <h1>Sign Up</h1>
+  <div class="auth-header">
+    <h1>Sign Up</h1>
+  </div>
+
+  {% if error %}
+  <p class="error-msg">{{ error }}</p>
+  {% endif %}
+
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <div class="form-group">
+      <label for="username">Choose Username</label>
+      <input
+        type="text"
+        id="username"
+        name="username"
+        class="form-control"
+        required
+        placeholder="Choose a username"
+      />
     </div>
 
-    {% if error %}
-    <p class="error-msg">{{ error }}</p>
-    {% endif %}
-
-    <form method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="form-group">
-            <label for="username">Choose Username</label>
-            <input type="text" id="username" name="username" class="form-control" required
-                placeholder="Choose a username">
-        </div>
-
-        <div class="form-group">
-            <label for="password">Choose Password</label>
-            <input type="password" id="password" name="password" class="form-control" required
-                placeholder="Choose a strong password">
-        </div>
-
-        <button type="submit" class="btn-auth">Create Account</button>
-    </form>
-
-    <div class="auth-links">
-        <p>Already have an account? <a href="{{ url_for('main.login') }}">Log in</a></p>
+    <div class="form-group">
+      <label for="password">Choose Password</label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        class="form-control"
+        required
+        placeholder="Choose a strong password"
+      />
     </div>
+
+    <button type="submit" class="btn-auth">Create Account</button>
+  </form>
+
+  <div class="auth-links">
+    <p>
+      Already have an account? <a href="{{ url_for('main.login') }}">Log in</a>
+    </p>
+  </div>
 </div>
 {% endblock %}

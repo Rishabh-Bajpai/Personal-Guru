@@ -105,16 +105,16 @@ if /i "%install_tts%"=="y" (
     echo          Local installation of TTS on Windows is experimental.
     echo [INFO] Starting TTS Server (Speaches/Kokoro)...
     docker compose up -d speaches
-    
+
     echo [INFO] Waiting for TTS Server to start (15s)...
     timeout /t 15 /nobreak
-    
+
     echo [INFO] Downloading Kokoro-82M model...
     docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
-    
+
     echo [INFO] Downloading Faster Whisper Medium model (STT)...
     docker compose exec speaches uv tool run speaches-cli model download Systran/faster-whisper-medium.en
-    
+
     echo [SUCCESS] TTS Setup Complete.
 )
 

@@ -1,41 +1,47 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="csrf-token" content="{{ csrf_token() }}" />
     <title>{% block title %}Personalized Learning App{% endblock %}</title>
-    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
     {% block head %}{% endblock %}
     <!-- Allow child templates to inject custom styles (e.g., Chat mode) -->
     {% block styles %}{% endblock %}
-</head>
+  </head>
 
-<body class="dark-mode">
+  <body class="dark-mode">
     <div id="loader">
-        <div class="spinner"></div>
+      <div class="spinner"></div>
     </div>
     <div class="container">
-        <div style="text-align: right; margin-bottom: 1rem;">
-            {% if current_user.is_authenticated %}
-            <span style="margin-right: 15px; color: var(--text-color);">Hello, {{ current_user.display_name }}</span>
-            <a href="{{ url_for('main.user_profile') }}" class="button">Profile</a>
-            <a href="{{ url_for('main.logout') }}" class="button">Logout</a>
-            {% else %}
-            <a href="{{ url_for('main.login') }}" class="button">Log In</a>
-            <a href="{{ url_for('main.signup') }}" class="button">Sign Up</a>
-            {% endif %}
-            <a href="/" class="button">Home</a>
-            <button id="theme-switcher" class="button">Toggle Theme</button>
-        </div>
-        {% block content %}{% endblock %}
+      <div style="text-align: right; margin-bottom: 1rem">
+        {% if current_user.is_authenticated %}
+        <span style="margin-right: 15px; color: var(--text-color)"
+          >Hello, {{ current_user.display_name }}</span
+        >
+        <a href="{{ url_for('main.user_profile') }}" class="button">Profile</a>
+        <a href="{{ url_for('main.logout') }}" class="button">Logout</a>
+        {% else %}
+        <a href="{{ url_for('main.login') }}" class="button">Log In</a>
+        <a href="{{ url_for('main.signup') }}" class="button">Sign Up</a>
+        {% endif %}
+        <a href="/" class="button">Home</a>
+        <button id="theme-switcher" class="button">Toggle Theme</button>
+      </div>
+      {% block content %}{% endblock %}
     </div>
 
     <script src="{{ url_for('static', filename='base.js') }}"></script>
     {% block scripts %}{% endblock %}
-</body>
-
+  </body>
 </html>

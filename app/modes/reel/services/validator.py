@@ -23,55 +23,52 @@ def check_embed_headers(video_id: str) -> bool:
     try:
         # Send a HEAD request to check response headers
         response = requests.head(
-            embed_url,
-            timeout=REQUEST_TIMEOUT,
-            allow_redirects=True)
+            embed_url, timeout=REQUEST_TIMEOUT, allow_redirects=True
+        )
 
         # Check for frame-blocking headers
-        x_frame_options = response.headers.get('X-Frame-Options', '').upper()
-        csp = response.headers.get('Content-Security-Policy', '')
+        x_frame_options = response.headers.get("X-Frame-Options", "").upper()
+        csp = response.headers.get("Content-Security-Policy", "")
 
         # If X-Frame-Options is DENY or SAMEORIGIN, video cannot be embedded
-        if x_frame_options in ['DENY', 'SAMEORIGIN']:
+        if x_frame_options in ["DENY", "SAMEORIGIN"]:
             logger.info(
-                f"Video {video_id}: blocked by X-Frame-Options={x_frame_options}")
+                f"Video {video_id}: blocked by X-Frame-Options={x_frame_options}"
+            )
             return False
 
         # Check Content-Security-Policy for frame-ancestors directive
-        if 'frame-ancestors' in csp.lower():
+        if "frame-ancestors" in csp.lower():
             # If frame-ancestors is restricted (not 'self' or '*'), likely not
             # embeddable
             if "'none'" in csp.lower() or "'self'" in csp.lower():
-                logger.info(
-                    f"Video {video_id}: blocked by CSP frame-ancestors")
+                logger.info(f"Video {video_id}: blocked by CSP frame-ancestors")
                 return False
 
         # Also do a GET request to check for 403/404 or other errors
         response_full = requests.get(
-            embed_url,
-            timeout=REQUEST_TIMEOUT,
-            allow_redirects=True)
+            embed_url, timeout=REQUEST_TIMEOUT, allow_redirects=True
+        )
         if response_full.status_code >= 400:
             logger.info(
-                f"Video {video_id}: HTTP {response_full.status_code} on embed URL")
+                f"Video {video_id}: HTTP {response_full.status_code} on embed URL"
+            )
             return False
 
         logger.info(f"Video {video_id}: embed check passed")
         return True
 
     except requests.exceptions.Timeout:
-        logger.warning(
-            f"Video {video_id}: embed check timeout (assuming embeddable)")
+        logger.warning(f"Video {video_id}: embed check timeout (assuming embeddable)")
         return True  # Timeout = assume embeddable to avoid over-filtering
     except requests.exceptions.RequestException as ex:
         logger.warning(
-            f"Video {video_id}: embed check error - {ex} (assuming embeddable)")
+            f"Video {video_id}: embed check error - {ex} (assuming embeddable)"
+        )
         return True  # Error = assume embeddable
 
 
-def validate_videos_batch(
-        videos: List[Dict],
-        session_logger=None) -> List[Dict]:
+def validate_videos_batch(videos: List[Dict], session_logger=None) -> List[Dict]:
     """
     Validate a batch of videos for embeddability using parallel processing.
 
@@ -89,15 +86,16 @@ def validate_videos_batch(
     removed_count = 0
 
     logger.info(
-        f"Starting validation of {len(videos)} videos (hybrid: header check + screenshot)")
+        f"Starting validation of {len(videos)} videos (hybrid: header check + "
+        f"screenshot)"
+    )
 
     # Use ThreadPoolExecutor for parallel validation
     with ThreadPoolExecutor(max_workers=3) as executor:
         # Submit all validation tasks
         future_to_video = {
-            executor.submit(
-                _validate_single_video,
-                video): video for video in videos}
+            executor.submit(_validate_single_video, video): video for video in videos
+        }
 
         # Collect results as they complete
         for future in as_completed(future_to_video):
@@ -111,7 +109,7 @@ def validate_videos_batch(
                     "embed_test": "passed",
                     "ytdlp_check": "passed" if is_playable else "failed",
                     "final_result": "accepted" if is_playable else "rejected",
-                    "reason": reason
+                    "reason": reason,
                 }
 
                 # Log to session if logger provided
@@ -123,7 +121,9 @@ def validate_videos_batch(
                 else:
                     removed_count += 1
                     logger.warning(
-                        f"Removed video {video['id']} ({video.get('title', 'unknown')}): {reason}")
+                        f"Removed video {video['id']} "
+                        f"({video.get('title', 'unknown')}): {reason}"
+                    )
             except Exception as ex:
                 logger.error(f"Error validating video {video.get('id')}: {ex}")
                 # On error, include video to avoid over-filtering
@@ -131,7 +131,9 @@ def validate_videos_batch(
 
     if removed_count > 0:
         logger.info(
-            f"Validation complete: removed {removed_count} videos, kept {len(validated)} playable")
+            f"Validation complete: removed {removed_count} videos, kept "
+            f"{len(validated)} playable"
+        )
     else:
         logger.info(f"Validation complete: all {len(validated)} videos passed")
 
@@ -146,7 +148,7 @@ def _validate_single_video(video: Dict) -> tuple:
     Returns:
         Tuple of (is_playable: bool, reason: str)
     """
-    video_id = video.get('id')
+    video_id = video.get("id")
 
     # Step 1: Fast header check
     if not check_embed_headers(video_id):

@@ -1,6 +1,10 @@
 from app.common.utils import call_llm
 from app.common.agents import ChatAgent
-from app.modes.chat.prompts import get_chat_system_message, get_welcome_prompt, get_chat_popup_system_message
+from app.modes.chat.prompts import (
+    get_chat_system_message,
+    get_welcome_prompt,
+    get_chat_popup_system_message,
+)
 
 
 class ChatModeMainChatAgent(ChatAgent):

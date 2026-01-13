@@ -19,10 +19,11 @@ exclude = '''
 
 [tool.ruff]
 line-length = 88
+[tool.ruff.lint]
 select = ["E", "F"]
 ignore = []
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 
 [tool.interrogate]

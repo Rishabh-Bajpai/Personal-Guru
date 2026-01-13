@@ -6,6 +6,7 @@ import atexit
 import datetime
 import logging
 
+
 class LogCapture:
     """
     Captures stdout and stderr, buffers them, and asynchronously writes to the database.
@@ -16,6 +17,7 @@ class LogCapture:
     ``app`` argument is used to configure the logger; subsequent ``app`` values are
     ignored because the instance is already initialized.
     """
+
     _instance = None
     _lock = threading.Lock()
 
@@ -44,8 +46,8 @@ class LogCapture:
 
         try:
             # Install hooks
-            sys.stdout = self._make_stream_wrapper(self.original_stdout, 'stdout')
-            sys.stderr = self._make_stream_wrapper(self.original_stderr, 'stderr')
+            sys.stdout = self._make_stream_wrapper(self.original_stdout, "stdout")
+            sys.stderr = self._make_stream_wrapper(self.original_stderr, "stderr")
 
             # Start background worker
             self._start_worker()
@@ -64,43 +66,44 @@ class LogCapture:
             self.worker_thread = None
             # Propagate the error to the caller.
             raise
+
     def _make_stream_wrapper(self, original_stream, stream_name):
         """Creates a wrapper that writes to both original stream and queue."""
         capture_instance = self
-        
+
         class StreamWrapper:
             def write(self, message):
                 # Write to original stream (console)
                 original_stream.write(message)
-                
-                # Filter out empty writes or just newlines if desired, 
+
+                # Filter out empty writes or just newlines if desired,
                 # but often we want to capture everything.
                 if message:
-                    capture_instance.queue.put({
-                        'stream': stream_name,
-                        'message': message,
-                        'timestamp': datetime.datetime.utcnow().isoformat()
-                    })
+                    capture_instance.queue.put(
+                        {
+                            "stream": stream_name,
+                            "message": message,
+                            "timestamp": datetime.datetime.utcnow().isoformat(),
+                        }
+                    )
 
             def flush(self):
                 original_stream.flush()
 
             def isatty(self):
-                return getattr(original_stream, 'isatty', lambda: False)()
+                return getattr(original_stream, "isatty", lambda: False)()
 
             @property
             def encoding(self):
                 """Expose the encoding of the underlying stream, if available."""
-                return getattr(original_stream, 'encoding', None)
-                
+                return getattr(original_stream, "encoding", None)
+
         return StreamWrapper()
 
     def _start_worker(self):
         if self.worker_thread is None or not self.worker_thread.is_alive():
             self.worker_thread = threading.Thread(
-                target=self._worker_loop, 
-                name="LogCaptureWorker",
-                daemon=True
+                target=self._worker_loop, name="LogCaptureWorker", daemon=True
             )
             self.worker_thread.start()
 
@@ -108,24 +111,25 @@ class LogCapture:
         """Background loop to flush logs."""
         buffer = []
         last_flush = time.time()
-        
+
         while not self.stop_event.is_set():
             try:
                 # Wait for item with timeout (flush interval)
                 remaining = self.flush_interval - (time.time() - last_flush)
                 if remaining <= 0:
-                    # Avoid timeout=0 which can cause a tight loop; use a small minimum delay
+                    # Avoid timeout=0 which can cause a tight loop; use a small
+                    # minimum delay
                     remaining = 0.1
-                
+
                 item = self.queue.get(timeout=remaining)
                 buffer.append(item)
-                
+
                 # Flush if full
                 if len(buffer) >= self.batch_size:
                     self._flush(buffer)
                     buffer = []
                     last_flush = time.time()
-                    
+
             except queue.Empty:
                 # Timeout reached, flush if we have anything
                 if buffer:
@@ -133,11 +137,11 @@ class LogCapture:
                     buffer = []
                     last_flush = time.time()
                 continue
-                
+
         # Final flush on stop
         if buffer:
             self._flush(buffer)
-            
+
         # Drain queue
         rest = []
         while not self.queue.empty():
@@ -160,7 +164,8 @@ class LogCapture:
                 from app.core.extensions import db
                 from sqlalchemy.exc import OperationalError
 
-                # We need an installation ID. Since this is background, we can't reliably get current_user.
+                # We need an installation ID. Since this is background, we can't
+                # reliably get current_user.
                 # We'll use the first installation found or a system sentinel.
                 # In a single-user app context, this is usually acceptable.
                 inst = Installation.query.first()
@@ -170,15 +175,15 @@ class LogCapture:
                 # Create one telemetry entry for the batch
                 log_entry = TelemetryLog(
                     installation_id=inst.installation_id,
-                    session_id='system_background',
-                    event_type='terminal_log',
-                    triggers={'source': 'system_capture'},
-                    payload={'logs': logs}
+                    session_id="system_background",
+                    event_type="terminal_log",
+                    triggers={"source": "system_capture"},
+                    payload={"logs": logs},
                 )
-                
+
                 db.session.add(log_entry)
                 db.session.commit()
-                
+
         except OperationalError as e:
             # Suppress "no such table" errors which happen during startup/setup
             # This avoids noise when logging happens before DB initialization
@@ -194,14 +199,14 @@ class LogCapture:
     def stop(self):
         """Stops the worker thread and restores streams."""
         self.stop_event.set()
-        
+
         if self.worker_thread:
             # Wait for worker to finish processing
             self.worker_thread.join(timeout=2.0)
             if self.worker_thread.is_alive():
                 logging.getLogger(__name__).warning(
-                    "LogCapture worker thread did not terminate within the 2.0 second timeout; "
-                    "some buffered logs may not have been flushed."
+                    "LogCapture worker thread did not terminate within the 2.0 second "
+                    "timeout; some buffered logs may not have been flushed."
                 )
 
         # Restore streams

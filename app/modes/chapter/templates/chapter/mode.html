@@ -1,50 +1,51 @@
-{% extends "base.html" %}
-
-{% block title %}Chapter Mode{% endblock %}
-
-{% block head %}
-<link rel="stylesheet" href="{{ url_for('chapter.static', filename='chapter.css') }}">
-{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Chapter Mode{% endblock %} {% block
+head %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('chapter.static', filename='chapter.css') }}"
+/>
+{% endblock %} {% block content %}
 <h1>Chapter Mode: {{ topic_name }}</h1>
 
 {% if has_plan %}
 <div class="chapter-overview">
-    <p>Your learning plan is ready.</p>
-    <a href="{{ url_for('chapter.learn_topic', topic_name=topic_name, step_index=0) }}" class="button">Start / Resume
-        Learning</a>
+  <p>Your learning plan is ready.</p>
+  <a
+    href="{{ url_for('chapter.learn_topic', topic_name=topic_name, step_index=0) }}"
+    class="button"
+    >Start / Resume Learning</a
+  >
 
-    <div class="plan-list-container">
-        <h2>Curriculum</h2>
-        <ul>
-            {% for step in plan %}
-            <li>{{ step }}</li>
-            {% endfor %}
-        </ul>
-    </div>
+  <div class="plan-list-container">
+    <h2>Curriculum</h2>
+    <ul>
+      {% for step in plan %}
+      <li>{{ step }}</li>
+      {% endfor %}
+    </ul>
+  </div>
 </div>
 {% else %}
 <div class="chapter-controls">
-    <p>No plan found for this topic. Generate a custom study plan to get started.</p>
-    <div>
-        <button id="generate-plan" class="button">Generate Plan</button>
-    </div>
-    <div id="generation-status" class="generation-status">
-        <p>Generating your personalized plan... <span class="spinner">⏳</span></p>
-    </div>
-    <div id="generation-error" class="generation-error"></div>
+  <p>
+    No plan found for this topic. Generate a custom study plan to get started.
+  </p>
+  <div>
+    <button id="generate-plan" class="button">Generate Plan</button>
+  </div>
+  <div id="generation-status" class="generation-status">
+    <p>Generating your personalized plan... <span class="spinner">⏳</span></p>
+  </div>
+  <div id="generation-error" class="generation-error"></div>
 </div>
 
 <script src="{{ url_for('chapter.static', filename='mode.js') }}"></script>
 <script>
-    setupChapterMode({
-        topicName: "{{ topic_name }}",
-        urls: {
-            generate_plan: "{{ url_for('chapter.generate_plan') }}"
-        }
-    });
+  setupChapterMode({
+    topicName: "{{ topic_name }}",
+    urls: {
+      generate_plan: "{{ url_for('chapter.generate_plan') }}",
+    },
+  });
 </script>
-{% endif %}
-
-{% endblock %}
+{% endif %} {% endblock %}

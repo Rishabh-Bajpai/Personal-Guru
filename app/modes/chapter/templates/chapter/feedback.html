@@ -1,24 +1,31 @@
-{% extends "base.html" %}
-
-{% block title %}Feedback on Your Answer{% endblock %}
-
+{% extends "base.html" %} {% block title %}Feedback on Your Answer{% endblock %}
 {% block content %}
 <h1>Feedback for {{ topic.name }}</h1>
 <div class="feedback-content">
-    <h2>Your Score: {{ score }}%</h2>
-    {% for result in feedback_results %}
-    <div class="feedback-item {% if result.is_correct %}correct{% else %}incorrect{% endif %}">
-        <p>{{ result.feedback }}</p>
-    </div>
-    {% endfor %}
+  <h2>Your Score: {{ score }}%</h2>
+  {% for result in feedback_results %}
+  <div
+    class="feedback-item {% if result.is_correct %}correct{% else %}incorrect{% endif %}"
+  >
+    <p>{{ result.feedback }}</p>
+  </div>
+  {% endfor %}
 </div>
 
 <div class="navigation">
-    {% if next_step_index < total_steps %} <a
-        href="{{ url_for('chapter.learn_topic', topic_name=topic.name, step_index=next_step_index) }}" class="button"
-        onclick="showLoader()">Continue to Next Step</a>
-        {% else %}
-        <a href="{{ url_for('chapter.complete_topic', topic_name=topic.name) }}" class="button">Finish Learning</a>
-        {% endif %}
+  {% if next_step_index < total_steps %}
+  <a
+    href="{{ url_for('chapter.learn_topic', topic_name=topic.name, step_index=next_step_index) }}"
+    class="button"
+    onclick="showLoader()"
+    >Continue to Next Step</a
+  >
+  {% else %}
+  <a
+    href="{{ url_for('chapter.complete_topic', topic_name=topic.name) }}"
+    class="button"
+    >Finish Learning</a
+  >
+  {% endif %}
 </div>
 {% endblock %}

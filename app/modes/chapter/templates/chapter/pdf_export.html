@@ -1,24 +1,23 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-
-<head>
+  <head>
     <title>{{ topic.name }}</title>
     <style>
-        body {
-            font-family: sans-serif;
-        }
+      body {
+        font-family: sans-serif;
+      }
 
-        h1 {
-            text-align: center;
-        }
+      h1 {
+        text-align: center;
+      }
 
-        .question {
-            margin-left: 20px;
-        }
+      .question {
+        margin-left: 20px;
+      }
     </style>
-</head>
+  </head>
 
-<body>
+  <body>
     <h1>{{ topic.name }}</h1>
     <h2>Average Score: {{ average_score }}%</h2>
     {% for step in topic.chapter_mode %}
@@ -28,20 +27,17 @@
     <h3>Questions</h3>
     {% for question in step.questions.questions %}
     <div class="question">
-        <p><b>{{ loop.index }}. {{ question.question }}</b></p>
-        <ul>
-            {% for option in question.options %}
-            <li>{{ option }}</li>
-            {% endfor %}
-        </ul>
-        <p><i>Correct Answer: {{ question.correct_answer }}</i></p>
-        {% if step.user_answers %}
-        <p><i>Your Answer: {{ step.user_answers[loop.index0] }}</i></p>
-        {% endif %}
+      <p><b>{{ loop.index }}. {{ question.question }}</b></p>
+      <ul>
+        {% for option in question.options %}
+        <li>{{ option }}</li>
+        {% endfor %}
+      </ul>
+      <p><i>Correct Answer: {{ question.correct_answer }}</i></p>
+      {% if step.user_answers %}
+      <p><i>Your Answer: {{ step.user_answers[loop.index0] }}</i></p>
+      {% endif %}
     </div>
-    {% endfor %}
-    {% endif %}
-    {% endfor %}
-</body>
-
+    {% endfor %} {% endif %} {% endfor %}
+  </body>
 </html>

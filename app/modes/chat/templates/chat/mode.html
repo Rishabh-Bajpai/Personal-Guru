@@ -1,82 +1,133 @@
-{% extends "base.html" %}
-
-{% block title %}Chat Mode - {{ topic_name }}{% endblock %}
-
-{% block head %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/12.2.0/markdown-it.min.js"
-    crossorigin="anonymous"></script>
-{% endblock %}
-
-{% block styles %}
-<link rel="stylesheet" href="{{ url_for('chat.static', filename='chat.css') }}">
-<link rel="stylesheet" href="{{ url_for('common.static', filename='css/chat_popup.css') }}">
-{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Chat Mode - {{ topic_name }}{%
+endblock %} {% block head %}
+<script
+  src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/12.2.0/markdown-it.min.js"
+  crossorigin="anonymous"
+></script>
+{% endblock %} {% block styles %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('chat.static', filename='chat.css') }}"
+/>
+<link
+  rel="stylesheet"
+  href="{{ url_for('common.static', filename='css/chat_popup.css') }}"
+/>
+{% endblock %} {% block content %}
 <div id="main-container">
-    <!-- Left Column: Study Plan -->
-    <div id="plan-sidebar">
-        <script>
-            // Apply collapsed state immediately to prevent flicker
-            if (localStorage.getItem('chatSidebarCollapsed') === 'true') {
-                const sidebar = document.getElementById('plan-sidebar');
-                sidebar.classList.add('collapsed');
-                sidebar.classList.add('no-transition');
-            }
-        </script>
-        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">
-            ☰
+  <!-- Left Column: Study Plan -->
+  <div id="plan-sidebar">
+    <script>
+      // Apply collapsed state immediately to prevent flicker
+      if (localStorage.getItem("chatSidebarCollapsed") === "true") {
+        const sidebar = document.getElementById("plan-sidebar");
+        sidebar.classList.add("collapsed");
+        sidebar.classList.add("no-transition");
+      }
+    </script>
+    <button
+      class="sidebar-toggle"
+      onclick="toggleSidebar()"
+      title="Toggle Sidebar"
+    >
+      ☰
+    </button>
+    <div class="sidebar-content">
+      <h2>Study Plan</h2>
+      <ul id="plan-steps">
+        <!-- Javascript will populate this -->
+        {% for step in plan %}
+        <li>{{ step }}</li>
+        {% endfor %}
+      </ul>
+      <form
+        id="plan-modification-form"
+        method="POST"
+        action="{{ url_for('chat.update_plan', topic_name=topic_name) }}"
+      >
+        <h3>Modify the Plan</h3>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <textarea
+          id="plan-modification-input"
+          name="comment"
+          maxlength="255"
+          placeholder="Suggest changes to the plan..."
+        ></textarea>
+        <button
+          id="plan-modification-button"
+          type="submit"
+          class="button is-small"
+        >
+          Update Plan
         </button>
-        <div class="sidebar-content">
-            <h2>Study Plan</h2>
-            <ul id="plan-steps">
-                <!-- Javascript will populate this -->
-                {% for step in plan %}
-                <li>{{ step }}</li>
-                {% endfor %}
-            </ul>
-            <form id="plan-modification-form" method="POST"
-                action="{{ url_for('chat.update_plan', topic_name=topic_name) }}">
-                <h3>Modify the Plan</h3>
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <textarea id="plan-modification-input" name="comment" maxlength="255"
-                    placeholder="Suggest changes to the plan..."></textarea>
-                <button id="plan-modification-button" type="submit" class="button is-small">Update Plan</button>
-            </form>
-        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Right Column: Chat Interface -->
+  <div id="chat-container">
+    <div id="chat-header">
+      <h1>Chat with your AI Tutor about {{ topic_name }}</h1>
     </div>
 
-    <!-- Right Column: Chat Interface -->
-    <div id="chat-container">
-        <div id="chat-header">
-            <h1>Chat with your AI Tutor about {{ topic_name }}</h1>
+    <div id="chat-window">
+      {% for message in chat_history %}
+      <!-- Message wrapper with role-specific alignment -->
+      <div
+        class="message-wrapper {{ 'user-wrapper' if message.role == 'user' else 'assistant-wrapper' }}"
+      >
+        <div
+          class="message-label {{ 'user-label' if message.role == 'user' else 'assistant-label' }}"
+        >
+          {{ 'You' if message.role == 'user' else 'AI Tutor' }}
         </div>
-
-        <div id="chat-window">
-            {% for message in chat_history %}
-            <!-- Message wrapper with role-specific alignment -->
-            <div class="message-wrapper {{ 'user-wrapper' if message.role == 'user' else 'assistant-wrapper' }}">
-                <div class="message-label {{ 'user-label' if message.role == 'user' else 'assistant-label' }}">{{ 'You'
-                    if message.role == 'user' else 'AI Tutor' }}</div>
-                <div class="message {{ 'user-message' if message.role == 'user' else 'assistant-message' }}">
-                    <div class="message-content"></div>
-                    <div class="raw-markdown" style="display: none;">{{ message.content | safe }}</div>
-                </div>
-            </div>
-            {% endfor %}
+        <div
+          class="message {{ 'user-message' if message.role == 'user' else 'assistant-message' }}"
+        >
+          <div class="message-content"></div>
+          <div class="raw-markdown" style="display: none">
+            {{ message.content | safe }}
+          </div>
         </div>
-
-        <div id="input-area">
-            <form id="chat-form" method="POST" action="{{ url_for('chat.send_message', topic_name=topic_name) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <textarea id="chat-input" name="message" placeholder="Ask your AI tutor a question..."
-                    autocomplete="off" autofocus required rows="1" style="resize: none;"></textarea>
-                <button type="button" id="mic-button" class="button secondary" title="Voice Input">🎙️</button>
-                <button id="send-button" class="button" type="submit">Send</button>
-                <span id="loading-indicator" class="loading-indicator" style="display: none;">Thinking...</span>
-            </form>
-        </div>
+      </div>
+      {% endfor %}
     </div>
+
+    <div id="input-area">
+      <form
+        id="chat-form"
+        method="POST"
+        action="{{ url_for('chat.send_message', topic_name=topic_name) }}"
+      >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <textarea
+          id="chat-input"
+          name="message"
+          placeholder="Ask your AI tutor a question..."
+          autocomplete="off"
+          autofocus
+          required
+          rows="1"
+          style="resize: none"
+        ></textarea>
+        <button
+          type="button"
+          id="mic-button"
+          class="button secondary"
+          title="Voice Input"
+        >
+          🎙️
+        </button>
+        <button id="send-button" class="button" type="submit">Send</button>
+        <span
+          id="loading-indicator"
+          class="loading-indicator"
+          style="display: none"
+          >Thinking...</span
+        >
+      </form>
+    </div>
+  </div>
 </div>
 
 {% include 'common/chat_popup.html' %}
@@ -85,17 +136,17 @@
 <script src="{{ url_for('common.static', filename='js/time_tracker.js') }}"></script>
 <script src="{{ url_for('common.static', filename='js/chat_popup.js') }}"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        new TimeTracker({
-            updateUrl: "{{ url_for('chat.update_time', topic_name=topic_name) }}",
-            topicName: "{{ topic_name }}"
-        });
-
-        initChatPopup({
-            urls: {
-                chat: "{{ url_for('chat.chat', topic_name=topic_name, step_index=9999) }}"
-            }
-        });
+  document.addEventListener("DOMContentLoaded", function () {
+    new TimeTracker({
+      updateUrl: "{{ url_for('chat.update_time', topic_name=topic_name) }}",
+      topicName: "{{ topic_name }}",
     });
+
+    initChatPopup({
+      urls: {
+        chat: "{{ url_for('chat.chat', topic_name=topic_name, step_index=9999) }}",
+      },
+    });
+  });
 </script>
 {% endblock %}

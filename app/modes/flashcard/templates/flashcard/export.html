@@ -1,66 +1,68 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>{{ topic_name }} - Flashcards</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            line-height: 1.6;
-        }
-        h1 {
-            color: #333;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 10px;
-        }
-        .flashcard {
-            border: 1px solid #ddd;
-            padding: 15px;
-            margin: 15px 0;
-            background-color: #f9f9f9;
-            border-radius: 5px;
-            page-break-inside: avoid;
-        }
-        .flashcard-term {
-            font-weight: bold;
-            color: #007bff;
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
-        .flashcard-definition {
-            color: #555;
-            font-size: 16px;
-            margin-left: 15px;
-        }
-        .flashcard-count {
-            text-align: right;
-            color: #999;
-            font-size: 12px;
-            margin-top: 5px;
-        }
-        .summary {
-            margin-top: 30px;
-            padding: 15px;
-            background-color: #e7f3ff;
-            border-left: 4px solid #007bff;
-            border-radius: 5px;
-        }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        line-height: 1.6;
+      }
+      h1 {
+        color: #333;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 10px;
+      }
+      .flashcard {
+        border: 1px solid #ddd;
+        padding: 15px;
+        margin: 15px 0;
+        background-color: #f9f9f9;
+        border-radius: 5px;
+        page-break-inside: avoid;
+      }
+      .flashcard-term {
+        font-weight: bold;
+        color: #007bff;
+        font-size: 18px;
+        margin-bottom: 10px;
+      }
+      .flashcard-definition {
+        color: #555;
+        font-size: 16px;
+        margin-left: 15px;
+      }
+      .flashcard-count {
+        text-align: right;
+        color: #999;
+        font-size: 12px;
+        margin-top: 5px;
+      }
+      .summary {
+        margin-top: 30px;
+        padding: 15px;
+        background-color: #e7f3ff;
+        border-left: 4px solid #007bff;
+        border-radius: 5px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <h1>{{ topic_name }} - Study Flashcards</h1>
-    
+
     <div class="summary">
-        <strong>Total Flashcards:</strong> {{ flashcards|length }}
+      <strong>Total Flashcards:</strong> {{ flashcards|length }}
     </div>
 
     {% for card in flashcards %}
     <div class="flashcard">
-        <div class="flashcard-term">{{ card.term }}</div>
-        <div class="flashcard-definition">{{ card.definition }}</div>
-        <div class="flashcard-count">Card {{ loop.index }} of {{ flashcards|length }}</div>
+      <div class="flashcard-term">{{ card.term }}</div>
+      <div class="flashcard-definition">{{ card.definition }}</div>
+      <div class="flashcard-count">
+        Card {{ loop.index }} of {{ flashcards|length }}
+      </div>
     </div>
     {% endfor %}
-</body>
+  </body>
 </html>

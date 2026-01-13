@@ -14,14 +14,14 @@ repos:
 
   # Black repo for python formatting
   - repo: https://github.com/psf/black
-    rev: 24.1.1
+    rev: 24.8.0
     hooks:
       - id: black
         exclude: "^thirdparty"
 
   # Ruff for python linting (replaces flake8)
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.14
+    rev: v0.8.0
     hooks:
       - id: ruff
         args: [ --fix ]

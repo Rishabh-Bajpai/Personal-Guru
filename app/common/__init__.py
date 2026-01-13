@@ -4,7 +4,5 @@ from flask import Blueprint
 # It is specifically required to serve the shared CSS/JS (static_folder)
 # and HTML templates (template_folder) that the chat popup needs.
 common_bp = Blueprint(
-    'common',
-    __name__,
-    template_folder='templates',
-    static_folder='static')
+    "common", __name__, template_folder="templates", static_folder="static"
+)

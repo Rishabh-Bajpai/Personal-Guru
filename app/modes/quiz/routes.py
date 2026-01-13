@@ -11,80 +11,77 @@ quiz_agent = QuizAgent()
 feedback_agent = FeedbackAgent()
 
 
-@quiz_bp.route('/generate/<topic_name>/<count>', methods=['GET', 'POST'])
+@quiz_bp.route("/generate/<topic_name>/<count>", methods=["GET", "POST"])
 def generate_quiz(topic_name, count):
     """Generate a quiz with the specified number of questions and save it."""
     from app.common.utils import get_user_context
+
     user_background = get_user_context()
 
     # Handle 'auto' or numeric count
-    if count.lower() != 'auto':
+    if count.lower() != "auto":
         try:
             count = int(count)
         except ValueError:
             count = 10
 
     try:
-        quiz_data = quiz_agent.generate_quiz(
-            topic_name, user_background, count=count)
+        quiz_data = quiz_agent.generate_quiz(topic_name, user_background, count=count)
     except Exception:
         # Error will be caught by global handler
         raise
 
     # Save quiz to topic data
-    topic_data = load_topic(topic_name) or {
-        "name": topic_name, "plan": [], "steps": []}
-    topic_data['quiz_mode'] = quiz_data
+    topic_data = load_topic(topic_name) or {"name": topic_name, "plan": [], "steps": []}
+    topic_data["quiz_mode"] = quiz_data
     save_topic(topic_name, topic_data)
 
-    session['quiz_questions'] = quiz_data.get('questions', [])
-    return render_template(
-        'quiz/mode.html',
-        topic_name=topic_name,
-        quiz_data=quiz_data)
+    session["quiz_questions"] = quiz_data.get("questions", [])
+    return render_template("quiz/mode.html", topic_name=topic_name, quiz_data=quiz_data)
 
 
-@quiz_bp.route('/<topic_name>')
+@quiz_bp.route("/<topic_name>")
 def mode(topic_name):
     """Load quiz from saved data or generate new one."""
     topic_data = load_topic(topic_name)
 
     # If quiz exists in saved data, use it
-    if topic_data and topic_data.get('quiz_mode'):
-        quiz_data = topic_data['quiz_mode']
-        session['quiz_questions'] = quiz_data.get('questions', [])
+    if topic_data and topic_data.get("quiz_mode"):
+        quiz_data = topic_data["quiz_mode"]
+        session["quiz_questions"] = quiz_data.get("questions", [])
 
         # Telemetry Hook: Quiz Viewed
         try:
             log_telemetry(
-                event_type='quiz_viewed',
-                triggers={'source': 'web_ui', 'action': 'navigation'},
-                payload={'topic': topic_name}
+                event_type="quiz_viewed",
+                triggers={"source": "web_ui", "action": "navigation"},
+                payload={"topic": topic_name},
             )
         except Exception:
-            pass # Telemetry failures must not block user flow; ignore logging errors.
+            pass  # Telemetry failures must not block user flow; ignore logging errors.
 
         return render_template(
-            'quiz/mode.html',
-            topic_name=topic_name,
-            quiz_data=quiz_data)
-
+            "quiz/mode.html", topic_name=topic_name, quiz_data=quiz_data
+        )
 
     # Otherwise show the quiz count selector
-    return render_template('quiz/select.html', topic_name=topic_name)
+    return render_template("quiz/select.html", topic_name=topic_name)
 
 
-@quiz_bp.route('/<topic_name>/submit', methods=['POST'])
+@quiz_bp.route("/<topic_name>/submit", methods=["POST"])
 def submit_quiz(topic_name):
-    user_answers_indices = [request.form.get(f'answers_{i}') for i in range(
-        len(session.get('quiz_questions', [])))]
-    questions = session.get('quiz_questions', [])
+    """Handle quiz submission, grading, and result storage."""
+    user_answers_indices = [
+        request.form.get(f"answers_{i}")
+        for i in range(len(session.get("quiz_questions", [])))
+    ]
+    questions = session.get("quiz_questions", [])
     num_correct = 0
     feedback_results = []
-    
+
     # Capture time spent
     try:
-        time_spent = int(request.form.get('time_spent', 0))
+        time_spent = int(request.form.get("time_spent", 0))
     except ValueError:
         time_spent = 0
 
@@ -92,20 +89,20 @@ def submit_quiz(topic_name):
         user_answer_index = user_answers_indices[i]
 
         feedback_data, _ = feedback_agent.evaluate_answer(
-            question, user_answer_index, answer_is_index=True)
+            question, user_answer_index, answer_is_index=True
+        )
 
-        if feedback_data['is_correct']:
+        if feedback_data["is_correct"]:
             num_correct += 1
 
         # Get the full text for user and correct answers for display
-        correct_answer_letter = question.get('correct_answer')
+        correct_answer_letter = question.get("correct_answer")
 
         # Robust handling of correct_answer_letter
         if correct_answer_letter:
             try:
-                correct_answer_index = ord(
-                    correct_answer_letter.upper()) - ord('A')
-                correct_answer_text = question['options'][correct_answer_index]
+                correct_answer_index = ord(correct_answer_letter.upper()) - ord("A")
+                correct_answer_text = question["options"][correct_answer_index]
             except (ValueError, IndexError):
                 correct_answer_text = "Unknown"
         else:
@@ -114,95 +111,104 @@ def submit_quiz(topic_name):
         user_answer_text = "No answer"
         if user_answer_index is not None:
             try:
-                user_answer_text = question['options'][int(user_answer_index)]
+                user_answer_text = question["options"][int(user_answer_index)]
             except (ValueError, IndexError):
                 user_answer_text = "Invalid answer"
 
-        feedback_results.append({
-            'question': question.get('question'),
-            'user_answer': user_answer_text,
-            'correct_answer': correct_answer_text,
-            'feedback': feedback_data['feedback'],
-            'is_correct': feedback_data['is_correct']
-        })
+        feedback_results.append(
+            {
+                "question": question.get("question"),
+                "user_answer": user_answer_text,
+                "correct_answer": correct_answer_text,
+                "feedback": feedback_data["feedback"],
+                "is_correct": feedback_data["is_correct"],
+            }
+        )
 
     score = (num_correct / len(questions) * 100) if questions else 0
 
     # Store results in topic data (server-side)
     topic_data = load_topic(topic_name)
     if topic_data:
-        topic_data['last_quiz_result'] = {
-            'topic_name': topic_name,
-            'score': score,
-            'feedback_results': feedback_results,
-            'date': datetime.date.today().isoformat(),
-            'time_spent': time_spent
+        topic_data["last_quiz_result"] = {
+            "topic_name": topic_name,
+            "score": score,
+            "feedback_results": feedback_results,
+            "date": datetime.date.today().isoformat(),
+            "time_spent": time_spent,
         }
 
         # Ensure the score is also saved to the Quiz table
-        if topic_data.get('quiz_mode'):
-            topic_data['quiz_mode']['score'] = score
+        if topic_data.get("quiz_mode"):
+            topic_data["quiz_mode"]["score"] = score
             # Store time for this attempt (matches last_quiz_result behavior)
-            topic_data['quiz_mode']['time_spent'] = time_spent
+            topic_data["quiz_mode"]["time_spent"] = time_spent
 
         save_topic(topic_name, topic_data)
 
         # Telemetry Hook: Quiz Submitted
         try:
             log_telemetry(
-                event_type='quiz_submitted',
-                triggers={'source': 'web_ui', 'action': 'click_submit'},
+                event_type="quiz_submitted",
+                triggers={"source": "web_ui", "action": "click_submit"},
                 payload={
-                    'topic': topic_name,
-                    'score': score,
-                    'q_count': len(questions),
-                    'time_spent': time_spent
-                }
+                    "topic": topic_name,
+                    "score": score,
+                    "q_count": len(questions),
+                    "time_spent": time_spent,
+                },
             )
         except Exception:
             pass  # Logging failure should not block the flow
 
-    session.pop('quiz_questions', None)
-    return render_template('quiz/feedback.html',
-                           topic_name=topic_name,
-                           score=score,
-                           feedback_results=feedback_results)
+    session.pop("quiz_questions", None)
+    return render_template(
+        "quiz/feedback.html",
+        topic_name=topic_name,
+        score=score,
+        feedback_results=feedback_results,
+    )
 
-@quiz_bp.route('/<topic_name>/update_time', methods=['POST'])
+
+@quiz_bp.route("/<topic_name>/update_time", methods=["POST"])
 def update_time(topic_name):
+    """Update the maximum time spent on a quiz session."""
     try:
-        time_spent = int(request.form.get('time_spent', 0))
+        time_spent = int(request.form.get("time_spent", 0))
     except (ValueError, TypeError):
         time_spent = 0
 
     if time_spent > 0:
         topic_data = load_topic(topic_name)
-        if topic_data and topic_data.get('quiz_mode'):
-            existing_time = topic_data['quiz_mode'].get('time_spent', 0) or 0
-            topic_data['quiz_mode']['time_spent'] = max(existing_time, time_spent)
+        if topic_data and topic_data.get("quiz_mode"):
+            existing_time = topic_data["quiz_mode"].get("time_spent", 0) or 0
+            topic_data["quiz_mode"]["time_spent"] = max(existing_time, time_spent)
             save_topic(topic_name, topic_data)
-    return '', 204
+    return "", 204
 
-@quiz_bp.route('/<topic_name>/export/pdf')
+
+@quiz_bp.route("/<topic_name>/export/pdf")
 def export_quiz_pdf(topic_name):
+    """Export quiz results as a PDF document."""
     topic_data = load_topic(topic_name)
-    quiz_results = topic_data.get('last_quiz_result') if topic_data else None
+    quiz_results = topic_data.get("last_quiz_result") if topic_data else None
 
     if not quiz_results:
         return "No quiz results found for this topic", 404
 
     # Render a dedicated template for the PDF
-    html = render_template('quiz/result_pdf.html', **quiz_results)
+    html = render_template("quiz/result_pdf.html", **quiz_results)
 
     pdf = HTML(string=html).write_pdf(
         document_metadata={
-            'title': f"Quiz Results - {topic_name}",
-            'created': quiz_results['date']
+            "title": f"Quiz Results - {topic_name}",
+            "created": quiz_results["date"],
         }
     )
 
     response = make_response(pdf)
-    response.headers[
-        "Content-Disposition"] = f"attachment; filename=quiz_results_{topic_name}.pdf"
+    response.headers["Content-Disposition"] = (
+        f"attachment; filename=quiz_results_{topic_name}.pdf"
+    )
     response.headers["Content-Type"] = "application/pdf"
     return response

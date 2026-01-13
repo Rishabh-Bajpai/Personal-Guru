@@ -16,7 +16,7 @@ from app.core.exceptions import (
     LLMResponseError,
     LLMTimeoutError,
     QuizValidationError,
-    STTError
+    STTError,
 )
 
 load_dotenv()
@@ -48,14 +48,14 @@ def call_llm(prompt_or_messages, is_json=False):
         raise MissingConfigError(
             "LLM configuration missing",
             missing_vars=[
-                v for v in [
-                    'LLM_BASE_URL',
-                    'LLM_MODEL_NAME'] if not os.getenv(v)],
-            error_code="CFG010")
+                v for v in ["LLM_BASE_URL", "LLM_MODEL_NAME"] if not os.getenv(v)
+            ],
+            error_code="CFG010",
+        )
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {LLM_API_KEY}"
+        "Authorization": f"Bearer {LLM_API_KEY}",
     }
 
     # Ensure the endpoint targets the chat completion path if not provided
@@ -66,11 +66,12 @@ def call_llm(prompt_or_messages, is_json=False):
     # We append /chat/completions.
 
     # However, to be robust against trailing slashes:
-    base_url = LLM_BASE_URL.rstrip('/')
-    if not base_url.endswith('/v1'):
+    base_url = LLM_BASE_URL.rstrip("/")
+    if not base_url.endswith("/v1"):
         # some users might just put the host.
         # For ollama: http://localhost:11434/v1/chat/completions is valid.
-        # IF user put http://localhost:11434, we might need to append /v1 if it's missing?
+        # IF user put http://localhost:11434, we might need to append /v1 if it's
+        # missing?
         # Let's assume the user follows the instruction to provide base url.
         # But commonly for ollama, they might forget.
         if "11434" in base_url and "/v1" not in base_url:
@@ -103,26 +104,24 @@ def call_llm(prompt_or_messages, is_json=False):
             # data["response_format"] = {"type": "json_object"}
             pass
 
-        response = requests.post(
-            api_url,
-            headers=headers,
-            json=data,
-            timeout=300)
+        response = requests.post(api_url, headers=headers, json=data, timeout=300)
         response.raise_for_status()
 
         response_json = response.json()
-        content = response_json['choices'][0]['message']['content']
-        
+        content = response_json["choices"][0]["message"]["content"]
+
         # Calculate latency
         end_time = time.time()
         latency_ms = int((end_time - start_time) * 1000)
 
         # Extract token usage if available
-        usage = response_json.get('usage', {})
-        input_tokens = usage.get('prompt_tokens', 0)
-        output_tokens = usage.get('completion_tokens', 0)
+        usage = response_json.get("usage", {})
+        input_tokens = usage.get("prompt_tokens", 0)
+        output_tokens = usage.get("completion_tokens", 0)
 
-        logger.debug(f"LLM Response received: {len(content)} characters. Latency: {latency_ms}ms")
+        logger.debug(
+            f"LLM Response received: {len(content)} characters. Latency: {latency_ms}ms"
+        )
 
         # Database Logging Hook
         try:
@@ -134,12 +133,12 @@ def call_llm(prompt_or_messages, is_json=False):
             # Only log if user is authenticated and we are in a request context
             if current_user and current_user.is_authenticated:
                 perf_log = AIModelPerformance(
-                    user_id=current_user.userid, # Use userid from Login
-                    model_type='LLM',
+                    user_id=current_user.userid,  # Use userid from Login
+                    model_type="LLM",
                     model_name=LLM_MODEL_NAME,
                     latency_ms=latency_ms,
                     input_tokens=input_tokens,
-                    output_tokens=output_tokens
+                    output_tokens=output_tokens,
                 )
                 db.session.add(perf_log)
                 db.session.commit()
@@ -165,10 +164,12 @@ def call_llm(prompt_or_messages, is_json=False):
             except json.JSONDecodeError:
                 # If that fails, try to find a JSON object embedded in the text
                 logger.warning(
-                    "Failed to parse content directly, attempting to extract JSON object.")
+                    "Failed to parse content directly, attempting to extract JSON "
+                    "object."
+                )
                 try:
                     # Regex to find a JSON object within the text.
-                    match = re.search(r'\{.*\}', content, re.DOTALL)
+                    match = re.search(r"\{.*\}", content, re.DOTALL)
                     if match:
                         json_str = match.group(0)
                         return json.loads(json_str)
@@ -179,7 +180,7 @@ def call_llm(prompt_or_messages, is_json=False):
                 raise LLMResponseError(
                     "Failed to parse JSON from LLM response",
                     error_code="LLM010",
-                    debug_info={"content_preview": content[:200]}
+                    debug_info={"content_preview": content[:200]},
                 )
 
         return content
@@ -190,7 +191,7 @@ def call_llm(prompt_or_messages, is_json=False):
             "Request to LLM timed out after 300 seconds",
             timeout=300,
             error_code="LLM011",
-            debug_info={"endpoint": api_url}
+            debug_info={"endpoint": api_url},
         )
     except requests.exceptions.ConnectionError as e:
         logger.error(f"Cannot connect to LLM: {e}")
@@ -198,7 +199,7 @@ def call_llm(prompt_or_messages, is_json=False):
             "Unable to connect to LLM service",
             endpoint=api_url,
             error_code="LLM012",
-            debug_info={"original_error": str(e)}
+            debug_info={"original_error": str(e)},
         )
     except requests.exceptions.RequestException as e:
         logger.error(f"LLM request failed: {e}")
@@ -207,18 +208,19 @@ def call_llm(prompt_or_messages, is_json=False):
             endpoint=api_url,
             error_code="LLM013",
             debug_info={
-                "status_code": getattr(
-                    e.response,
-                    'status_code',
-                    None) if hasattr(
-                    e,
-                    'response') else None})
+                "status_code": (
+                    getattr(e.response, "status_code", None)
+                    if hasattr(e, "response")
+                    else None
+                )
+            },
+        )
     except (KeyError, IndexError) as e:
         logger.error(f"Invalid LLM response structure: {e}")
         raise LLMResponseError(
             "LLM response has unexpected structure",
             error_code="LLM014",
-            debug_info={"error": str(e)}
+            debug_info={"error": str(e)},
         )
 
 
@@ -229,40 +231,44 @@ def validate_quiz_structure(quiz_data):
     Raises:
         QuizValidationError: If quiz structure is invalid
     """
-    if not quiz_data or "questions" not in quiz_data or not isinstance(
-            quiz_data["questions"], list) or not quiz_data["questions"]:
+    if (
+        not quiz_data
+        or "questions" not in quiz_data
+        or not isinstance(quiz_data["questions"], list)
+        or not quiz_data["questions"]
+    ):
         raise QuizValidationError(
             "Invalid quiz format: missing or empty questions list",
             error_code="QUIZ001",
             debug_info={
                 "has_data": bool(quiz_data),
-                "has_questions_key": "questions" in quiz_data if quiz_data else False})
+                "has_questions_key": "questions" in quiz_data if quiz_data else False,
+            },
+        )
 
     for i, q in enumerate(quiz_data["questions"]):
         if not isinstance(q, dict):
             raise QuizValidationError(
                 f"Question {i} is not a dictionary",
                 error_code="QUIZ002",
-                debug_info={"question_index": i, "type": type(q).__name__}
+                debug_info={"question_index": i, "type": type(q).__name__},
             )
 
         if not all(k in q for k in ["question", "options", "correct_answer"]):
             missing_keys = [
-                k for k in [
-                    "question",
-                    "options",
-                    "correct_answer"] if k not in q]
+                k for k in ["question", "options", "correct_answer"] if k not in q
+            ]
             raise QuizValidationError(
                 f"Question {i} missing required keys: {missing_keys}",
                 error_code="QUIZ003",
-                debug_info={"question_index": i, "missing_keys": missing_keys}
+                debug_info={"question_index": i, "missing_keys": missing_keys},
             )
 
         if not isinstance(q["question"], str) or not q["question"].strip():
             raise QuizValidationError(
                 f"Question {i} has empty text",
                 error_code="QUIZ004",
-                debug_info={"question_index": i}
+                debug_info={"question_index": i},
             )
 
         if not isinstance(q["options"], list) or len(q["options"]) != 4:
@@ -271,33 +277,31 @@ def validate_quiz_structure(quiz_data):
                 error_code="QUIZ005",
                 debug_info={
                     "question_index": i,
-                    "options_count": len(
-                        q["options"]) if isinstance(
-                        q.get("options"),
-                        list) else 0})
+                    "options_count": (
+                        len(q["options"]) if isinstance(q.get("options"), list) else 0
+                    ),
+                },
+            )
 
-        if not all(isinstance(opt, str) and opt.strip()
-                   for opt in q["options"]):
+        if not all(isinstance(opt, str) and opt.strip() for opt in q["options"]):
             raise QuizValidationError(
                 f"Question {i} has one or more empty options",
                 error_code="QUIZ006",
-                debug_info={"question_index": i}
+                debug_info={"question_index": i},
             )
 
         correct_answer = q.get("correct_answer", "")
-        if not isinstance(
-                correct_answer,
-                str) or correct_answer.upper() not in [
-                'A',
-                'B',
-                'C',
-                'D']:
+        if not isinstance(correct_answer, str) or correct_answer.upper() not in [
+            "A",
+            "B",
+            "C",
+            "D",
+        ]:
             raise QuizValidationError(
                 f"Question {i} has invalid correct_answer: must be A, B, C, or D",
                 error_code="QUIZ007",
-                debug_info={
-                    "question_index": i,
-                    "correct_answer": correct_answer})
+                debug_info={"question_index": i, "correct_answer": correct_answer},
+            )
 
 
 def generate_audio(text, step_index):
@@ -306,13 +310,13 @@ def generate_audio(text, step_index):
     Supports long text by chunking and merging.
     """
     start_time = time.time()
-    static_dir = os.path.join(os.getcwd(), 'app', 'static')
+    static_dir = os.path.join(os.getcwd(), "app", "static")
     if not os.path.exists(static_dir):
         os.makedirs(static_dir)
 
     # Clean up old audio
     for filename in os.listdir(static_dir):
-        if filename.endswith('.wav') and f"step_{step_index}.wav" == filename:
+        if filename.endswith(".wav") and f"step_{step_index}.wav" == filename:
             try:
                 os.remove(os.path.join(static_dir, filename))
             except OSError:
@@ -320,12 +324,13 @@ def generate_audio(text, step_index):
 
     # 1. Chunk Text
     # Split by simple sentence delimiters to be safe
-    # Kokoro has a limit around 500 tokens (approx 2000 chars maybe, but 510 phonemes is small)
+    # Kokoro has a limit around 500 tokens (approx 2000 chars maybe, but 510
+    # phonemes is small)
     # Let's target ~300 chars to be safe.
     chunks = []
 
     # Helper to split text
-    sentences = re.split(r'([.!?]+)', text)
+    sentences = re.split(r"([.!?]+)", text)
     current_chunk = ""
 
     for i in range(0, len(sentences) - 1, 2):
@@ -361,12 +366,9 @@ def generate_audio(text, step_index):
             if not chunk.strip():
                 continue
 
-            print(
-                f"DEBUG: Generating chunk {i+1}/{len(chunks)}, len: {len(chunk)}")
+            print(f"DEBUG: Generating chunk {i+1}/{len(chunks)}, len: {len(chunk)}")
             response = tts_client.audio.speech.create(
-                model="tts-1",
-                voice=voice,
-                input=chunk
+                model="tts-1", voice=voice, input=chunk
             )
 
             # Save segment to temp file
@@ -380,25 +382,26 @@ def generate_audio(text, step_index):
 
         # 3. Merge Audio using ffmpeg
         list_file_fd, list_file_path = tempfile.mkstemp(suffix=".txt")
-        with os.fdopen(list_file_fd, 'w') as f:
+        with os.fdopen(list_file_fd, "w") as f:
             for tf in temp_files:
                 f.write(f"file '{tf}'\n")
 
         print("Merging audio files...")
         cmd = [
             "ffmpeg",
-            "-f", "concat",
-            "-safe", "0",
-            "-i", list_file_path,
-            "-c", "copy",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            list_file_path,
+            "-c",
+            "copy",
             "-y",
-            output_filename
+            output_filename,
         ]
 
-        result = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         os.remove(list_file_path)
 
         if result.returncode != 0:
@@ -417,16 +420,16 @@ def generate_audio(text, step_index):
                 input_len = len(text)
                 perf_log = AIModelPerformance(
                     user_id=current_user.userid,
-                    model_type='TTS',
-                    model_name='tts-1', # Hardcoded as per implementation
+                    model_type="TTS",
+                    model_name="tts-1",  # Hardcoded as per implementation
                     latency_ms=latency_ms,
                     input_tokens=input_len,
-                    output_tokens=0 # Audio output doesn't measure in tokens easily
+                    output_tokens=0,  # Audio output doesn't measure in tokens easily
                 )
                 db.session.add(perf_log)
                 db.session.commit()
         except Exception as e:
-             logging.warning(f"Failed to log TTS performance: {e}")
+            logging.warning(f"Failed to log TTS performance: {e}")
 
         return f"step_{step_index}.wav", None
 
@@ -457,11 +460,11 @@ def reconcile_plan_steps(current_steps, current_plan, new_plan):
             # Preserve existing content
             step_data = step_content_map[step_text]
             # Update step_index to match new position
-            step_data['step_index'] = i
+            step_data["step_index"] = i
             new_steps.append(step_data)
         else:
             # New step, empty content with correct index
-            new_steps.append({'step_index': i})
+            new_steps.append({"step_index": i})
 
     return new_steps
 
@@ -493,9 +496,9 @@ def generate_podcast_audio(transcript, output_filename):
     # 1. Parse Transcript
     lines = []
     print("Parsing transcript...")
-    for line in transcript.strip().split('\n'):
-        if ':' in line:
-            parts = line.split(':', 1)
+    for line in transcript.strip().split("\n"):
+        if ":" in line:
+            parts = line.split(":", 1)
             speaker = parts[0].strip()
             content = parts[1].strip()
             if content:
@@ -514,16 +517,19 @@ def generate_podcast_audio(transcript, output_filename):
     # 3. Assign Voices
     unique_speakers = sorted(list(set(s for s, t in lines)))
     available_voices = [
-        'af_bella',
-        'am_michael',
-        'am_puck',
-        'af_nicole',
-        'af_heart',
-        'af_sarah',
-        'am_adam']
+        "af_bella",
+        "am_michael",
+        "am_puck",
+        "af_nicole",
+        "af_heart",
+        "af_sarah",
+        "am_adam",
+    ]
 
-    voice_map = {speaker: available_voices[i % len(
-        available_voices)] for i, speaker in enumerate(unique_speakers)}
+    voice_map = {
+        speaker: available_voices[i % len(available_voices)]
+        for i, speaker in enumerate(unique_speakers)
+    }
 
     # 4. Generate Audio Segments
     temp_files = []
@@ -531,13 +537,11 @@ def generate_podcast_audio(transcript, output_filename):
 
     try:
         for i, (speaker, text) in enumerate(lines):
-            voice = voice_map.get(speaker, 'alloy')
+            voice = voice_map.get(speaker, "alloy")
             print(f"Generating: {speaker} ({voice}) -> '{text[:20]}...'")
 
             response = tts_client.audio.speech.create(
-                model="tts-1",
-                voice=voice,
-                input=text
+                model="tts-1", voice=voice, input=text
             )
 
             # Save segment to temp file
@@ -552,11 +556,12 @@ def generate_podcast_audio(transcript, output_filename):
             return False, "Failed to generate any audio content"
 
         # 5. Merge Audio using ffmpeg
-        # ffmpeg -i "concat:file1.mp3|file2.mp3" -c copy output.mp3 (concatenation protocol)
+        # ffmpeg -i "concat:file1.mp3|file2.mp3" -c copy output.mp3 (concatenation
+        # protocol)
         # OR using a list file for safer handling of many files
 
         list_file_fd, list_file_path = tempfile.mkstemp(suffix=".txt")
-        with os.fdopen(list_file_fd, 'w') as f:
+        with os.fdopen(list_file_fd, "w") as f:
             for tf in temp_files:
                 f.write(f"file '{tf}'\n")
 
@@ -564,18 +569,19 @@ def generate_podcast_audio(transcript, output_filename):
         # ffmpeg -f concat -safe 0 -i list.txt -c copy output.mp3
         cmd = [
             "ffmpeg",
-            "-f", "concat",
-            "-safe", "0",
-            "-i", list_file_path,
-            "-c", "copy",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            list_file_path,
+            "-c",
+            "copy",
             "-y",  # Overwrite output
-            output_filename
+            output_filename,
         ]
 
-        result = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         # Clean up list file
         os.remove(list_file_path)
@@ -591,23 +597,23 @@ def generate_podcast_audio(transcript, output_filename):
             from app.core.extensions import db
             from app.core.models import AIModelPerformance
             from flask_login import current_user
-            
+
             # Calculate approx input length from lines
             total_chars = sum(len(txt) for _, txt in lines)
 
             if current_user and current_user.is_authenticated:
                 perf_log = AIModelPerformance(
                     user_id=current_user.userid,
-                    model_type='TTS',
-                    model_name='tts-1',
+                    model_type="TTS",
+                    model_name="tts-1",
                     latency_ms=latency_ms,
                     input_tokens=total_chars,
-                    output_tokens=0 
+                    output_tokens=0,
                 )
                 db.session.add(perf_log)
                 db.session.commit()
         except Exception as e:
-             logging.warning(f"Failed to log Podcast TTS performance: {e}")
+            logging.warning(f"Failed to log Podcast TTS performance: {e}")
 
         return True, None
 
@@ -637,7 +643,7 @@ def transcribe_audio(audio_file_path):
             transcript = client.audio.transcriptions.create(
                 model="Systran/faster-whisper-medium.en",
                 file=audio_file,
-                response_format="text"
+                response_format="text",
             )
 
         # --- Logging Hook for STT ---
@@ -647,23 +653,23 @@ def transcribe_audio(audio_file_path):
             from app.core.extensions import db
             from app.core.models import AIModelPerformance
             from flask_login import current_user
-            
+
             # Use transcript length as proxy for output tokens
             output_len = len(transcript)
 
             if current_user and current_user.is_authenticated:
                 perf_log = AIModelPerformance(
                     user_id=current_user.userid,
-                    model_type='STT',
-                    model_name='Systran/faster-whisper-medium.en',
+                    model_type="STT",
+                    model_name="Systran/faster-whisper-medium.en",
                     latency_ms=latency_ms,
-                    input_tokens=0, # Audio input difficult to measure in tokens
-                    output_tokens=output_len 
+                    input_tokens=0,  # Audio input difficult to measure in tokens
+                    output_tokens=output_len,
                 )
                 db.session.add(perf_log)
                 db.session.commit()
         except Exception as e:
-             logging.warning(f"Failed to log STT performance: {e}")
+            logging.warning(f"Failed to log STT performance: {e}")
 
         return transcript
     except Exception as e:
@@ -679,7 +685,8 @@ def summarize_text(text, max_lines=4):
         return ""
 
     prompt = f"""
-You are an expert summarizer. Your task is to condense the following text into a very dense summary.
+You are an expert summarizer. Your task is to condense the following text into a very
+dense summary.
 Requirements:
 1. Minimum 1 line, maximum {max_lines} lines.
 2. Maintain all essential core information and context.
@@ -699,23 +706,27 @@ Text to summarize:
         return text[:300] + "..." if len(text) > 300 else text
 
 
-def log_telemetry(event_type: str, triggers: dict, payload: dict, installation_id: str = None) -> None:
+def log_telemetry(
+    event_type: str, triggers: dict, payload: dict, installation_id: str = None
+) -> None:
     """
     Logs a telemetry event to the database.
     Fails silently on errors to avoid disrupting the user experience.
-    
+
     Args:
         event_type (str): The type of event (e.g., 'user_login', 'quiz_submitted').
-        triggers (dict): What triggered the event (e.g., {'source': 'web_ui', 'action': 'click'}).
+        triggers (dict): What triggered the event (e.g., {'source': 'web_ui',
+                         'action': 'click'}).
         payload (dict): The data payload for the event.
-        installation_id (str, optional): The installation ID. If None, attempts to resolve from current_user or DB.
-    """   
+        installation_id (str, optional): The installation ID. If None, attempts to
+                                         resolve from current_user or DB.
+    """
     import uuid
     from flask import session
     from flask_login import current_user
     from app.core.extensions import db
     from app.core.models import TelemetryLog, Installation
-    
+
     logger = logging.getLogger(__name__)
 
     try:
@@ -729,31 +740,33 @@ def log_telemetry(event_type: str, triggers: dict, payload: dict, installation_i
 
         # Resolve Installation ID (Non-Nullable)
         if not installation_id:
-             # Try to find any installation record (assuming single-tenant / personal use)
-             inst_record = Installation.query.first()
-             if inst_record:
+            # Try to find any installation record (assuming single-tenant / personal
+            # use)
+            inst_record = Installation.query.first()
+            if inst_record:
                 installation_id = inst_record.installation_id
-        
-        # If we still don't have an installation_id, we cannot log (Constraint Violation)
+
+        # If we still don't have an installation_id, we cannot log (Constraint
+        # Violation)
         if not installation_id:
             logger.debug(f"Skipping telemetry {event_type}: No installation_id found.")
             return
 
         # Ensure session_id exists
-        if 'telemetry_session_id' not in session:
-            session['telemetry_session_id'] = str(uuid.uuid4())
-        
-        session_id = session['telemetry_session_id']
-        
+        if "telemetry_session_id" not in session:
+            session["telemetry_session_id"] = str(uuid.uuid4())
+
+        session_id = session["telemetry_session_id"]
+
         log_entry = TelemetryLog(
             user_id=user_id,
             installation_id=installation_id,
             session_id=session_id,
             event_type=event_type,
             triggers=triggers,
-            payload=payload
+            payload=payload,
         )
-        
+
         db.session.add(log_entry)
         db.session.commit()
         logger.debug(f"Telemetry logged: {event_type}")
@@ -769,77 +782,88 @@ def get_system_info():
     Returns a dict with cpu_cores, ram_gb, gpu_model, os_version, install_method.
     """
     info = {
-        'cpu_cores': os.cpu_count(),
-        'ram_gb': round(psutil.virtual_memory().total / (1024**3)),
-        'os_version': platform.platform(),
-        'install_method': 'local',  # Default
-        'gpu_model': 'Unknown' 
+        "cpu_cores": os.cpu_count(),
+        "ram_gb": round(psutil.virtual_memory().total / (1024**3)),
+        "os_version": platform.platform(),
+        "install_method": "local",  # Default
+        "gpu_model": "Unknown",
     }
-    
+
     # Check for Docker
-    if os.path.exists('/.dockerenv'):
-        info['install_method'] = 'docker'
-        
+    if os.path.exists("/.dockerenv"):
+        info["install_method"] = "docker"
+
     # GPU Detection (cross-platform, multi-vendor)
     gpu_detected = False
-    
+
     # Try NVIDIA (nvidia-smi)
     if not gpu_detected:
         try:
-            result = subprocess.run(['nvidia-smi', '-L'], capture_output=True, text=True, timeout=5)
+            result = subprocess.run(
+                ["nvidia-smi", "-L"], capture_output=True, text=True, timeout=5
+            )
             if result.returncode == 0 and result.stdout.strip():
-                info['gpu_model'] = result.stdout.strip().split('\n')[0]
+                info["gpu_model"] = result.stdout.strip().split("\n")[0]
                 gpu_detected = True
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
-    
+
     # Try AMD (rocm-smi)
     if not gpu_detected:
         try:
-            result = subprocess.run(['rocm-smi', '--showproductname'], capture_output=True, text=True, timeout=5)
+            result = subprocess.run(
+                ["rocm-smi", "--showproductname"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
             if result.returncode == 0 and result.stdout.strip():
-                model_name = result.stdout.strip().split('\n')[0]
-                info['gpu_model'] = f"AMD {model_name}"
+                model_name = result.stdout.strip().split("\n")[0]
+                info["gpu_model"] = f"AMD {model_name}"
                 gpu_detected = True
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
-    
+
     # Try Intel (Linux)
-    if not gpu_detected and platform.system() == 'Linux':
+    if not gpu_detected and platform.system() == "Linux":
         try:
-            result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
+            result = subprocess.run(
+                ["lspci"], capture_output=True, text=True, timeout=5
+            )
             if result.returncode == 0:
-                for line in result.stdout.split('\n'):
-                    if 'VGA' in line or 'Display' in line or '3D' in line:
-                        if 'Intel' in line:
-                            info['gpu_model'] = line.split(':')[-1].strip()
+                for line in result.stdout.split("\n"):
+                    if "VGA" in line or "Display" in line or "3D" in line:
+                        if "Intel" in line:
+                            info["gpu_model"] = line.split(":")[-1].strip()
                             gpu_detected = True
                             break
-                        elif 'AMD' in line or 'ATI' in line:
-                            info['gpu_model'] = line.split(':')[-1].strip()
+                        elif "AMD" in line or "ATI" in line:
+                            info["gpu_model"] = line.split(":")[-1].strip()
                             gpu_detected = True
                             break
-                        elif 'NVIDIA' in line:
-                            info['gpu_model'] = line.split(':')[-1].strip()
+                        elif "NVIDIA" in line:
+                            info["gpu_model"] = line.split(":")[-1].strip()
                             gpu_detected = True
                             break
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
-    
+
     # Try macOS (Apple Silicon / discrete GPU)
-    if not gpu_detected and platform.system() == 'Darwin':
+    if not gpu_detected and platform.system() == "Darwin":
         try:
             result = subprocess.run(
-                ['system_profiler', 'SPDisplaysDataType'],
-                capture_output=True, text=True, timeout=10
+                ["system_profiler", "SPDisplaysDataType"],
+                capture_output=True,
+                text=True,
+                timeout=10,
             )
             if result.returncode == 0:
-                for line in result.stdout.split('\n'):
-                    if 'Chipset Model:' in line or 'Chip:' in line:
-                        info['gpu_model'] = line.split(':')[-1].strip()
+                for line in result.stdout.split("\n"):
+                    if "Chipset Model:" in line or "Chip:" in line:
+                        info["gpu_model"] = line.split(":")[-1].strip()
                         gpu_detected = True
                         break
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
-        
+
     return info

@@ -1,64 +1,82 @@
-{% extends "base.html" %}
-
-{% block title %}Flash Card Mode{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Flash Card Mode{% endblock %} {%
+block content %}
 <h1>Flash Card Mode</h1>
 
-<div class="flashcard-controls generation-bar" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-    <span style="font-weight: bold;">Generate:</span>
-    <button class="button preset-btn" data-count="auto">Auto</button>
-    <button class="button preset-btn" data-count="10">10</button>
-    <button class="button preset-btn" data-count="25">25</button>
+<div
+  class="flashcard-controls generation-bar"
+  style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap"
+>
+  <span style="font-weight: bold">Generate:</span>
+  <button class="button preset-btn" data-count="auto">Auto</button>
+  <button class="button preset-btn" data-count="10">10</button>
+  <button class="button preset-btn" data-count="25">25</button>
 
-    <div class="custom-control" style="display: flex; gap: 5px; align-items: center;">
-        <input type="number" id="custom-flashcount" placeholder="#" min="1" max="100"
-            style="width: 70px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-        <button id="generate-custom-btn" class="button">Go</button>
-    </div>
+  <div
+    class="custom-control"
+    style="display: flex; gap: 5px; align-items: center"
+  >
+    <input
+      type="number"
+      id="custom-flashcount"
+      placeholder="#"
+      min="1"
+      max="100"
+      style="
+        width: 70px;
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+      "
+    />
+    <button id="generate-custom-btn" class="button">Go</button>
+  </div>
 </div>
 
-<link rel="stylesheet" href="{{ url_for('flashcard.static', filename='flashcards.css') }}">
-<div id="flashcard-container" class="flashcard-container" style="display:none;">
-    <div id="flashcard" class="flashcard">
-        <div class="flashcard-front">
-            <h2 id="flash-term"></h2>
-        </div>
-        <div class="flashcard-back">
-            <p id="flash-definition"></p>
-        </div>
+<link
+  rel="stylesheet"
+  href="{{ url_for('flashcard.static', filename='flashcards.css') }}"
+/>
+<div id="flashcard-container" class="flashcard-container" style="display: none">
+  <div id="flashcard" class="flashcard">
+    <div class="flashcard-front">
+      <h2 id="flash-term"></h2>
     </div>
-    <div class="flashcard-nav">
-        <button id="prev-card" class="button small">Previous</button>
-        <button id="next-card" class="button small">Next</button>
+    <div class="flashcard-back">
+      <p id="flash-definition"></p>
     </div>
-    <p id="flash-index"></p>
-    <div id="export-controls" class="export-controls">
-        <p><strong>You've reached the end of the flashcards!</strong></p>
-        <a id="export-pdf-btn" href="#" class="button">Save as PDF</a>
-    </div>
+  </div>
+  <div class="flashcard-nav">
+    <button id="prev-card" class="button small">Previous</button>
+    <button id="next-card" class="button small">Next</button>
+  </div>
+  <p id="flash-index"></p>
+  <div id="export-controls" class="export-controls">
+    <p><strong>You've reached the end of the flashcards!</strong></p>
+    <a id="export-pdf-btn" href="#" class="button">Save as PDF</a>
+  </div>
 </div>
 
 <div id="flash-error" class="flash-error"></div>
-{% endblock %}
+{% endblock %} {% block scripts %}
 
-{% block scripts %}
-
-<div id="flashcard-data"
-    data-flashcards='{{ (flashcard_mode if flashcard_mode is defined else flashcards)|tojson|safe }}'
-    data-topic="{{ topic_name }}">
-</div>
+<div
+  id="flashcard-data"
+  data-flashcards="{{ (flashcard_mode if flashcard_mode is defined else flashcards)|tojson|safe }}"
+  data-topic="{{ topic_name }}"
+></div>
 
 <script src="{{ url_for('flashcard.static', filename='mode.js') }}"></script>
 
 <script>
-    initFlashcardMode({
-        urls: {
-            generate: "{{ url_for('flashcard.generate_flashcards_route') }}",
-            export_pdf: "{{ url_for('flashcard.export_pdf', topic_name=topic_name) }}",
-            update_progress: "{{ url_for('flashcard.update_progress', topic_name=topic_name) }}"
-        }
-    });
+  initFlashcardMode({
+    urls: {
+      generate: "{{ url_for('flashcard.generate_flashcards_route') }}",
+      export_pdf:
+        "{{ url_for('flashcard.export_pdf', topic_name=topic_name) }}",
+      update_progress:
+        "{{ url_for('flashcard.update_progress', topic_name=topic_name) }}",
+    },
+  });
 </script>
 
 {% endblock %}

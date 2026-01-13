@@ -34,14 +34,15 @@ class CodeExecutionAgent:
             # 1. Try to find JSON within markdown code blocks first (most
             # reliable)
             code_block_match = re.search(
-                r'```(?:json)?\s*(\{.*?\})\s*```', response, re.DOTALL)
+                r"```(?:json)?\s*(\{.*?\})\s*```", response, re.DOTALL
+            )
             if code_block_match:
                 return json.loads(code_block_match.group(1))
 
             # 2. Fallback: Find the first valid JSON object structure using greedy match
             # Note: This might fail if there are trailing braces in the text,
             # but it's a reasonable fallback
-            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            json_match = re.search(r"\{.*\}", response, re.DOTALL)
             if json_match:
                 data = json.loads(json_match.group())
                 return data
@@ -58,40 +59,41 @@ class FeedbackAgent:
     Agent responsible for evaluating user answers and providing feedback.
     """
 
-    def evaluate_answer(
-            self,
-            question_obj,
-            user_answer,
-            answer_is_index=False):
+    def evaluate_answer(self, question_obj, user_answer, answer_is_index=False):
         """
         Evaluates a user's answer against a question object.
 
         Args:
             question_obj (dict or str): The question object or string.
             user_answer (str or int): The user's answer.
-            answer_is_index (bool): Whether the user_answer is an index (for multiple choice).
+            answer_is_index (bool): Whether the user_answer is an index (
+                for multiple choice
+            ).
 
         Returns:
-            tuple: A dictionary with 'is_correct' (bool) and 'feedback' (str), and an error object (or None).
+            tuple: A dictionary with 'is_correct' (bool) and 'feedback' (str),
+                   and an error object (or None).
         """
         # Handle free-form questions from the assessment feature
         if isinstance(question_obj, str):
-            is_correct = str(user_answer).strip().upper() == str(
-                question_obj).strip().upper()
+            is_correct = (
+                str(user_answer).strip().upper() == str(question_obj).strip().upper()
+            )
             if is_correct:
                 feedback = "That's correct! Great job."
             else:
-                feedback = f"Not quite. The correct answer was {question_obj}. Keep trying!"
+                feedback = (
+                    f"Not quite. The correct answer was {question_obj}. Keep trying!"
+                )
             return {"is_correct": is_correct, "feedback": feedback}, None
 
         # Handle multiple-choice questions from the quiz feature
-        correct_answer_letter = question_obj.get('correct_answer')
+        correct_answer_letter = question_obj.get("correct_answer")
 
         try:
-            options = question_obj.get('options', [])
-            question_text = question_obj.get('question')
-            correct_answer_index = ord(
-                correct_answer_letter.upper()) - ord('A')
+            options = question_obj.get("options", [])
+            question_text = question_obj.get("question")
+            correct_answer_index = ord(correct_answer_letter.upper()) - ord("A")
             correct_answer_text = options[correct_answer_index]
 
             is_correct = False
@@ -100,12 +102,13 @@ class FeedbackAgent:
             if user_answer is not None:
                 if answer_is_index:
                     user_answer_index = int(user_answer)
-                    is_correct = (user_answer_index == correct_answer_index)
+                    is_correct = user_answer_index == correct_answer_index
                 else:  # answer is letter
-                    is_correct = (str(user_answer).strip().upper() == str(
-                        correct_answer_letter).strip().upper())
-                    user_answer_index = ord(
-                        str(user_answer).upper()) - ord('A')
+                    is_correct = (
+                        str(user_answer).strip().upper()
+                        == str(correct_answer_letter).strip().upper()
+                    )
+                    user_answer_index = ord(str(user_answer).upper()) - ord("A")
 
                 if 0 <= user_answer_index < len(options):
                     user_answer_text = options[user_answer_index]
@@ -113,31 +116,37 @@ class FeedbackAgent:
                     user_answer_text = "Invalid answer"
 
         except (IndexError, TypeError, ValueError):
-            return {"is_correct": False,
-                    "feedback": f"Not quite. The correct answer was {correct_answer_letter}. Keep trying!"}, None
+            return {
+                "is_correct": False,
+                "feedback": (
+                    f"Not quite. The correct answer was {correct_answer_letter}. "
+                    "Keep trying!"
+                ),
+            }, None
 
         if is_correct:
             feedback = "That's correct! Great job."
             return {"is_correct": True, "feedback": feedback}, None
 
         from app.common.prompts import get_feedback_prompt
+
         prompt = get_feedback_prompt(
-            question_text,
-            correct_answer_text,
-            user_answer_text)
+            question_text, correct_answer_text, user_answer_text
+        )
         try:
             feedback = call_llm(prompt)
         except LLMResponseError as e:
             # Fallback on LLM error
             print(f"LLM Error in FeedbackAgent: {e}")
-            return {"is_correct": False,
-                    "feedback": f"Not quite. The correct answer was {correct_answer_text}. Keep trying!"}, None
+            return {
+                "is_correct": False,
+                "feedback": (
+                    f"Not quite. The correct answer was {correct_answer_text}. "
+                    "Keep trying!"
+                ),
+            }, None
 
-        feedback = re.sub(
-            r'<think>.*?</think>',
-            '',
-            feedback,
-            flags=re.DOTALL).strip()
+        feedback = re.sub(r"<think>.*?</think>", "", feedback, flags=re.DOTALL).strip()
         return {"is_correct": False, "feedback": feedback}, None
 
 
@@ -152,7 +161,8 @@ class TopicTeachingAgent:
         Subclasses should implement this method.
         """
         raise NotImplementedError(
-            "Subclasses must implement generate_teaching_material")
+            "Subclasses must implement generate_teaching_material"
+        )
 
 
 class PlannerAgent:
@@ -186,30 +196,26 @@ class PlannerAgent:
         plan_steps = plan_data.get("plan", [])
         if not plan_steps or not isinstance(plan_steps, list):
             raise LLMResponseError(
-                "Could not parse study plan from LLM response: missing or invalid 'plan' key",
+                "Could not parse study plan from LLM response: missing or invalid "
+                "'plan' key",
                 error_code="LLM020",
                 debug_info={
-                    "response_keys": list(
-                        plan_data.keys()) if isinstance(
-                        plan_data,
-                        dict) else None})
+                    "response_keys": (
+                        list(plan_data.keys()) if isinstance(plan_data, dict) else None
+                    )
+                },
+            )
 
-        if not all(isinstance(step, str) and step.strip()
-                   for step in plan_steps):
+        if not all(isinstance(step, str) and step.strip() for step in plan_steps):
             raise LLMResponseError(
                 "Study plan contains invalid steps",
                 error_code="LLM021",
-                debug_info={"plan_steps": plan_steps}
+                debug_info={"plan_steps": plan_steps},
             )
 
         return plan_steps
 
-    def update_study_plan(
-            self,
-            topic_name,
-            user_background,
-            current_plan,
-            comment):
+    def update_study_plan(self, topic_name, user_background, current_plan, comment):
         """
         Updates an existing study plan based on user feedback.
 
@@ -233,53 +239,73 @@ class PlannerAgent:
         import ast
 
         prompt = get_plan_update_prompt(
-            topic_name, user_background, current_plan, comment)
+            topic_name, user_background, current_plan, comment
+        )
         response = call_llm(prompt)
 
         try:
             # Remove analysis block if present
-            response = re.sub(r'<analysis>.*?</analysis>',
-                              '', response, flags=re.DOTALL)
+            response = re.sub(
+                r"<analysis>.*?</analysis>", "", response, flags=re.DOTALL
+            )
 
             # Extract list from response if it contains other text
-            match = re.search(r'\[.*\]', response, re.DOTALL)
+            match = re.search(r"\[.*\]", response, re.DOTALL)
             if match:
                 response = match.group(0)
 
             # The response is expected to be a string representation of a list
             new_plan = ast.literal_eval(response)
             if isinstance(new_plan, list):
-                
+
                 # Database Hook for PlanRevision
                 try:
                     from app.core.extensions import db
                     from app.core.models import Topic, PlanRevision
                     from flask_login import current_user
-                    
+
                     if current_user and current_user.is_authenticated:
                         # Find the topic to get its ID
-                        # Note: we assume topic_name is unique per user, or close enough for this context lookup
-                        topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
-                        
+                        # Note: we assume topic_name is unique per user, or close enough
+                        # for this context lookup
+                        topic = Topic.query.filter_by(
+                            name=topic_name, user_id=current_user.userid
+                        ).first()
+
                         if topic:
-                            # Deduplication check: Prevent logging if identical revision exists within last 30 seconds
+                            # Deduplication check: Prevent logging if identical revision
+                            # exists within last 30 seconds
                             import datetime
-                            last_revision = PlanRevision.query.filter_by(
-                                topic_id=topic.id,
-                                user_id=current_user.userid
-                            ).order_by(PlanRevision.timestamp.desc()).first()
-                            
+
+                            last_revision = (
+                                PlanRevision.query.filter_by(
+                                    topic_id=topic.id, user_id=current_user.userid
+                                )
+                                .order_by(PlanRevision.timestamp.desc())
+                                .first()
+                            )
+
                             is_duplicate = False
                             if last_revision:
-                                # Check if identical request (reason + old_plan + new_plan) within short time
-                                time_diff = datetime.datetime.utcnow() - last_revision.timestamp
-                                
-                                if (last_revision.reason == (comment if comment else "Manual Revision") and
-                                    last_revision.old_plan_json == current_plan and
-                                    last_revision.new_plan_json == new_plan and 
-                                    time_diff.total_seconds() < 30):
+                                # Check if identical request
+                                # (reason + old_plan + new_plan)
+                                # within short time
+                                time_diff = (
+                                    datetime.datetime.utcnow() - last_revision.timestamp
+                                )
+
+                                if (
+                                    last_revision.reason
+                                    == (comment if comment else "Manual Revision")
+                                    and last_revision.old_plan_json == current_plan
+                                    and last_revision.new_plan_json == new_plan
+                                    and time_diff.total_seconds() < 30
+                                ):
                                     is_duplicate = True
-                                    logger.info(f"Skipping duplicate PlanRevision for topic {topic_name}")
+                                    logger.info(
+                                        f"Skipping duplicate PlanRevision for topic "
+                                        f"{topic_name}"
+                                    )
 
                             if not is_duplicate:
                                 revision = PlanRevision(
@@ -287,31 +313,34 @@ class PlannerAgent:
                                     user_id=current_user.userid,
                                     reason=comment if comment else "Manual Revision",
                                     old_plan_json=current_plan,
-                                    new_plan_json=new_plan
+                                    new_plan_json=new_plan,
                                 )
                                 db.session.add(revision)
                                 db.session.commit()
-                                logger.info(f"Logged PlanRevision for topic {topic_name}")
+                                logger.info(
+                                    f"Logged PlanRevision for topic {topic_name}"
+                                )
                         else:
-                            logger.warning(f"Could not find topic {topic_name} to log PlanRevision")
-                            
+                            logger.warning(
+                                f"Could not find topic {topic_name} to log PlanRevision"
+                            )
+
                 except Exception as db_err:
-                     logger.warning(f"Failed to log PlanRevision: {db_err}")
+                    logger.warning(f"Failed to log PlanRevision: {db_err}")
 
                 return new_plan
             else:
                 raise LLMResponseError(
                     "LLM did not return a valid list for the new plan",
                     error_code="LLM022",
-                    debug_info={"response_type": type(new_plan).__name__}
+                    debug_info={"response_type": type(new_plan).__name__},
                 )
         except (ValueError, SyntaxError) as e:
-            logger.error(
-                f"Could not parse the new plan from LLM response: {response}")
+            logger.error(f"Could not parse the new plan from LLM response: {response}")
             raise LLMResponseError(
                 "Could not parse the new plan from LLM response",
                 error_code="LLM023",
-                debug_info={"response_preview": response[:200], "parse_error": str(e)}
+                debug_info={"response_preview": response[:200], "parse_error": str(e)},
             )
 
 
@@ -325,7 +354,8 @@ class ChatAgent:
         Initializes the ChatAgent.
 
         Args:
-            system_message_generator (callable): A function that generates the system message.
+            system_message_generator (callable): A function that generates the
+                system message.
         """
         self.system_message_generator = system_message_generator
 
@@ -344,12 +374,8 @@ class ChatAgent:
         pass
 
     def get_answer(
-            self,
-            question,
-            conversation_history,
-            context,
-            user_background,
-            plan=None):
+        self, question, conversation_history, context, user_background, plan=None
+    ):
         """
         Generates an answer to a user's question.
 
@@ -367,7 +393,8 @@ class ChatAgent:
         is_guided_mode = len(conversation_history) > 0
 
         system_message = self.system_message_generator(
-            context, user_background, is_guided_mode, plan)
+            context, user_background, is_guided_mode, plan
+        )
 
         messages = [{"role": "system", "content": system_message}]
 
@@ -376,8 +403,10 @@ class ChatAgent:
             messages.extend(conversation_history)
 
         # Ensure the user's question is included.
-        if not conversation_history or conversation_history[-1].get(
-                'content') != question:
+        if (
+            not conversation_history
+            or conversation_history[-1].get("content") != question
+        ):
             messages.append({"role": "user", "content": question})
 
         try:
@@ -386,15 +415,12 @@ class ChatAgent:
             raise e
 
         # Filter out content within <think> tags
-        answer = re.sub(
-            r'<think>.*?</think>',
-            '',
-            answer,
-            flags=re.DOTALL).strip()
+        answer = re.sub(r"<think>.*?</think>", "", answer, flags=re.DOTALL).strip()
 
         # Filter out <tool_call> tags if present (cleanup artifact)
-        answer = re.sub(r'<tool_call>.*?</tool_call>', '',
-                        answer, flags=re.DOTALL).strip()
+        answer = re.sub(
+            r"<tool_call>.*?</tool_call>", "", answer, flags=re.DOTALL
+        ).strip()
 
         return answer
 
@@ -416,6 +442,7 @@ class SuggestionAgent:
             tuple: A list of suggested topic strings and an error object (or None).
         """
         from app.common.prompts import get_topic_suggestions_prompt
+
         prompt = get_topic_suggestions_prompt(user_profile, past_topics)
 
         try:

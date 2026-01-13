@@ -2,6 +2,7 @@
 Fast embed testing without screenshots or LLM.
 Simply tries to load the embed URL and check for real HTTP errors.
 """
+
 import requests
 import logging
 from typing import Tuple
@@ -24,8 +25,13 @@ def test_embed_direct(video_id: str) -> Tuple[bool, str]:
     try:
         # Get the full embed page
         response = requests.get(
-            embed_url, timeout=REQUEST_TIMEOUT, headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
+            embed_url,
+            timeout=REQUEST_TIMEOUT,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36"
+            },
+        )
 
         # Check HTTP status
         if response.status_code >= 400:
@@ -41,10 +47,10 @@ def test_embed_direct(video_id: str) -> Tuple[bool, str]:
         return True, "passed_embed_test"
 
     except requests.exceptions.Timeout:
-        logger.warning(
-            f"Video {video_id}: embed test timeout (assuming embeddable)")
+        logger.warning(f"Video {video_id}: embed test timeout (assuming embeddable)")
         return True, "timeout"
     except Exception as ex:
         logger.warning(
-            f"Video {video_id}: embed test error - {ex} (assuming embeddable)")
+            f"Video {video_id}: embed test error - {ex} (assuming embeddable)"
+        )
         return True, f"error: {str(ex)}"

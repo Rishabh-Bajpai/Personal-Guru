@@ -2,6 +2,7 @@
 Session logging module for tracking video searches and user interactions.
 Creates timestamped log files for each search session.
 """
+
 import json
 import os
 from datetime import datetime
@@ -38,12 +39,13 @@ class SessionLogger:
                 "accepted_videos": 0,
                 "rejected_videos": 0,
                 "videos_played": 0,
-                "videos_skipped": 0
-            }
+                "videos_skipped": 0,
+            },
         }
 
-    def add_video(self, video_data: Dict[str, Any],
-                  validation_results: Dict[str, Any] = None):
+    def add_video(
+        self, video_data: Dict[str, Any], validation_results: Dict[str, Any] = None
+    ):
         """
         Add a video to the session log.
 
@@ -62,18 +64,19 @@ class SessionLogger:
                 "played": False,
                 "skipped": False,
                 "auto_skipped": False,
-                "timestamp": None
-            }
+                "timestamp": None,
+            },
         }
 
         self.data["videos"].append(video_entry)
         self.data["total_videos_found"] = len(self.data["videos"])
 
         # Update summary
-        if validation_results and validation_results.get(
-                "final_result") == "accepted":
+        if validation_results and validation_results.get("final_result") == "accepted":
             self.data["summary"]["accepted_videos"] += 1
-        elif validation_results and validation_results.get("final_result") == "rejected":
+        elif (
+            validation_results and validation_results.get("final_result") == "rejected"
+        ):
             self.data["summary"]["rejected_videos"] += 1
 
     def update_video_interaction(self, video_id: str, event_type: str):
@@ -102,7 +105,7 @@ class SessionLogger:
     def save(self):
         """Save the session log to disk."""
         log_file = os.path.join(self.session_dir, "session.json")
-        with open(log_file, 'w', encoding='utf-8') as f:
+        with open(log_file, "w", encoding="utf-8") as f:
             json.dump(self.data, f, indent=2, ensure_ascii=False)
 
     def get_log_path(self) -> str:

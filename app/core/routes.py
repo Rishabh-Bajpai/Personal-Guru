@@ -4,24 +4,27 @@ from app.common.utils import log_telemetry
 from flask_login import login_user, logout_user, login_required, current_user
 import os
 
-main_bp = Blueprint('main', __name__)
+main_bp = Blueprint("main", __name__)
 
-@main_bp.route('/', methods=['GET', 'POST'])
+
+@main_bp.route("/", methods=["GET", "POST"])
 def index():
+    """Render the main index page, handling topic creation and mode selection."""
     # Cleanup persistent sandbox if exists
-    sandbox_id = session.get('sandbox_id')
+    sandbox_id = session.get("sandbox_id")
     if sandbox_id:
         try:
             from app.common.sandbox import Sandbox
+
             sb = Sandbox(sandbox_id=sandbox_id)
             sb.cleanup()
         except Exception:
             pass  # Ignore cleanup errors
-        session.pop('sandbox_id', None)
+        session.pop("sandbox_id", None)
 
-    if request.method == 'POST':
-        topic_name = request.form.get('topic', '').strip()
-        mode = request.form.get('mode', 'chapter')
+    if request.method == "POST":
+        topic_name = request.form.get("topic", "").strip()
+        mode = request.form.get("mode", "chapter")
 
         if not topic_name:
             topics = get_all_topics()
@@ -29,149 +32,156 @@ def index():
             for topic in topics:
                 data = load_topic(topic)
                 if data:
-                    has_plan = bool(data.get('plan'))
-                    topics_data.append({'name': topic, 'has_plan': has_plan})
+                    has_plan = bool(data.get("plan"))
+                    topics_data.append({"name": topic, "has_plan": has_plan})
                 else:
-                    topics_data.append({'name': topic, 'has_plan': True})
+                    topics_data.append({"name": topic, "has_plan": True})
             return render_template(
-                'index.html',
-                topics=topics_data,
-                error="Please enter a topic name.")
+                "index.html", topics=topics_data, error="Please enter a topic name."
+            )
 
         # Telemetry Hook: Topic Created/Opened (Intent)
         try:
             log_telemetry(
-                event_type='topic_created' if topic_name not in get_all_topics() else 'topic_opened',
-                triggers={'source': 'web_ui', 'action': 'form_submit'},
-                payload={'topic_name': topic_name, 'mode': mode}
+                event_type=(
+                    "topic_created"
+                    if topic_name not in get_all_topics()
+                    else "topic_opened"
+                ),
+                triggers={"source": "web_ui", "action": "form_submit"},
+                payload={"topic_name": topic_name, "mode": mode},
             )
         except Exception:
-            pass # Telemetry failures must not block user flow; ignore logging errors.
+            pass  # Telemetry failures must not block user flow; ignore logging errors.
 
         if mode:
-            if mode == 'chapter':
-                return redirect(url_for('chapter.mode', topic_name=topic_name))
+            if mode == "chapter":
+                return redirect(url_for("chapter.mode", topic_name=topic_name))
 
-            elif mode == 'quiz':
-                return redirect(url_for('quiz.mode', topic_name=topic_name))
+            elif mode == "quiz":
+                return redirect(url_for("quiz.mode", topic_name=topic_name))
 
-            elif mode == 'flashcard':
-                return redirect(
-                    url_for(
-                        'flashcard.mode',
-                        topic_name=topic_name))
+            elif mode == "flashcard":
+                return redirect(url_for("flashcard.mode", topic_name=topic_name))
 
-            elif mode == 'reel':
-                return redirect(url_for('reel.mode', topic_name=topic_name))
+            elif mode == "reel":
+                return redirect(url_for("reel.mode", topic_name=topic_name))
 
-            elif mode == 'chat':
+            elif mode == "chat":
                 # Chat doesn't have a 'mode' route yet, but we will add/fix it.
-                return redirect(url_for('chat.mode', topic_name=topic_name))
+                return redirect(url_for("chat.mode", topic_name=topic_name))
 
             else:
                 return render_template(
-                    'index.html',
+                    "index.html",
                     topics=get_all_topics(),
-                    error=f"Mode {mode} not available")
-
+                    error=f"Mode {mode} not available",
+                )
 
     topics = get_all_topics()
     topics_data = []
     for topic in topics:
         data = load_topic(topic)
         if data:
-            plan = data.get('plan')
-            flashcard_mode = data.get('flashcard_mode')
-            quiz = data.get('quiz_mode')
-            chat_history = data.get('chat_history')
+            plan = data.get("plan")
+            flashcard_mode = data.get("flashcard_mode")
+            quiz = data.get("quiz_mode")
+            chat_history = data.get("chat_history")
 
-            topics_data.append({
-                'name': topic,
-                'has_plan': bool(plan),
-                'has_flashcards': bool(flashcard_mode),
-                'has_quiz': bool(quiz),
-                'has_chat': bool(chat_history),
-                'has_reels': False  # Placeholder as reels aren't stored in topic currently
-            })
+            topics_data.append(
+                {
+                    "name": topic,
+                    "has_plan": bool(plan),
+                    "has_flashcards": bool(flashcard_mode),
+                    "has_quiz": bool(quiz),
+                    "has_chat": bool(chat_history),
+                    "has_reels": False,
+                    # Placeholder as reels aren't stored in topic currently
+                }
+            )
         else:
-            topics_data.append({
-                'name': topic,
-                'has_plan': False,
-                'has_flashcards': False,
-                'has_quiz': False,
-                'has_chat': False,
-                'has_reels': False
-            })
+            topics_data.append(
+                {
+                    "name": topic,
+                    "has_plan": False,
+                    "has_flashcards": False,
+                    "has_quiz": False,
+                    "has_chat": False,
+                    "has_reels": False,
+                }
+            )
 
-    return render_template('index.html', topics=topics_data)
+    return render_template("index.html", topics=topics_data)
 
 
-@main_bp.route('/login', methods=['GET', 'POST'])
+@main_bp.route("/login", methods=["GET", "POST"])
 def login():
+    """Handle user login via username and password."""
     if current_user.is_authenticated:
-        return redirect(url_for('main.index'))
+        return redirect(url_for("main.index"))
 
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+
         from app.core.models import Login
+
         user = Login.query.filter_by(username=username).first()
-        
+
         if user is None or not user.check_password(password):
-            return render_template(
-                'login.html', error='Invalid username or password')
+            return render_template("login.html", error="Invalid username or password")
 
         login_user(user)
 
         # Telemetry Hook: User Login
         try:
             log_telemetry(
-                event_type='user_login',
-                triggers={'source': 'web_ui', 'action': 'form_submit'},
-                payload={'method': 'password'}
+                event_type="user_login",
+                triggers={"source": "web_ui", "action": "form_submit"},
+                payload={"method": "password"},
             )
         except Exception:
-            pass # Telemetry failures must not block user flow; ignore logging errors.
+            pass  # Telemetry failures must not block user flow; ignore logging errors.
 
-        return redirect(url_for('main.index'))
+        return redirect(url_for("main.index"))
 
-    return render_template('login.html')
+    return render_template("login.html")
 
 
-@main_bp.route('/signup', methods=['GET', 'POST'])
+@main_bp.route("/signup", methods=["GET", "POST"])
 def signup():
+    """Handle user registration and installation initialization."""
     if current_user.is_authenticated:
-        return redirect(url_for('main.index'))
+        return redirect(url_for("main.index"))
 
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+
         from app.core.models import User, Login, Installation
         from app.core.extensions import db
-        
+
         login_check = Login.query.filter_by(username=username).first()
         if login_check:
-            return render_template('signup.html', error='Username already exists')
-            
+            return render_template("signup.html", error="Username already exists")
+
         # Determine installation context explicitly
         installations = Installation.query.all()
         if len(installations) == 0:
             # First time setup - Create Installation
             from app.common.utils import get_system_info
             import uuid
-            
+
             sys_info = get_system_info()
             inst_id = str(uuid.uuid4())
-            
+
             new_inst = Installation(
                 installation_id=inst_id,
-                cpu_cores=sys_info['cpu_cores'],
-                ram_gb=sys_info['ram_gb'],
-                gpu_model=sys_info['gpu_model'],
-                os_version=sys_info['os_version'],
-                install_method=sys_info['install_method']
+                cpu_cores=sys_info["cpu_cores"],
+                ram_gb=sys_info["ram_gb"],
+                gpu_model=sys_info["gpu_model"],
+                os_version=sys_info["os_version"],
+                install_method=sys_info["install_method"],
             )
             db.session.add(new_inst)
             db.session.commit()
@@ -180,115 +190,132 @@ def signup():
         else:
             # Multiple installations detected; avoid arbitrary association
             return render_template(
-                'signup.html',
-                error='Multiple installations are configured. Please contact the administrator.'
+                "signup.html",
+                error="Multiple installations are configured. Please contact the "
+                "administrator.",
             )
-        
+
         uid = Login.generate_userid(inst_id)
-        
-        new_login = Login(userid=uid, username=username, name=username, installation_id=inst_id)
+
+        new_login = Login(
+            userid=uid, username=username, name=username, installation_id=inst_id
+        )
         new_login.set_password(password)
         db.session.add(new_login)
-        
-        new_user = User(login_id=uid) # Profile details separate
+
+        new_user = User(login_id=uid)  # Profile details separate
         db.session.add(new_user)
-        
+
         db.session.commit()
-        
+
         login_user(new_login)
 
         # Telemetry Hook: User Signup
         try:
             telemetry_payload = {}
-            if 'sys_info' in locals():
-                telemetry_payload['install_method'] = sys_info['install_method']
+            if "sys_info" in locals():
+                telemetry_payload["install_method"] = sys_info["install_method"]
 
             log_telemetry(
-                event_type='user_signup',
-                triggers={'source': 'web_ui', 'action': 'form_submit'},
+                event_type="user_signup",
+                triggers={"source": "web_ui", "action": "form_submit"},
                 payload=telemetry_payload,
-                installation_id=inst_id
+                installation_id=inst_id,
             )
         except Exception:
-            pass # Telemetry failures must not block user flow; ignore logging errors.
+            pass  # Telemetry failures must not block user flow; ignore logging errors.
 
-        return redirect(url_for('main.user_profile'))
-        
-    return render_template('signup.html')
+        return redirect(url_for("main.user_profile"))
+
+    return render_template("signup.html")
 
 
-@main_bp.route('/logout')
+@main_bp.route("/logout")
 def logout():
+    """Log out the current user and redirect to index."""
     logout_user()
-    return redirect(url_for('main.index'))
+    return redirect(url_for("main.index"))
 
 
-@main_bp.route('/user_profile', methods=['GET', 'POST'])
+@main_bp.route("/user_profile", methods=["GET", "POST"])
 @login_required
 def user_profile():
+    """Display and update the user's profile information."""
     from app.core.extensions import db
-    
+
     user = current_user.user_profile
-        
-    if request.method == 'POST':
+
+    if request.method == "POST":
         if user.login is not None:
-            user.login.name = request.form.get('name')
-        user.age = request.form.get('age') or None
-        user.country = request.form.get('country')
-        
+            user.login.name = request.form.get("name")
+        user.age = request.form.get("age") or None
+        user.country = request.form.get("country")
+
         # Handle languages as list
-        langs = request.form.get('languages')
+        langs = request.form.get("languages")
         if langs:
-            user.languages = [x.strip() for x in langs.split(',') if x.strip()]
+            user.languages = [x.strip() for x in langs.split(",") if x.strip()]
         else:
             user.languages = []
 
-        user.education_level = request.form.get('education_level')
-        user.field_of_study = request.form.get('field_of_study')
-        user.occupation = request.form.get('occupation')
-        user.learning_goals = request.form.get('learning_goals')
-        user.prior_knowledge = request.form.get('prior_knowledge')
-        user.learning_style = request.form.get('learning_style')
-        user.time_commitment = request.form.get('time_commitment') or None
-        user.preferred_format = request.form.get('preferred_format')
+        user.education_level = request.form.get("education_level")
+        user.field_of_study = request.form.get("field_of_study")
+        user.occupation = request.form.get("occupation")
+        user.learning_goals = request.form.get("learning_goals")
+        user.prior_knowledge = request.form.get("prior_knowledge")
+        user.learning_style = request.form.get("learning_style")
+        user.time_commitment = request.form.get("time_commitment") or None
+        user.preferred_format = request.form.get("preferred_format")
 
         db.session.commit()
-        return redirect(url_for('main.index'))
+        return redirect(url_for("main.index"))
 
     show_terms = False
-    return render_template('user_profile.html', user=user, show_terms=show_terms)
+    return render_template("user_profile.html", user=user, show_terms=show_terms)
 
 
-@main_bp.route('/delete/<topic_name>')
+@main_bp.route("/delete/<topic_name>")
 def delete_topic_route(topic_name):
+    """Delete a specific topic and redirect to index."""
     from app.common.storage import delete_topic
+
     delete_topic(topic_name)
 
     # Telemetry Hook: Topic Deleted
     try:
         log_telemetry(
-            event_type='topic_deleted',
-            triggers={'source': 'web_ui', 'action': 'click_delete'},
-            payload={'topic_name': topic_name}
+            event_type="topic_deleted",
+            triggers={"source": "web_ui", "action": "click_delete"},
+            payload={"topic_name": topic_name},
         )
     except Exception:
-        pass # Telemetry failures must not block user flow; ignore logging errors.
+        pass  # Telemetry failures must not block user flow; ignore logging errors.
 
-    return redirect(url_for('main.index'))
+    return redirect(url_for("main.index"))
 
 
-@main_bp.route('/api/suggest-topics', methods=['GET', 'POST'])
+@main_bp.route("/api/suggest-topics", methods=["GET", "POST"])
 @login_required
 def suggest_topics():
+    """Generate topic suggestions based on user profile and history."""
     from app.common.agents import SuggestionAgent
     from app.common.storage import get_all_topics
     from flask import jsonify
-    
-    user_profile = current_user.user_profile.to_context_string() if current_user.user_profile else ""
-    past_topics = get_all_topics() # This gets all topics for the specific user because of how storage works (folder based) or we might need to verify isolation. 
-    # Actually storage.get_all_topics() scans the directory. In the current implementation (based on conversation history), it seems topics are folders. 
-    # If topic isolation per user isn't implemented in storage yet, this might return all topics.
-    # checking storage.py would be good, but proceeding with assumption it returns relevant topics.
+
+    user_profile = (
+        current_user.user_profile.to_context_string()
+        if current_user.user_profile
+        else ""
+    )
+    past_topics = get_all_topics()
+    # This gets all topics for the specific user because of how storage works
+    # (folder based) or we might need to verify isolation.
+    # Actually storage.get_all_topics() scans the directory. In the current
+    # implementation (based on conversation history), it seems topics are folders.
+    # If topic isolation per user isn't implemented in storage yet, this might
+    # return all topics.
+    # checking storage.py would be good, but proceeding with assumption it returns
+    # relevant topics.
     # EDIT: Conversation 38b1 implies "Verifying Topic Isolation" was a goal.
     # Let's assume get_all_topics returns list of strings.
 
@@ -296,51 +323,51 @@ def suggest_topics():
     try:
         suggestions, error = agent.generate_suggestions(user_profile, past_topics)
         if error:
-            return jsonify({'error': str(error)}), 500
+            return jsonify({"error": str(error)}), 500
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-    return jsonify({'suggestions': suggestions})
+    return jsonify({"suggestions": suggestions})
 
 
-@main_bp.route('/settings', methods=['GET', 'POST'])
+@main_bp.route("/settings", methods=["GET", "POST"])
 def settings():
+    """Configure application settings and environment variables."""
     # Load defaults
     defaults = {}
 
     # Try loading from .env first, then .env.example
-    env_path = '.env' if os.path.exists('.env') else '.env.example'
+    env_path = ".env" if os.path.exists(".env") else ".env.example"
     if os.path.exists(env_path):
-        with open(env_path, 'r') as f:
+        with open(env_path, "r") as f:
             for line in f:
                 line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    key, value = line.split('=', 1)
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
                     defaults[key] = value
 
-    if request.method == 'POST':
+    if request.method == "POST":
         # Gather form data
         config = {
-            'DATABASE_URL': request.form.get('database_url'),
-            'PORT': request.form.get('port', '5011'),
-            'LLM_BASE_URL': request.form.get('LLM_BASE_URL'),
-            'LLM_MODEL_NAME': request.form.get('llm_model'),
-            'LLM_API_KEY': request.form.get('llm_key', ''),
-            'LLM_NUM_CTX': request.form.get('llm_ctx', '18000'),
-            'TTS_BASE_URL': request.form.get('tts_url', ''),
-            'OPENAI_API_KEY': request.form.get('openai_key', ''),
-            'YOUTUBE_API_KEY': request.form.get('youtube_key', '')
+            "DATABASE_URL": request.form.get("database_url"),
+            "PORT": request.form.get("port", "5011"),
+            "LLM_BASE_URL": request.form.get("LLM_BASE_URL"),
+            "LLM_MODEL_NAME": request.form.get("llm_model"),
+            "LLM_API_KEY": request.form.get("llm_key", ""),
+            "LLM_NUM_CTX": request.form.get("llm_ctx", "18000"),
+            "TTS_BASE_URL": request.form.get("tts_url", ""),
+            "OPENAI_API_KEY": request.form.get("openai_key", ""),
+            "YOUTUBE_API_KEY": request.form.get("youtube_key", ""),
         }
 
         # Simple validation
-        if not config['DATABASE_URL'] or not config['LLM_BASE_URL']:
+        if not config["DATABASE_URL"] or not config["LLM_BASE_URL"]:
             return render_template(
-                'setup.html',
-                defaults=defaults,
-                error="Missing required fields")
+                "setup.html", defaults=defaults, error="Missing required fields"
+            )
 
         # Write to .env
-        with open('.env', 'w') as f:
+        with open(".env", "w") as f:
             for key, value in config.items():
                 f.write(f"{key}={value}\n")
 
@@ -349,26 +376,28 @@ def settings():
         # Setup app returned "Setup Complete" string.
         # Here we should probably redirect or render success.
         return render_template(
-            'setup.html',
+            "setup.html",
             defaults=config,
-            success="Settings saved! Restart app to apply.")
+            success="Settings saved! Restart app to apply.",
+        )
 
-    return render_template('setup.html', defaults=defaults)
+    return render_template("setup.html", defaults=defaults)
 
 
-@main_bp.route('/api/transcribe', methods=['POST'])
+@main_bp.route("/api/transcribe", methods=["POST"])
 @login_required
 def transcribe():
+    """Transcribe uploaded audio file to text."""
     from flask import jsonify
     from app.common.utils import transcribe_audio
     import tempfile
 
-    if 'audio' not in request.files:
-        return jsonify({'error': 'No audio file provided'}), 400
+    if "audio" not in request.files:
+        return jsonify({"error": "No audio file provided"}), 400
 
-    audio_file = request.files['audio']
-    if audio_file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
+    audio_file = request.files["audio"]
+    if audio_file.filename == "":
+        return jsonify({"error": "No selected file"}), 400
 
     # Save to temp file
     # or .webm depending on what we record
@@ -380,9 +409,9 @@ def transcribe():
         try:
             transcript = transcribe_audio(temp_path)
         except Exception as error:
-            return jsonify({'error': str(error)}), 500
+            return jsonify({"error": str(error)}), 500
 
-        return jsonify({'transcript': transcript})
+        return jsonify({"transcript": transcript})
 
     finally:
         if os.path.exists(temp_path):

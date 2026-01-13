@@ -1,14 +1,19 @@
-{% extends "base.html" %}
-
-{% block title %}Congratulations!{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Congratulations!{% endblock %} {%
+block content %}
 <h1>Congratulations!</h1>
 <p>You have completed the topic: {{ topic_name }}</p>
 <p>Your average score was: {{ average_score }}%</p>
 <div class="navigation">
-    <a href="{{ url_for('chapter.export_topic', topic_name=topic_name) }}" class="button">Export as Markdown</a>
-    <a href="{{ url_for('chapter.export_topic_pdf', topic_name=topic_name) }}" class="button">Export as PDF</a>
-    <a href="{{ url_for('main.index') }}" class="button">Back to Home</a>
+  <a
+    href="{{ url_for('chapter.export_topic', topic_name=topic_name) }}"
+    class="button"
+    >Export as Markdown</a
+  >
+  <a
+    href="{{ url_for('chapter.export_topic_pdf', topic_name=topic_name) }}"
+    class="button"
+    >Export as PDF</a
+  >
+  <a href="{{ url_for('main.index') }}" class="button">Back to Home</a>
 </div>
 {% endblock %}
