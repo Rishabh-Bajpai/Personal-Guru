@@ -10,6 +10,11 @@ class LogCapture:
     """
     Captures stdout and stderr, buffers them, and asynchronously writes to the database.
     Uses a queue to ensure non-blocking application performance.
+
+    This class is implemented as a singleton. Multiple calls to ``LogCapture(app=...)``
+    will return the same shared instance. Only the first successful instantiation's
+    ``app`` argument is used to configure the logger; subsequent ``app`` values are
+    ignored because the instance is already initialized.
     """
     _instance = None
     _lock = threading.Lock()
