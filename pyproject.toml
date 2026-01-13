@@ -1,0 +1,40 @@
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | thirdparty
+)/
+'''
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F"]
+ignore = []
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.interrogate]
+ignore-init-module = true
+ignore-init-method = true
+ignore-module = true
+ignore-nested-functions = true
+ignore-magic = true
+ignore-regex = ["^get$", "^mock_.*", ".*BaseClass.*"]
+exclude = ["setup.py", "docs", "build", "tests", "thirdparty"]
+fail-under = 80
+verbose = 2
+
+[tool.codespell]
+skip = "*.svg,*.map,*.min.js,thirdparty/*"
