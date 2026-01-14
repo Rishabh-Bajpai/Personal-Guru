@@ -105,7 +105,7 @@ Run the entire stack (App + DB + Optional TTS) in containers.
 3.  **Access the App**:
     Open your browser and go to:
     - **http://localhost:5011** (or the port defined in your `.env`)
-    
+
     *Tip: You can change the configuration (LLM, Keys, etc.) directly from the UI by clicking "⚙️ Setup Environment" on the home page.*
 
 ### Method 3: Manual Installation (For Developers)
@@ -115,11 +115,11 @@ If you prefer full control over your environment.
 2.  **Install Dependencies**: `pip install -r requirements.txt`
 3.  **Setup Environment Variables**:
     Creating a `.env` file is **optional** as the application has a built-in UI Wizard to help you configure these settings. However, you can configure it manually:
-    
+
     ```bash
     cp .env.example .env
     ```
-    
+
     **Key Variables:**
     - `DATABASE_URL`: Connection string (e.g., `postgresql://postgres:postgres@localhost:5433/personal_guru`).
     - `PORT`: Default `5011`.
@@ -131,7 +131,7 @@ If you prefer full control over your environment.
     - `LLM_MODEL_NAME`: e.g., `llama3`, `gpt-4o`.
     - `TTS_BASE_URL`: `http://localhost:8969/v1` (Replace `localhost` with your machine's actual LAN IP address if running on another machine).
     - `STT_BASE_URL`: `http://localhost:8969/v1` (Same as TTS if using Speaches).
-    
+
 4.  **Database Setup (Docker)**:
     Start the Postgres database using Docker:
     ```bash
@@ -143,7 +143,7 @@ If you prefer full control over your environment.
     docker compose up -d speaches
     ```
     *Starts Speaches on `localhost:8969`.*
-    
+
     Download the models inside the container (Wait a few seconds for the container to start):
     ```bash
     # TTS Model
@@ -152,7 +152,7 @@ If you prefer full control over your environment.
     # STT Model
     docker compose exec speaches uv tool run speaches-cli model download Systran/faster-whisper-medium.en
     ```
-    
+
     **Test TTS:**
     ```bash
     curl "http://localhost:8969/v1/audio/speech" -s -H "Content-Type: application/json" \
@@ -205,13 +205,13 @@ If you plan to move data between different types of computers (e.g., your Linux 
    docker compose exec db pg_dump -U postgres personal_guru > backup.sql
    ```
 
-2. **Import (on new machine):** 
+2. **Import (on new machine):**
    Move the `backup.sql` file to the new machine, start the fresh empty container, and run:
 
    ```bash
    # Copy file into container
    docker cp backup.sql personal-guru-db-1:/backup.sql
-   
+
    # Restore
    docker compose exec db psql -U postgres -d personal_guru -f /backup.sql
    ```
@@ -326,3 +326,29 @@ You can see the actual responses from the LLM (or mocks) in the terminal by usin
 ```bash
 python -m pytest -m integration --show-llm-responses -s
 ```
+
+## For Developers: Pre-commit Hooks
+
+This project uses `pre-commit` to ensure code quality (linting, formatting, checking for merge conflicts, etc.) before every commit.
+
+### Installation
+
+1.  **Install the hooks:**
+    ```bash
+    pre-commit install
+    ```
+
+2.  **Run manually (optional):**
+    To run the hooks on all files without committing:
+    ```bash
+    pre-commit run --all-files
+    ```
+
+### Hooks Included
+- **Trailing Whitespace**: Removes trailing whitespace.
+- **Merge Conflicts**: Checks for unresolved merge conflict markers.
+- **Black**: Formats Python code.
+- **Ruff**: Lints Python code.
+- **Prettier**: Formats JS, CSS, and HTML.
+- **Codespell**: Checks for spelling errors.
+- **Interrogate**: Checks for missing docstrings in Python code.

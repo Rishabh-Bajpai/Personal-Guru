@@ -1,9 +1,13 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from app.common.utils import summarize_text
+from app.core.models import TelemetryLog
 from app.core.exceptions import TopicNotFoundError, ValidationError
 from app.common.config_validator import validate_config
+
 from app.setup_app import create_setup_app
+from app.common.log_capture import LogCapture
+import time
 
 # Mark all tests in this file as 'unit'
 pytestmark = pytest.mark.unit
@@ -469,4 +473,156 @@ def test_get_system_info(mocker):
     mock_run.side_effect = FileNotFoundError
     info = get_system_info()
     assert info['gpu_model'] == "Unknown"
+
+
+def test_log_telemetry(mocker):
+    """Test the log_telemetry utility function."""
+    from app.common.utils import log_telemetry
+    from app.core.models import TelemetryLog
+    
+    # Mock current_user
+    mock_user = MagicMock()
+    mock_user.is_authenticated = True
+    mock_user.userid = 'test_user_123'
+    mock_user.installation_id = 'inst_123'
+    
+    # Mock db and session where they are defined/imported
+    # log_telemetry imports them inside the function, so we patch the source
+    mock_db = mocker.patch('app.core.extensions.db')
+    
+    # Mock flask session
+    # We need to mock the dict behavior of session
+    mock_session = {}
+    mocker.patch('flask.session', mock_session)
+    
+    # Mock flask_login.current_user
+    mocker.patch('flask_login.current_user', mock_user)
+
+    # Mock Installation model for fallback
+    mock_installation_cls = mocker.patch('app.core.models.Installation')
+    
+    # 1. Test successful logging (User has installation_id)
+    log_telemetry(
+        event_type='unit_test_event',
+        triggers={'source': 'test'},
+        payload={'data': 'value'}
+    )
+    
+    # Verify db.session.add was called with a TelemetryLog object
+    assert mock_db.session.add.called
+    args, _ = mock_db.session.add.call_args
+    log_entry = args[0]
+    
+    assert isinstance(log_entry, TelemetryLog)
+    assert log_entry.user_id == 'test_user_123'
+    assert log_entry.installation_id == 'inst_123'
+    assert log_entry.event_type == 'unit_test_event'
+    assert log_entry.triggers == {'source': 'test'}
+    assert log_entry.payload == {'data': 'value'}
+    assert 'telemetry_session_id' in mock_session
+    assert log_entry.session_id == mock_session['telemetry_session_id']
+    
+    assert mock_db.session.commit.called
+    
+    # 2. Test explicit installation_id (overrides user)
+    mock_db.session.add.reset_mock()
+    log_telemetry('explicit_event', {}, {}, installation_id='explicit_inst_999')
+    args, _ = mock_db.session.add.call_args
+    log_entry = args[0]
+    assert log_entry.installation_id == 'explicit_inst_999'
+
+    # 3. Test unauthenticated user BUT with installation lookup
+    mock_user.is_authenticated = False
+    mock_db.session.add.reset_mock()
+    
+    # Mock Installation.query.first()
+    mock_inst_record = MagicMock()
+    mock_inst_record.installation_id = 'fallback_inst_456'
+    mock_installation_cls.query.first.return_value = mock_inst_record
+    
+    log_telemetry('anon_event', {}, {})
+    assert mock_db.session.add.called
+    args, _ = mock_db.session.add.call_args
+    log_entry = args[0]
+    assert log_entry.user_id is None
+    assert log_entry.installation_id == 'fallback_inst_456'
+
+    # 4. Test missing installation_id (should skip)
+    mock_installation_cls.query.first.return_value = None
+    mock_db.session.add.reset_mock()
+    log_telemetry('skip_event', {}, {})
+    assert not mock_db.session.add.called
+
+    # 5. Test exception handling (should fail silently)
+    # Restore auth user for easy path
+    mock_user.is_authenticated = True
+    mock_db.session.add.side_effect = Exception("DB Error")
+    
+    try:
+         log_telemetry('fail_event', {}, {})
+    except Exception:
+         pytest.fail("log_telemetry raised exception instead of failing silently")
+
+def test_log_capture_threading():
+    """Test that log capture correctly buffers and flushes logs using background thread."""
+    # Mock app and database session
+    mock_app = MagicMock()
+    mock_app.app_context.return_value.__enter__.return_value = None
+    
+    # Mock Installation query
+    mock_installation = MagicMock()
+    mock_installation.installation_id = "test_install_id"
+    
+    # We need to mock the imports inside LogCapture._flush to avoid side effects
+    # but since they are local imports, we can mock the whole function or the db access.
+    # A better integration test is to use the real class but mock the database write.
+    
+    with patch('app.core.models.Installation') as mock_inst_cls, \
+         patch('app.core.extensions.db.session') as mock_session:
+         
+        mock_inst_cls.query.first.return_value = mock_installation
+        
+        # Initialize LogCapture with short flush interval
+        # We must be careful not to create a second singleton if one exists, 
+        # but for testing we might want a fresh one. 
+        # The singleton pattern in LogCapture.__new__ might make testing tricky.
+        # Let's reset the singleton for the test.
+        # Reset singleton for test, enabling thread safety
+        with LogCapture._lock:
+            LogCapture._instance = None
+        
+        capture = LogCapture(None) # don't attach to real app to avoid interfering with other tests
+        capture.app = mock_app # attach mock app manually
+        
+        # Configure instance properties (worker loop picks these up dynamically)
+        capture.flush_interval = 0.5
+        capture.batch_size = 10
+        
+        # Verify worker thread started
+        assert capture.worker_thread.is_alive()
+
+        # 1. Test Buffering
+        print("Log 1")
+        print("Log 2")
+        
+        # Wait for flush (should trigger by batch size or time)
+        time.sleep(1.0)
+        
+        # Verify database interaction
+        # We expect at least one TelemetryLog to be added
+        assert mock_session.add.called
+        args, _ = mock_session.add.call_args
+        log_entry = args[0]
+        
+        assert isinstance(log_entry, TelemetryLog)
+        assert log_entry.event_type == 'terminal_log'
+        assert log_entry.installation_id == "test_install_id"
+        assert len(log_entry.payload['logs']) >= 2
+        assert "Log 1" in [log_item['message'].strip() for log_item in log_entry.payload['logs']]
+        
+        # Cleanup
+        capture.stop()
+        with LogCapture._lock:
+            LogCapture._instance = None # Reset for other tests
+
 
