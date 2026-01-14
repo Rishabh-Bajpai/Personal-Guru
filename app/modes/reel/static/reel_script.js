@@ -197,7 +197,7 @@ function initializePlayer(index, videoId) {
         events: {
             'onReady': (event) => {
                 // If it's the first video and visible, play it (observer usually handles this though)
-                // But observer might fire before player is ready? 
+                // But observer might fire before player is ready?
                 // We'll let observer handle playback trigger.
             },
             'onStateChange': (event) => onPlayerStateChange(event, index),
@@ -266,7 +266,7 @@ function showVideoError(reelItem, youtubeUrl) {
         justify-content: center;
         color: white;
         text-align: center;
-        z-index: 10; 
+        z-index: 10;
     `;
     errorOverlay.innerHTML = `
         <p style="margin-bottom: 20px; font-size: 18px; font-weight: bold;">

@@ -112,7 +112,7 @@ def call_llm(prompt_or_messages, is_json=False):
 
         response_json = response.json()
         content = response_json['choices'][0]['message']['content']
-        
+
         # Calculate latency
         end_time = time.time()
         latency_ms = int((end_time - start_time) * 1000)
@@ -591,7 +591,7 @@ def generate_podcast_audio(transcript, output_filename):
             from app.core.extensions import db
             from app.core.models import AIModelPerformance
             from flask_login import current_user
-            
+
             # Calculate approx input length from lines
             total_chars = sum(len(txt) for _, txt in lines)
 
@@ -602,7 +602,7 @@ def generate_podcast_audio(transcript, output_filename):
                     model_name='tts-1',
                     latency_ms=latency_ms,
                     input_tokens=total_chars,
-                    output_tokens=0 
+                    output_tokens=0
                 )
                 db.session.add(perf_log)
                 db.session.commit()
@@ -647,7 +647,7 @@ def transcribe_audio(audio_file_path):
             from app.core.extensions import db
             from app.core.models import AIModelPerformance
             from flask_login import current_user
-            
+
             # Use transcript length as proxy for output tokens
             output_len = len(transcript)
 
@@ -658,7 +658,7 @@ def transcribe_audio(audio_file_path):
                     model_name='Systran/faster-whisper-medium.en',
                     latency_ms=latency_ms,
                     input_tokens=0, # Audio input difficult to measure in tokens
-                    output_tokens=output_len 
+                    output_tokens=output_len
                 )
                 db.session.add(perf_log)
                 db.session.commit()
@@ -703,19 +703,19 @@ def log_telemetry(event_type: str, triggers: dict, payload: dict, installation_i
     """
     Logs a telemetry event to the database.
     Fails silently on errors to avoid disrupting the user experience.
-    
+
     Args:
         event_type (str): The type of event (e.g., 'user_login', 'quiz_submitted').
         triggers (dict): What triggered the event (e.g., {'source': 'web_ui', 'action': 'click'}).
         payload (dict): The data payload for the event.
         installation_id (str, optional): The installation ID. If None, attempts to resolve from current_user or DB.
-    """   
+    """
     import uuid
     from flask import session
     from flask_login import current_user
     from app.core.extensions import db
     from app.core.models import TelemetryLog, Installation
-    
+
     logger = logging.getLogger(__name__)
 
     try:
@@ -733,7 +733,7 @@ def log_telemetry(event_type: str, triggers: dict, payload: dict, installation_i
              inst_record = Installation.query.first()
              if inst_record:
                 installation_id = inst_record.installation_id
-        
+
         # If we still don't have an installation_id, we cannot log (Constraint Violation)
         if not installation_id:
             logger.debug(f"Skipping telemetry {event_type}: No installation_id found.")
@@ -742,9 +742,9 @@ def log_telemetry(event_type: str, triggers: dict, payload: dict, installation_i
         # Ensure session_id exists
         if 'telemetry_session_id' not in session:
             session['telemetry_session_id'] = str(uuid.uuid4())
-        
+
         session_id = session['telemetry_session_id']
-        
+
         log_entry = TelemetryLog(
             user_id=user_id,
             installation_id=installation_id,
@@ -753,7 +753,7 @@ def log_telemetry(event_type: str, triggers: dict, payload: dict, installation_i
             triggers=triggers,
             payload=payload
         )
-        
+
         db.session.add(log_entry)
         db.session.commit()
         logger.debug(f"Telemetry logged: {event_type}")
@@ -773,16 +773,16 @@ def get_system_info():
         'ram_gb': round(psutil.virtual_memory().total / (1024**3)),
         'os_version': platform.platform(),
         'install_method': 'local',  # Default
-        'gpu_model': 'Unknown' 
+        'gpu_model': 'Unknown'
     }
-    
+
     # Check for Docker
     if os.path.exists('/.dockerenv'):
         info['install_method'] = 'docker'
-        
+
     # GPU Detection (cross-platform, multi-vendor)
     gpu_detected = False
-    
+
     # Try NVIDIA (nvidia-smi)
     if not gpu_detected:
         try:
@@ -792,7 +792,7 @@ def get_system_info():
                 gpu_detected = True
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
-    
+
     # Try AMD (rocm-smi)
     if not gpu_detected:
         try:
@@ -803,7 +803,7 @@ def get_system_info():
                 gpu_detected = True
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
-    
+
     # Try Intel (Linux)
     if not gpu_detected and platform.system() == 'Linux':
         try:
@@ -825,7 +825,7 @@ def get_system_info():
                             break
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
-    
+
     # Try macOS (Apple Silicon / discrete GPU)
     if not gpu_detected and platform.system() == 'Darwin':
         try:
@@ -841,5 +841,5 @@ def get_system_info():
                         break
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
-        
+
     return info

@@ -453,7 +453,7 @@ function setupSelectionMenu() {
     document.addEventListener('mousedown', (e) => {
         if (e.target !== guruBtn) {
             // Delay hiding so button click can register
-            // We don't hide immediately on mousedown if it is the button, 
+            // We don't hide immediately on mousedown if it is the button,
             // but if it is not the button, we hide.
             // Actually, selection clears on mousedown usually, so we rely on selection change mainly,
             // but let's be explicit.

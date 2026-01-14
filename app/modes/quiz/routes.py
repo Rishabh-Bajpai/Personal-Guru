@@ -81,7 +81,7 @@ def submit_quiz(topic_name):
     questions = session.get('quiz_questions', [])
     num_correct = 0
     feedback_results = []
-    
+
     # Capture time spent
     try:
         time_spent = int(request.form.get('time_spent', 0))

@@ -73,7 +73,7 @@ INSTRUCTIONS:
 3. **Visualization**: If the code generates plots, ensure they are saved to a file or buffer if needed, or better yet, assume standard plt.show() works in the sandbox which captures stdout/images.
 4. **Dependencies List**: Identify all external pip packages required.
 5. **Least number of libraries**: Use the least number of libraries possible to achieve the same functionality.
-6. **Easy to install libraries**: Use libraries that are easy to install and use. Don't use tourch or libraries that require a lot of dependencies.
+6. **Easy to install libraries**: Use libraries that are easy to install and use. Don't use torch or libraries that require a lot of dependencies.
 OUTPUT FORMAT:
 Return a strictly valid JSON object with the following structure:
 {{

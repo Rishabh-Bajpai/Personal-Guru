@@ -73,14 +73,14 @@ def update_time(topic_name):
         time_spent = int(request.form.get('time_spent', 0))
     except (ValueError, TypeError):
         time_spent = 0
-        
+
     if time_spent > 0:
         topic_data = load_topic(topic_name)
         if topic_data and topic_data.get('flashcard_mode'):
              if len(topic_data['flashcard_mode']) > 0:
                  topic_data['flashcard_mode'][0]['time_spent'] = (topic_data['flashcard_mode'][0].get('time_spent', 0) or 0) + time_spent
                  save_topic(topic_name, topic_data)
-             
+
     return '', 204
 
 @flashcard_bp.route('/<topic_name>/update_progress', methods=['POST'])
@@ -89,7 +89,7 @@ def update_progress(topic_name):
     topic_data = load_topic(topic_name)
     if not topic_data:
         return {"error": "Topic not found"}, 404
-        
+
     # Re-reading logic:
     # incoming data['flashcards'] is list of {term:..., time_spent:...}
     # Let's map incoming by ID and Term
@@ -100,17 +100,17 @@ def update_progress(topic_name):
             incoming_by_id[item['id']] = item.get('time_spent', 0)
         if 'term' in item:
             incoming_by_term[item['term']] = item.get('time_spent', 0)
-    
+
     for card in topic_data.get('flashcard_mode', []):
         added_time = 0
         if card.get('id') in incoming_by_id:
             added_time = incoming_by_id[card['id']]
         elif card.get('term') in incoming_by_term:
             added_time = incoming_by_term[card['term']]
-            
+
         if added_time > 0:
             card['time_spent'] = (card.get('time_spent', 0) or 0) + added_time
-            
+
     save_topic(topic_name, topic_data)
     return {"status": "success"}
 

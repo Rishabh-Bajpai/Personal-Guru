@@ -93,16 +93,16 @@ if [[ "$install_tts" =~ ^[Yy]$ ]]; then
     if command -v docker &> /dev/null; then
         echo "🎤 Starting TTS Server (Speaches/Kokoro)..."
         docker compose up -d speaches
-        
+
         echo "⏳ Waiting for TTS Server to start (15s)..."
         sleep 15
-        
+
         echo "⬇️  Downloading Kokoro-82M model..."
         docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
 
         echo "⬇️  Downloading Faster Whisper Medium model (STT)..."
         docker compose exec speaches uv tool run speaches-cli model download Systran/faster-whisper-medium.en
-        
+
         echo "✅ TTS Setup Complete."
     else
         echo "❌ Docker not found. Cannot set up TTS server."
@@ -118,10 +118,10 @@ else
     if command -v docker &> /dev/null; then
         echo "🐳 Starting Database..."
         docker compose up -d db
-        
+
         echo "⏳ Waiting for Database to be ready..."
         sleep 5
-        
+
         echo "🗄️  Initializing/Updating Database Tables..."
         $ENV_PYTHON scripts/update_database.py
     else
