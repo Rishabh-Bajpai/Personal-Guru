@@ -12,7 +12,11 @@ class TimestampMixin:
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
     modified_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, nullable=False)
 
-class Topic(TimestampMixin, db.Model):
+class SyncMixin:
+    sync_status = db.Column(db.Text, default='pending', nullable=True)
+
+
+class Topic(TimestampMixin, SyncMixin, db.Model):
     __tablename__ = 'topics'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -32,7 +36,7 @@ class Topic(TimestampMixin, db.Model):
     plan_revisions = db.relationship('PlanRevision', back_populates='topic', uselist=True, cascade='all, delete-orphan')
     login = db.relationship('Login', back_populates='topics')
 
-class ChatMode(TimestampMixin, db.Model):
+class ChatMode(TimestampMixin, SyncMixin, db.Model):
     __tablename__ = 'chat_mode'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -46,7 +50,7 @@ class ChatMode(TimestampMixin, db.Model):
     # Relationships
     topic = db.relationship('Topic', back_populates='chat_mode')
 
-class ChapterMode(TimestampMixin, db.Model):
+class ChapterMode(TimestampMixin, SyncMixin, db.Model):
     __tablename__ = 'chapter_mode'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -67,7 +71,7 @@ class ChapterMode(TimestampMixin, db.Model):
     # Relationships
     topic = db.relationship('Topic', back_populates='chapter_mode')
     
-class QuizMode(TimestampMixin, db.Model):
+class QuizMode(TimestampMixin, SyncMixin, db.Model):
     __tablename__ = 'quiz_mode'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -83,7 +87,7 @@ class QuizMode(TimestampMixin, db.Model):
     topic = db.relationship('Topic', back_populates='quiz_mode')
 
 
-class FlashcardMode(TimestampMixin, db.Model):
+class FlashcardMode(TimestampMixin, SyncMixin, db.Model):
     __tablename__ = 'flashcard_mode'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -97,7 +101,7 @@ class FlashcardMode(TimestampMixin, db.Model):
     topic = db.relationship('Topic', back_populates='flashcard_mode')
 
 
-class User(TimestampMixin, db.Model):
+class User(TimestampMixin, SyncMixin, db.Model):
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -153,7 +157,7 @@ class User(TimestampMixin, db.Model):
 
         return "\n".join(parts)
 
-class Installation(TimestampMixin, db.Model):
+class Installation(TimestampMixin, SyncMixin, db.Model):
     __tablename__ = 'installations'
 
     installation_id = db.Column(db.String(36), primary_key=True)  # UUID
@@ -168,7 +172,7 @@ class Installation(TimestampMixin, db.Model):
     telemetry_logs = db.relationship('TelemetryLog', back_populates='installation', cascade='all, delete-orphan')
 
 # TelemetryLog: Stores user action events for analytics
-class TelemetryLog(TimestampMixin, db.Model):
+class TelemetryLog(TimestampMixin, SyncMixin, db.Model):
     __tablename__ = 'telemetry_logs'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -184,7 +188,7 @@ class TelemetryLog(TimestampMixin, db.Model):
     login = db.relationship('Login', back_populates='telemetry_logs')
     installation = db.relationship('Installation', back_populates='telemetry_logs')
 
-class Feedback(TimestampMixin, db.Model):
+class Feedback(TimestampMixin, SyncMixin, db.Model):
     __tablename__ = 'feedback'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -198,7 +202,7 @@ class Feedback(TimestampMixin, db.Model):
     login = db.relationship('Login', back_populates='feedbacks')
 
 
-class AIModelPerformance(TimestampMixin, db.Model):
+class AIModelPerformance(TimestampMixin, SyncMixin, db.Model):
     __tablename__ = 'ai_model_performance'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -214,7 +218,7 @@ class AIModelPerformance(TimestampMixin, db.Model):
     login = db.relationship('Login', back_populates='ai_model_performances')
 
 
-class PlanRevision(TimestampMixin, db.Model):
+class PlanRevision(TimestampMixin, SyncMixin, db.Model):
     __tablename__ = 'plan_revisions'
 
     id = db.Column(db.Integer, primary_key=True)
