@@ -13,7 +13,7 @@ class TimestampMixin:
     modified_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, nullable=False)
 
 class SyncMixin:
-    sync_status = db.Column(db.Text, default='pending', nullable=True)
+    sync_status = db.Column(db.Text, default='pending', onupdate='pending', nullable=True)
 
 
 class Topic(TimestampMixin, SyncMixin, db.Model):

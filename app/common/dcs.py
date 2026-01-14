@@ -34,15 +34,23 @@ class DCSClient:
         If already registered (ID exists in DB), verifies or updates details.
         """
         from app.common.utils import get_system_info
+        from sqlalchemy.exc import OperationalError
         
         # Check if already registered
-        inst = Installation.query.first()
-        if inst:
-            self.installation_id = inst.installation_id
-            logger.info(f"Device already registered with ID: {self.installation_id}")
-            # Optionally update details
-            self.update_device_details()
-            return True
+        try:
+            inst = Installation.query.first()
+            if inst:
+                self.installation_id = inst.installation_id
+                logger.info(f"Device already registered with ID: {self.installation_id}")
+                # Optionally update details
+                self.update_device_details()
+                return True
+        except OperationalError:
+            logger.warning("Database tables not ready yet. Retrying registration later.")
+            return False
+        except Exception as e:
+            logger.error(f"Error checking registration: {e}")
+            return False
 
         logger.info("Registering device with DCS...")
         try:
@@ -106,9 +114,6 @@ class DCSClient:
             logger.warning("Cannot sync: No installation_id")
             return
 
-        # Start a new DB session context for the thread
-        # In Flask, we need ap_context usually, handled by caller or here
-        
         payload = {
             "installation_id": self.installation_id,
             "topics": [],
@@ -123,26 +128,34 @@ class DCSClient:
             "feedback": []
         }
         
-        # Helper to fetch pending records
-        # Limit batch size to avoid huge payloads
         BATCH_SIZE = 50 
-        
         objects_to_update = []
         
+        # Track which topics are included in this payload
+        included_topic_ids = set()
+        
+        def add_topic_to_payload(topic):
+            if topic.id in included_topic_ids:
+                return
+            payload["topics"].append({
+                "id": topic.id,
+                "user_id": topic.user_id,
+                "name": topic.name,
+                "study_plan": topic.study_plan,
+                "created_at": topic.created_at.isoformat(),
+                "modified_at": topic.modified_at.isoformat()
+            })
+            included_topic_ids.add(topic.id)
+
         try:
-            # Topics
+            # 1. Topics (Pending)
             topics = Topic.query.filter((Topic.sync_status == 'pending') | (Topic.sync_status == None)).limit(BATCH_SIZE).all()
             for t in topics:
-                payload["topics"].append({
-                    "id": t.id,
-                    "user_id": t.user_id,
-                    "name": t.name,
-                    "study_plan": t.study_plan,
-                    "created_at": t.created_at.isoformat(),
-                    "modified_at": t.modified_at.isoformat()
-                })
+                add_topic_to_payload(t)
                 objects_to_update.append(t)
 
+            # 2. Child Objects - Ensure Parent Topic is Included
+            
             # ChatMode
             chats = ChatMode.query.filter((ChatMode.sync_status == 'pending') | (ChatMode.sync_status == None)).limit(BATCH_SIZE).all()
             for c in chats:
@@ -155,6 +168,9 @@ class DCSClient:
                     "modified_at": c.modified_at.isoformat()
                 })
                 objects_to_update.append(c)
+                # Ensure parent topic is added
+                if c.topic and c.topic.id not in included_topic_ids:
+                    add_topic_to_payload(c.topic)
 
             # ChapterMode
             chapters = ChapterMode.query.filter((ChapterMode.sync_status == 'pending') | (ChapterMode.sync_status == None)).limit(BATCH_SIZE).all()
@@ -172,6 +188,8 @@ class DCSClient:
                     "modified_at": c.modified_at.isoformat()
                 })
                 objects_to_update.append(c)
+                if c.topic and c.topic.id not in included_topic_ids:
+                    add_topic_to_payload(c.topic)
 
             # QuizMode
             quizzes = QuizMode.query.filter((QuizMode.sync_status == 'pending') | (QuizMode.sync_status == None)).limit(BATCH_SIZE).all()
@@ -186,6 +204,8 @@ class DCSClient:
                     "modified_at": q.modified_at.isoformat()
                 })
                 objects_to_update.append(q)
+                if q.topic and q.topic.id not in included_topic_ids:
+                    add_topic_to_payload(q.topic)
 
             # FlashcardMode
             flashcards = FlashcardMode.query.filter((FlashcardMode.sync_status == 'pending') | (FlashcardMode.sync_status == None)).limit(BATCH_SIZE).all()
@@ -200,6 +220,8 @@ class DCSClient:
                     "modified_at": f.modified_at.isoformat()
                 })
                 objects_to_update.append(f)
+                if f.topic and f.topic.id not in included_topic_ids:
+                    add_topic_to_payload(f.topic)
 
             # User Profile
             users = User.query.filter((User.sync_status == 'pending') | (User.sync_status == None)).limit(BATCH_SIZE).all()
