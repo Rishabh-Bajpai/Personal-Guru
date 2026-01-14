@@ -58,6 +58,15 @@ class TestDCS(unittest.TestCase):
         # Add some data
         topic = Topic(name="Test Topic", user_id="test_user", sync_status="pending")
         db.session.add(topic)
+        
+        # Add new tables
+        from app.core.models import Feedback, AIModelPerformance
+        fb = Feedback(user_id="test_user", feedback_type="in_place", comment="Great!", sync_status="pending")
+        db.session.add(fb)
+        
+        perf = AIModelPerformance(user_id="test_user", model_type="LLM", latency_ms=100, sync_status="pending")
+        db.session.add(perf)
+        
         db.session.commit()
         
         # Mock Sync Response
@@ -72,6 +81,12 @@ class TestDCS(unittest.TestCase):
         # Verify Sync Status
         t = Topic.query.first()
         self.assertEqual(t.sync_status, 'synced')
+        
+        fb_query = Feedback.query.first()
+        self.assertEqual(fb_query.sync_status, 'synced')
+        
+        perf_query = AIModelPerformance.query.first()
+        self.assertEqual(perf_query.sync_status, 'synced')
         
         # Verify SyncLog
         log = SyncLog.query.first()

@@ -249,6 +249,36 @@ class DCSClient:
                 })
                 objects_to_update.append(l)
 
+            # Feedback
+            feedbacks = Feedback.query.filter((Feedback.sync_status == 'pending') | (Feedback.sync_status == None)).limit(BATCH_SIZE).all()
+            for f in feedbacks:
+                payload["feedback"].append({
+                    "user_id": f.user_id,
+                    "feedback_type": f.feedback_type,
+                    "content_reference": f.content_reference,
+                    "rating": f.rating,
+                    "comment": f.comment,
+                    "created_at": f.created_at.isoformat(),
+                    "modified_at": f.modified_at.isoformat()
+                })
+                objects_to_update.append(f)
+
+            # AIModelPerformance
+            perfs = AIModelPerformance.query.filter((AIModelPerformance.sync_status == 'pending') | (AIModelPerformance.sync_status == None)).limit(BATCH_SIZE).all()
+            for p in perfs:
+                payload["ai_performances"].append({
+                    "user_id": p.user_id,
+                    "model_type": p.model_type,
+                    "model_name": p.model_name,
+                    "latency_ms": p.latency_ms,
+                    "input_tokens": p.input_tokens,
+                    "output_tokens": p.output_tokens,
+                    "timestamp": p.timestamp.isoformat(),
+                    "created_at": p.created_at.isoformat(),
+                    "modified_at": p.modified_at.isoformat()
+                })
+                objects_to_update.append(p)
+
             # Check if we have anything to send
             total_items = sum(len(v) for k, v in payload.items() if isinstance(v, list))
             if total_items == 0:
