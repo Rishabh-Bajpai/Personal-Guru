@@ -170,6 +170,20 @@ class Installation(TimestampMixin, SyncMixin, db.Model):
     # Relationships
     logins = db.relationship('Login', back_populates='installation', cascade='all, delete-orphan')
     telemetry_logs = db.relationship('TelemetryLog', back_populates='installation', cascade='all, delete-orphan')
+    sync_logs = db.relationship('SyncLog', back_populates='installation', cascade='all, delete-orphan')
+
+# SyncLog: Stores the result of background data synchronization attempts
+class SyncLog(TimestampMixin, db.Model):
+    __tablename__ = 'sync_logs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    installation_id = db.Column(db.String(36), db.ForeignKey('installations.installation_id'), nullable=False)
+    status = db.Column(db.String(20), nullable=False) # 'success', 'failed', 'partial'
+    details = db.Column(JSON) # Detailed stats or error message
+    timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+    # Relationship
+    installation = db.relationship('Installation', back_populates='sync_logs')
 
 # TelemetryLog: Stores user action events for analytics
 class TelemetryLog(TimestampMixin, SyncMixin, db.Model):

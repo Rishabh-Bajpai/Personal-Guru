@@ -14,6 +14,7 @@ certs/
 flask_session
 postgres_data/
 backup.sql
+API_DOCS.md
 # ==============================================================================
 # PYTHON CORE (Byte-compiled, C extensions)
 # ==============================================================================
