@@ -461,7 +461,7 @@ def reconcile_plan_steps(current_steps, current_plan, new_plan):
             new_steps.append(step_data)
         else:
             # New step, empty content with correct index
-            new_steps.append({'step_index': i})
+            new_steps.append({'step_index': i, 'title': step_text})
 
     return new_steps
 

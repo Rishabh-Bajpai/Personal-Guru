@@ -240,4 +240,14 @@ def create_app(config_class=Config):
                 http_status=500
             ), 500
 
+    # Initialize Background Sync
+    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        # Prevent double initialization in debug mode reloader
+        try:
+            from app.common.dcs import SyncManager
+            sync_manager = SyncManager(app)
+            sync_manager.start()
+        except Exception as e:
+            logger.error(f"Failed to start SyncManager: {e}")
+
     return app
