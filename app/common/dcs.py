@@ -315,7 +315,7 @@ class DCSClient:
             if total_items == 0:
                 return
 
-            logger.info(f"Syncing {total_items} items to DCS...")
+            logger.debug(f"Syncing {total_items} items to DCS...")
             
             # Send to DCS
             resp = requests.post(f"{self.base_url}/api/sync", json=payload, timeout=30)
@@ -333,7 +333,7 @@ class DCSClient:
             )
             db.session.add(log_entry)
             db.session.commit()
-            logger.info("Sync successful")
+            logger.debug("Sync successful")
 
         except Exception as e:
             logger.error(f"Sync failed: {e}")

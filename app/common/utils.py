@@ -532,7 +532,7 @@ def generate_podcast_audio(transcript, output_filename):
     try:
         for i, (speaker, text) in enumerate(lines):
             voice = voice_map.get(speaker, 'alloy')
-            print(f"Generating: {speaker} ({voice}) -> '{text[:20]}...'")
+            # Debug: Generating: {speaker} ({voice}) -> '{text[:20]}...'
 
             response = tts_client.audio.speech.create(
                 model="tts-1",
