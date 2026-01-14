@@ -163,6 +163,8 @@ class DCSClient:
                     "topic_id": c.topic_id,
                     "user_id": c.user_id,
                     "history": c.history,
+                    "history_summary": c.history_summary,
+                    "popup_chat_history": c.popup_chat_history,
                     "time_spent": c.time_spent,
                     "created_at": c.created_at.isoformat(),
                     "modified_at": c.modified_at.isoformat()
@@ -180,10 +182,13 @@ class DCSClient:
                     "user_id": c.user_id,
                     "step_index": c.step_index,
                     "title": c.title,
+                    "content": c.content,
+                    "podcast_audio_path": c.podcast_audio_path,
                     "questions": c.questions,
                     "user_answers": c.user_answers,
                     "score": c.score,
-                    "time_spent": c.time_spent,
+                    "popup_chat_history": c.popup_chat_history,
+                    "time_spent": c.time_spent or 0,
                     "created_at": c.created_at.isoformat(),
                     "modified_at": c.modified_at.isoformat()
                 })
@@ -197,9 +202,10 @@ class DCSClient:
                 payload["quiz_modes"].append({
                     "topic_id": q.topic_id,
                     "user_id": q.user_id,
+                    "questions": q.questions,
                     "score": q.score,
                     "result": q.result,
-                    "time_spent": q.time_spent,
+                    "time_spent": q.time_spent or 0,
                     "created_at": q.created_at.isoformat(),
                     "modified_at": q.modified_at.isoformat()
                 })
@@ -230,7 +236,15 @@ class DCSClient:
                     "login_id": u.login_id,
                     "age": u.age,
                     "country": u.country,
+                    "languages": u.languages,
+                    "education_level": u.education_level,
+                    "field_of_study": u.field_of_study,
+                    "occupation": u.occupation,
                     "learning_goals": u.learning_goals,
+                    "prior_knowledge": u.prior_knowledge,
+                    "learning_style": u.learning_style,
+                    "time_commitment": u.time_commitment,
+                    "preferred_format": u.preferred_format,
                     "created_at": u.created_at.isoformat(),
                     "modified_at": u.modified_at.isoformat()
                 })
@@ -256,12 +270,29 @@ class DCSClient:
                     "user_id": f.user_id,
                     "feedback_type": f.feedback_type,
                     "content_reference": f.content_reference,
-                    "rating": f.rating,
+                    "rating": f.rating or 0, # Ensure integer
                     "comment": f.comment,
                     "created_at": f.created_at.isoformat(),
                     "modified_at": f.modified_at.isoformat()
                 })
                 objects_to_update.append(f)
+
+            # PlanRevision
+            plans = PlanRevision.query.filter((PlanRevision.sync_status == 'pending') | (PlanRevision.sync_status == None)).limit(BATCH_SIZE).all()
+            for pr in plans:
+                payload["plan_revisions"].append({
+                    "topic_id": pr.topic_id,
+                    "user_id": pr.user_id,
+                    "reason": pr.reason,
+                    "old_plan_json": pr.old_plan_json,
+                    "new_plan_json": pr.new_plan_json,
+                    "created_at": pr.created_at.isoformat(),
+                    "modified_at": pr.modified_at.isoformat()
+                })
+                objects_to_update.append(pr)
+                # Ensure parent topic is added
+                if pr.topic and pr.topic.id not in included_topic_ids:
+                    add_topic_to_payload(pr.topic)
 
             # AIModelPerformance
             perfs = AIModelPerformance.query.filter((AIModelPerformance.sync_status == 'pending') | (AIModelPerformance.sync_status == None)).limit(BATCH_SIZE).all()

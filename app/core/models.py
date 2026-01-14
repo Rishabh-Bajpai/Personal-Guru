@@ -68,6 +68,10 @@ class ChapterMode(TimestampMixin, SyncMixin, db.Model):
     popup_chat_history = db.Column(JSON) # Store chat history for this step
     time_spent = db.Column(db.Integer, default=0) # Duration in seconds
 
+    __table_args__ = (
+        db.UniqueConstraint('topic_id', 'step_index', name='_topic_step_uc'),
+    )
+
     # Relationships
     topic = db.relationship('Topic', back_populates='chapter_mode')
     

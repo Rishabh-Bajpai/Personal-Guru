@@ -15,6 +15,7 @@ flask_session
 postgres_data/
 backup.sql
 API_DOCS.md
+DCS_code/
 # ==============================================================================
 # PYTHON CORE (Byte-compiled, C extensions)
 # ==============================================================================
