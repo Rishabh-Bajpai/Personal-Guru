@@ -36,6 +36,7 @@ class ChatMode(TimestampMixin, db.Model):
     __tablename__ = 'chat_mode'
     
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False, unique=True)
     history = db.Column(JSON)
     history_summary = db.Column(JSON)
@@ -49,6 +50,7 @@ class ChapterMode(TimestampMixin, db.Model):
     __tablename__ = 'chapter_mode'
     
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
     step_index = db.Column(db.Integer, nullable=False)
     title = db.Column(db.String(255))
@@ -69,6 +71,7 @@ class QuizMode(TimestampMixin, db.Model):
     __tablename__ = 'quiz_mode'
     
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     # TODO: Remove unique constraint to allow multiple quizzes per topic
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False, unique=True)
     questions = db.Column(JSON, nullable=False) # List of question objects
@@ -84,6 +87,7 @@ class FlashcardMode(TimestampMixin, db.Model):
     __tablename__ = 'flashcard_mode'
     
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
     term = db.Column(db.String(255), nullable=False)
     definition = db.Column(db.Text, nullable=False)

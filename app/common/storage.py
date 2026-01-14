@@ -112,6 +112,7 @@ def save_topic(topic_name, data):
                      step_index = current_max + 1
 
                 step = ChapterMode(
+                    user_id=current_user.userid,
                     topic_id=topic.id,
                     step_index=step_index,
                     title=step_data.get('title'),
@@ -181,6 +182,7 @@ def save_topic(topic_name, data):
                      existing_quiz.time_spent = q_data.get('time_spent', 0)
                  else:
                      quiz = QuizMode(
+                         user_id=current_user.userid,
                          topic_id=topic.id,
                          questions=q_data.get('questions'),
                          score=q_data.get('score'),
@@ -229,6 +231,7 @@ def save_topic(topic_name, data):
             else:
                 # Create new
                 new_card = FlashcardMode(
+                    user_id=current_user.userid,
                     topic_id=topic.id,
                     term=term,
                     definition=card_data.get('definition'),
@@ -248,7 +251,7 @@ def save_topic(topic_name, data):
         if 'chat_history' in data or 'popup_chat_history' in data:
             from app.core.models import ChatMode
             if not topic.chat_mode:
-                chat_session = ChatMode(topic_id=topic.id)
+                chat_session = ChatMode(user_id=current_user.userid, topic_id=topic.id)
                 db.session.add(chat_session)
             else:
                 chat_session = topic.chat_mode
@@ -329,7 +332,7 @@ def save_chat_history(topic_name, history, history_summary=None, time_spent=0, p
         from app.core.models import ChatMode
 
         if not topic.chat_mode:
-            chat_session = ChatMode(topic_id=topic.id, history=[])
+            chat_session = ChatMode(user_id=current_user.userid, topic_id=topic.id, history=[])
             db.session.add(chat_session)
         else:
             chat_session = topic.chat_mode
