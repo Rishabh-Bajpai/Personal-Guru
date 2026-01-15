@@ -6,7 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 # UserMixin provides default implementations for the methods that Flask-Login expects user objects to have:
 # is_authenticated, is_active, is_anonymous, and get_id.
-from flask_login import UserMixin 
+from flask_login import UserMixin
 
 class TimestampMixin:
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
@@ -23,11 +23,11 @@ class Topic(TimestampMixin, SyncMixin, db.Model):
     user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     name = db.Column(db.String(255), nullable=False)
     study_plan = db.Column(JSON) # Storing list of strings as JSON
-    
+
     __table_args__ = (
         db.UniqueConstraint('user_id', 'name', name='_user_topic_uc'),
     )
-    
+
     # Relationships
     chapter_mode = db.relationship('ChapterMode', back_populates='topic', order_by='ChapterMode.step_index', cascade='all, delete-orphan')
     quiz_mode = db.relationship('QuizMode', back_populates='topic', uselist=False, cascade='all, delete-orphan')
@@ -38,7 +38,7 @@ class Topic(TimestampMixin, SyncMixin, db.Model):
 
 class ChatMode(TimestampMixin, SyncMixin, db.Model):
     __tablename__ = 'chat_mode'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False, unique=True)
@@ -52,7 +52,7 @@ class ChatMode(TimestampMixin, SyncMixin, db.Model):
 
 class ChapterMode(TimestampMixin, SyncMixin, db.Model):
     __tablename__ = 'chapter_mode'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
@@ -60,7 +60,7 @@ class ChapterMode(TimestampMixin, SyncMixin, db.Model):
     title = db.Column(db.String(255))
     content = db.Column(db.Text) # Markdown content
     podcast_audio_path = db.Column(db.String(512)) # path e.g. "/data/audio/podcast_<user_id><topic><step_id>.mp3"
-    
+
     # Questions and Feedback stored as JSON
     questions = db.Column(JSON)
     user_answers = db.Column(JSON)
@@ -74,10 +74,10 @@ class ChapterMode(TimestampMixin, SyncMixin, db.Model):
 
     # Relationships
     topic = db.relationship('Topic', back_populates='chapter_mode')
-    
+
 class QuizMode(TimestampMixin, SyncMixin, db.Model):
     __tablename__ = 'quiz_mode'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     # TODO: Remove unique constraint to allow multiple quizzes per topic
@@ -93,7 +93,7 @@ class QuizMode(TimestampMixin, SyncMixin, db.Model):
 
 class FlashcardMode(TimestampMixin, SyncMixin, db.Model):
     __tablename__ = 'flashcard_mode'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
@@ -107,7 +107,7 @@ class FlashcardMode(TimestampMixin, SyncMixin, db.Model):
 
 class User(TimestampMixin, SyncMixin, db.Model):
     __tablename__ = 'users'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     login_id = db.Column(db.String(100), db.ForeignKey('logins.userid'))
     age = db.Column(db.Integer)
@@ -128,7 +128,7 @@ class User(TimestampMixin, SyncMixin, db.Model):
     def to_context_string(self):
         """Generates a text description of the user profile for LLM context."""
         parts = []
-        if self.login: 
+        if self.login:
             parts.append(f"Name: {self.login.display_name}")
         if self.age:
             parts.append(f"Age: {self.age}")
@@ -255,7 +255,7 @@ class PlanRevision(TimestampMixin, SyncMixin, db.Model):
 class Login(UserMixin, TimestampMixin, db.Model):
     __tablename__ = 'logins'
 
-    userid = db.Column(db.String(100), primary_key=True) 
+    userid = db.Column(db.String(100), primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
     name = db.Column(db.String(100))
     password_hash = db.Column(db.String(255))

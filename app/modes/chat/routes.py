@@ -131,7 +131,7 @@ def send_message(topic_name):
         time_spent = int(request.form.get('time_spent', 0))
     except (ValueError, TypeError):
         time_spent = 0
-    
+
     # Prevent empty or whitespace-only messages from being processed
     if not user_message or not user_message.strip():
         return redirect(url_for('chat.mode', topic_name=topic_name))
@@ -183,7 +183,7 @@ def send_message(topic_name):
             context,
             user_background,
             plan)
-        
+
         # Append full answer to full history
         chat_history.append({"role": "assistant", "content": answer})
 
@@ -212,13 +212,13 @@ def update_time(topic_name):
         time_spent = int(request.form.get('time_spent', 0))
     except (ValueError, TypeError):
         time_spent = 0
-        
+
     if time_spent > 0:
         topic_data = load_topic(topic_name)
         if topic_data:
             chat_history = topic_data.get('chat_history', [])
             save_chat_history(topic_name, chat_history, time_spent=time_spent)
-             
+
     return '', 204
 
 @chat_bp.route('/<topic_name>/<int:step_index>', methods=['POST'])

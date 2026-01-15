@@ -5,6 +5,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_session import Session  # Server-side sessions for large chat histories
 from flask_login import LoginManager
 import logging
+import os
 
 csrf = CSRFProtect()
 sess = Session()
