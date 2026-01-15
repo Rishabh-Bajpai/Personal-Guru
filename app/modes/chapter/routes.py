@@ -75,7 +75,7 @@ def mode(topic_name):
     # Save the new plan
     topic_data = topic_data or {"name": topic_name}
     topic_data['plan'] = plan_steps
-    topic_data['chapter_mode'] = [{'title': step_title} for step_title in plan_steps]
+    topic_data['chapter_mode'] = [{'title': step_title, 'step_index': i} for i, step_title in enumerate(plan_steps)]
     save_topic(topic_name, topic_data)
 
     _log_plan_generated(topic_name, plan_steps)
@@ -106,7 +106,7 @@ def generate_plan():
     topic_data = load_topic(topic_name) or {"name": topic_name}
     topic_data['plan'] = plan_steps
     # Initialize steps structure
-    topic_data['chapter_mode'] = [{'title': step_title} for step_title in plan_steps]
+    topic_data['chapter_mode'] = [{'title': step_title, 'step_index': i} for i, step_title in enumerate(plan_steps)]
 
     save_topic(topic_name, topic_data)
 
