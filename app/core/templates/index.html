@@ -40,8 +40,8 @@
         <label>
             <input type="radio" name="mode" value="flashcard"> Flash Card Mode
         </label>
-        <label>
-            <input type="radio" name="mode" value="reel"> Reel Mode
+        <label title="Experimental feature: usage may be unstable">
+            <input type="radio" name="mode" value="reel"> Reel Mode (Experimental)
         </label>
     </div>
     <input type="submit" value="Start Learning" class="button">
@@ -82,7 +82,8 @@
 
                 <!-- Reel Mode -->
                 <a href="{{ url_for('reel.mode', topic_name=topic.name) }}"
-                    class="button {% if not topic.has_reels %}secondary{% endif %}">
+                    class="button {% if not topic.has_reels %}secondary{% endif %}"
+                    title="Experimental feature: usage may be unstable">
                     Reel
                 </a>
             </div>
