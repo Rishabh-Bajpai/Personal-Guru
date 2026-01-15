@@ -5,19 +5,19 @@
 {% block content %}
 <div class="error-container">
     <h1>Oops! Something Went Wrong</h1>
-    
+
     <div class="error-details">
         <p class="error-code">Error Code: {{ error_code }}</p>
         <p class="error-message">{{ error_message }}</p>
     </div>
-    
+
     {% if can_retry %}
     <div class="retry-message">
         <p>This appears to be a temporary issue. Please try again in a moment.</p>
         <button onclick="window.location.reload();" class="btn-retry">Try Again</button>
     </div>
     {% endif %}
-    
+
     <div class="action-buttons">
         <a href="{{ url_for('main.index') }}" class="btn-home">Go to Homepage</a>
     </div>

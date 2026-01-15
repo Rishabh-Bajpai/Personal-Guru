@@ -77,7 +77,7 @@ class TimeTracker {
         }
 
         if (navigator.sendBeacon) {
-            // sendBeacon requires blob or form data. 
+            // sendBeacon requires blob or form data.
             // Note: sendBeacon sends POST.
             // Some backends check CSRF. We added it to FormData.
             const url = this.updateUrl;

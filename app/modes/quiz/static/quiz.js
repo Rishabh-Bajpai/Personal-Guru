@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const radio = this.querySelector('input[type="radio"]');
 
             // If the click wasn't on the radio itself (since clicking label/radio propagates),
-            // we manualy select it. However, since the label covers the whole area,
+            // we manually select it. However, since the label covers the whole area,
             // click on label triggers radio change. We just need to update visual classes.
 
             // Remove selected class from all options in the same question group

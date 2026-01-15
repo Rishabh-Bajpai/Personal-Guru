@@ -261,7 +261,7 @@ def assess_step(topic_name, step_index):
     current_step_data = topic_data['chapter_mode'][step_index]
     questions = current_step_data.get('questions', {}).get('questions', [])
     user_answers = [request.form.get(f'option_{i}') for i in range(len(questions))]
-    
+
     try:
         time_spent = int(request.form.get('time_spent', 0))
     except ValueError:
@@ -300,7 +300,7 @@ def assess_step(topic_name, step_index):
     save_topic(topic_name, topic_data)
 
     # Telemetry Hook: Step Assessed
-    try:     
+    try:
         log_telemetry(
             event_type='chapter_step_assessed',
             triggers={'source': 'web_ui', 'action': 'click_next'},
@@ -337,24 +337,24 @@ def update_time(topic_name, step_index):
 
     if time_spent > 0:
         # Prevent race condition: Use direct DB update instead of load_topic/save_topic
-        # load_topic gets a snapshot. If another request (e.g. assess_step) updates 
-        # user_answers in parallel, save_topic (which overwrites everything) would 
+        # load_topic gets a snapshot. If another request (e.g. assess_step) updates
+        # user_answers in parallel, save_topic (which overwrites everything) would
         # revert user_answers to the stale snapshot state (None).
-        
+
         from app.core.models import Topic, ChapterMode
         from flask_login import current_user
         from app.core.extensions import db
-        
-        # We need to find the specific step. 
+
+        # We need to find the specific step.
         # Note: step_index isn't unique globally, only per topic.
-        
+
         topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
         if topic:
              step = ChapterMode.query.filter_by(topic_id=topic.id, step_index=step_index).first()
              if step:
                  step.time_spent = (step.time_spent or 0) + time_spent
                  db.session.commit()
-            
+
     return '', 204
 
 @chapter_bp.route('/reset_quiz/<topic_name>/<int:step_index>', methods=['POST'])
@@ -422,14 +422,14 @@ def generate_podcast_route(topic_name, step_index):
 
     # Define output path
     step_id = current_step_data.get('id')
-    
+
     # Fallback if ID is missing (e.g. not flushed yet), though load_topic should have it if it existed.
     # If it's a new step that hasn't been saved to DB, it might not have an ID.
     # But current_step_data comes from load_topic, which comes from DB.
     # Logic in storage: if step exists in DB, it has ID.
     if not step_id:
          # Try to save to ensure ID? save_topic does flush.
-         # But wait, load_topic gets data from DB. 
+         # But wait, load_topic gets data from DB.
          # If I just generated the topic, it should be in DB.
          # Let's rely on user_id and topic name + step index if id missing?
          # The Requirement says: <step_id (ChapterMode's id)>
@@ -438,7 +438,7 @@ def generate_podcast_route(topic_name, step_index):
     from flask_login import current_user
     import werkzeug
     filename = werkzeug.utils.secure_filename(f"podcast_{current_user.userid}_{step_id}.mp3")
-    
+
     # New Path: <cwd>/data/audio/
     audio_dir = os.path.join(os.getcwd(), 'data', 'audio')
     if not os.path.exists(audio_dir):
@@ -469,18 +469,18 @@ def generate_podcast_route(topic_name, step_index):
             encoded_string = base64.b64encode(audio_file.read()).decode('utf-8')
     except Exception as e:
         return {"error": f"Failed to encode audio: {e}"}, 500
-    
+
     # Save the podcast path to the step
     current_step_data['podcast_audio_path'] = output_path
     save_topic(topic_name, topic_data)
-    
+
     # Telemetry Hook: Podcast Generated
     try:
         log_telemetry(
             event_type='content_generated',
             triggers={'source': 'web_ui', 'action': 'click_podcast'},
             payload={
-                'topic': topic_name, 
+                'topic': topic_name,
                 'step_index': step_index,
                 'content_type': 'podcast'
             }

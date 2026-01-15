@@ -33,7 +33,7 @@ class TestLogger:
     def response(self, label, content):
         if self.enabled:
             print(f"\n📝 {label}:\n{'-'*40}\n{content}\n{'-'*40}")
-    
+
     def info(self, message):
         if self.enabled:
             print(f"   ℹ️  {message}")
@@ -66,9 +66,9 @@ def client(app):
 def auth_client(client, app):
     """A logged-in test client."""
     from app.core.models import User
-    
+
     with app.app_context():
-             
+
         from app.core.models import Login
         if not Login.query.filter_by(username='testuser').first():
             import uuid
@@ -76,11 +76,11 @@ def auth_client(client, app):
             login = Login(userid=uid, username='testuser', name='Test User')
             login.set_password('password')
             db.session.add(login)
-            
+
             user = User(login_id=uid)
             db.session.add(user)
             db.session.commit()
-            
+
     # Login
     client.post('/login', data={'username': 'testuser', 'password': 'password'}, follow_redirects=True)
     return client

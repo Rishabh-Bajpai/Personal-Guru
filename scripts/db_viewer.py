@@ -18,10 +18,10 @@ from app.core import models  # noqa: E402
 def create_viewer_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-    
+
     # Initialize only the DB extension
     db.init_app(app)
-    
+
     return app
 
 app = create_viewer_app()
@@ -59,20 +59,20 @@ VIEWER_HTML = """
       th:hover { background-color: #444; }
       th.sorted-asc::after { content: " ▲"; color: #00C9FF; }
       th.sorted-desc::after { content: " ▼"; color: #00C9FF; }
-      
+
       tr:nth-child(even) { background-color: #252525; }
       tr.selected { background-color: rgba(0, 201, 255, 0.2) !important; }
-      
+
       pre { margin: 0; white-space: pre-wrap; font-size: 0.9em; color: #ccc; }
-      
+
       .btn-danger {
           background-color: #d9534f; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px;
       }
       .btn-danger:hover { background-color: #c9302c; }
-      
+
       .bulk-actions { margin-bottom: 15px; display: none; }
       .bulk-actions.visible { display: block; }
-      
+
       .chat-message { margin-bottom: 5px; padding: 5px; border-radius: 4px; }
       .chat-role { font-weight: bold; font-size: 0.8em; margin-bottom: 2px; }
       .chat-role.user { color: #5cb85c; }
@@ -92,10 +92,10 @@ VIEWER_HTML = """
             <a href="/db-viewer/{{ name }}" style="{% if name == current_model %}font-weight: bold; color: white; border-bottom: 2px solid #00C9FF;{% endif %}">{{ name }}</a>
         {% endfor %}
     </nav>
-    
+
     {% if current_model %}
         <h2>{{ current_model }}</h2>
-        
+
         <div class="bulk-actions" id="bulkActions">
             <form action="/db-viewer/{{ current_model }}/bulk_delete" method="post" onsubmit="return confirm('Delete selected items?');">
                 <input type="hidden" name="ids[]" id="bulkDeleteInput">
@@ -152,29 +152,29 @@ VIEWER_HTML = """
                 </tbody>
             </table>
         </div>
-        
+
         <script>
             let lastChecked = null;
             const rows = document.querySelectorAll('#dataTable tbody tr');
             const checkboxes = document.querySelectorAll('.row-select');
             const selectAll = document.getElementById('selectAll');
-            
+
             // Row Click Handler (Ctrl/Shift Select)
             function toggleRow(e, row) {
                 // Don't trigger if clicking inside button or link or checkbox container
                 if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
-                
+
                 const checkbox = row.querySelector('.row-select');
                 // Get current rows in current order (after sort)
                 const currentRows = Array.from(document.querySelectorAll('#dataTable tbody tr'));
-                
+
                 // Handle Shift Click
                 if (e.shiftKey && lastChecked) {
                     let start = currentRows.indexOf(row);
                     let end = currentRows.indexOf(lastChecked);
-                    
+
                     const [lower, upper] = [Math.min(start, end), Math.max(start, end)];
-                    
+
                     for (let i = lower; i <= upper; i++) {
                         const r = currentRows[i];
                         const cb = r.querySelector('.row-select');
@@ -183,10 +183,10 @@ VIEWER_HTML = """
                     }
                 } else {
                     // Regular Click or Ctrl Click
-                    // If Ctrl is NOT pressed, maybe we should clear others? 
+                    // If Ctrl is NOT pressed, maybe we should clear others?
                     // User asked for "multiple selections using Ctrl and Shift".
                     // Standard file manager behavior: Click = select one (clear others), Ctrl+Click = toggle one.
-                    
+
                     if (!e.ctrlKey && !e.metaKey) {
                         // Clear all
                         checkboxes.forEach(cb => {
@@ -201,15 +201,15 @@ VIEWER_HTML = """
                     toggleRowVisual(row, checkbox.checked);
                     lastChecked = row;
                 }
-                
+
                 updateBulkState();
             }
-            
+
             function toggleRowVisual(row, isSelected) {
                 if (isSelected) row.classList.add('selected');
                 else row.classList.remove('selected');
             }
-            
+
             // Checkbox Change Handler (for direct clicks)
             checkboxes.forEach(cb => {
                 cb.addEventListener('click', function(e) {
@@ -220,7 +220,7 @@ VIEWER_HTML = """
                      e.stopPropagation(); // Prevent row click
                 });
             });
-            
+
             if (selectAll) {
                 selectAll.addEventListener('change', function(e) {
                     checkboxes.forEach(cb => {
@@ -235,25 +235,25 @@ VIEWER_HTML = """
                 const selected = Array.from(checkboxes).filter(cb => cb.checked);
                 const count = selected.length;
                 document.getElementById('selectedCount').innerText = count;
-                
+
                 const bulkActions = document.getElementById('bulkActions');
                 if (count > 0) bulkActions.classList.add('visible');
                 else bulkActions.classList.remove('visible');
-                
+
                 // Populate hidden input
                 const ids = selected.map(cb => cb.value);
                 const container = document.getElementById('bulkDeleteInput');
                 // We need to append multiple inputs for form.getlist or use a simpler delimiter?
                 // Flask getlist works with multiple inputs of same name.
                 // Let's replace the single input logic.
-                
+
                 // Clear old inputs
                 const form = container.form;
                 // Remove existing hidden id inputs
                 form.querySelectorAll('input[name="ids[]"]').forEach(el => {
                     if (el.type === 'hidden' && el !== container) el.remove();
                 });
-                
+
                 // Add new ones
                 ids.forEach(id => {
                     const input = document.createElement('input');
@@ -263,19 +263,19 @@ VIEWER_HTML = """
                     form.appendChild(input);
                 });
             }
-            
+
             // Sorting Logic
             function sortTable(n) {
                 const table = document.getElementById("dataTable");
                 let rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
                 switching = true;
-                dir = "asc"; 
-                
+                dir = "asc";
+
                 // Reset headers
                 table.querySelectorAll('th').forEach(th => {
-                   th.classList.remove('sorted-asc', 'sorted-desc'); 
+                   th.classList.remove('sorted-asc', 'sorted-desc');
                 });
-                
+
                 while (switching) {
                     switching = false;
                     rows = table.rows;
@@ -283,16 +283,16 @@ VIEWER_HTML = """
                         shouldSwitch = false;
                         x = rows[i].getElementsByTagName("TD")[n];
                         y = rows[i + 1].getElementsByTagName("TD")[n];
-                        
+
                         let xVal = x.textContent.toLowerCase();
                         let yVal = y.textContent.toLowerCase();
-                        
+
                         // Try numeric
                         if (!isNaN(parseFloat(xVal)) && isFinite(xVal)) {
                             xVal = parseFloat(xVal);
                             yVal = parseFloat(yVal);
                         }
-                        
+
                         if (dir == "asc") {
                             if (xVal > yVal) { shouldSwitch = true; break; }
                         } else if (dir == "desc") {
@@ -302,7 +302,7 @@ VIEWER_HTML = """
                     if (shouldSwitch) {
                         rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
                         switching = true;
-                        switchcount ++;      
+                        switchcount ++;
                     } else {
                         if (switchcount == 0 && dir == "asc") {
                             dir = "desc";
@@ -310,7 +310,7 @@ VIEWER_HTML = """
                         }
                     }
                 }
-                
+
                 const th = table.querySelectorAll('th')[n];
                 th.classList.add(dir === 'asc' ? 'sorted-asc' : 'sorted-desc');
             }
@@ -342,7 +342,7 @@ def delete_item(model_name, pk_value):
             # SQLAlchemy might handle this, but let's be safe.
             # User uses string, others use int.
             # We can try to query directly.
-            
+
             # Construct filter kwargs
             filter_args = {pk_name: pk_value}
             item = model.query.filter_by(**filter_args).first()
@@ -353,7 +353,7 @@ def delete_item(model_name, pk_value):
                 except Exception as e:
                     db.session.rollback()
                     return f"Error deleting: {e}", 500
-                    
+
         return redirect(f'/db-viewer/{model_name}')
     return "Model not found", 404
 
@@ -364,15 +364,15 @@ def bulk_delete_items(model_name):
         model = MODELS[model_name]
         mapper = class_mapper(model)
         pk_keys = [key.name for key in mapper.primary_key]
-        
+
         if not pk_keys:
              return "No PK found", 400
-             
+
         pk_name = pk_keys[0]
         ids = request.form.getlist('ids[]')
         # Filter out empty strings that might come from template inputs
         ids = [x for x in ids if x.strip()]
-        
+
         if ids:
             try:
                 # Filter by list of IDs
@@ -381,7 +381,7 @@ def bulk_delete_items(model_name):
                 # Using in_ for bulk delete
                 # model.query.filter(getattr(model, pk_name).in_(ids)).delete(synchronize_session=False) ## This is faster
                 # But let's stick to safe iteration for now to reuse logic or if cascade needed (though delete usually cascades)
-                
+
                 # Fetch and delete to handle potential complex relationships if needed (though batch is better)
                 # Let's use batch delete
                 model.query.filter(getattr(model, pk_name).in_(ids)).delete(synchronize_session=False)
@@ -389,21 +389,21 @@ def bulk_delete_items(model_name):
             except Exception as e:
                 db.session.rollback()
                 return f"Error deleting: {e}", 500
-        
+
         return redirect(f'/db-viewer/{model_name}')
     return "Model not found", 404
 
 @app.route('/db-viewer')
 @app.route('/db-viewer/<model_name>')
 def db_viewer(model_name=None):
-    
+
     if model_name and model_name in MODELS:
         model = MODELS[model_name]
         mapper = class_mapper(model)
         columns = [c.name for c in mapper.columns]
         pk_keys = [key.name for key in mapper.primary_key]
         pk_name = pk_keys[0] if pk_keys else 'id'
-        
+
         # Identify JSON columns for formatting
         json_cols = []
         for c in mapper.columns:
@@ -416,7 +416,7 @@ def db_viewer(model_name=None):
             query = query.order_by(model.step_index.asc())
         elif 'id' in columns:
             query = query.order_by(model.id.asc())
-        
+
         items = query.all()
         rows = []
         for item in items:
@@ -427,7 +427,7 @@ def db_viewer(model_name=None):
             # Add PK specifically for actions
             row['_pk_value'] = getattr(item, pk_name)
             rows.append(row)
-            
+
         # Custom aliases for headers
         headers = []
         for c in columns:
@@ -436,14 +436,14 @@ def db_viewer(model_name=None):
             else:
                 headers.append(c)
 
-        return render_template_string(VIEWER_HTML, 
-                                      models=MODELS.keys(), 
-                                      current_model=model_name, 
+        return render_template_string(VIEWER_HTML,
+                                      models=MODELS.keys(),
+                                      current_model=model_name,
                                       columns=columns,  # Use original keys for data lookup
                                       headers=headers,  # Use aliases for display
                                       rows=rows,
                                       json_cols=json_cols)
-    
+
     return render_template_string(VIEWER_HTML, models=MODELS.keys(), current_model=None)
 
 # Redirect root to viewer for convenience in this standalone mode

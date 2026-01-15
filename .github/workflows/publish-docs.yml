@@ -43,7 +43,7 @@ jobs:
           REPO_B_TOKEN: ${{ secrets.REPO_B_TOKEN }} # Recommend using a PAT for cross-repo pushes
         run: |
           set -euo pipefail
-          
+
           # Configure Git
           git config --global user.email "github-actions@github.com"
           git config --global user.name "GitHub Actions"
@@ -61,7 +61,7 @@ jobs:
           # Use REPO_B_TOKEN if URL doesn't contain it
           # Assuming REPO_B_URL is like 'github.com/username/repo-b'
           PUSH_URL="https://x-access-token:${REPO_B_TOKEN}@${REPO_B_URL#*//}"
-          
+
           # Target directory for temporary clone
           TARGET_DIR="/tmp/repo-b"
 
@@ -70,5 +70,5 @@ jobs:
             echo "Error: Failed to export documentation to Repo B"
             exit 1
           fi
-          
+
           echo "Documentation successfully published to Repo B"
