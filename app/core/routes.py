@@ -416,7 +416,7 @@ def submit_feedback():
 
         if not feedback_type:
             return jsonify({'error': 'Feedback type is required'}), 400
-        if not rating or not isinstance(rating, int) or rating < 1 or rating > 5:
+        if rating is not None and (not isinstance(rating, int) or rating < 1 or rating > 5):
             return jsonify({'error': 'Rating must be between 1 and 5'}), 400
         if not comment or not comment.strip():
             return jsonify({'error': 'Comment is required'}), 400

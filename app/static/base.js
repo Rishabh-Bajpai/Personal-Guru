@@ -116,12 +116,6 @@ if (feedbackForm) {
             return;
         }
 
-        if (rating === 0) {
-            feedbackMessage.textContent = 'Please select a rating.';
-            feedbackMessage.className = 'feedback-message error';
-            return;
-        }
-
         try {
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
             const response = await fetch('/api/feedback', {
