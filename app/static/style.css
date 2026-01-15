@@ -419,7 +419,8 @@ body.dark-mode .button {
 }
 
 body.dark-mode .button:hover {
-    background: #5c6658; /* Slightly darker shade for hover */
+    background: #5c6658;
+    /* Slightly darker shade for hover */
 }
 
 body.dark-mode .button.secondary {
@@ -520,6 +521,7 @@ body.dark-mode code {
     background-color: #555;
     color: #e0e0e0;
 }
+
 /* Learning Content (inside flex layout) */
 .learning-content {
     flex: 1;
@@ -533,4 +535,213 @@ body.dark-mode code {
 body.dark-mode .learning-content {
     background: #2c2c2c;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* ===== Feedback Modal Styles ===== */
+.feedback-modal-overlay {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    justify-content: center;
+    align-items: center;
+}
+
+.feedback-modal-overlay.active {
+    display: flex;
+}
+
+.feedback-modal {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 480px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.feedback-modal h2 {
+    margin-top: 0;
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.feedback-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #666;
+    transition: color 0.2s;
+    line-height: 1;
+}
+
+.feedback-modal-close:hover {
+    color: #333;
+}
+
+.feedback-form-group {
+    margin-bottom: 20px;
+}
+
+.feedback-form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.feedback-form-group select,
+.feedback-form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.feedback-form-group select:focus,
+.feedback-form-group textarea:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+}
+
+.feedback-form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Star Rating */
+.star-rating {
+    display: flex;
+    gap: 8px;
+    font-size: 28px;
+}
+
+.star-rating .star {
+    color: #ccc;
+    cursor: pointer;
+    transition: color 0.2s, transform 0.15s;
+}
+
+.star-rating .star:hover,
+.star-rating .star.hovered {
+    color: #ffc107;
+    transform: scale(1.15);
+}
+
+.star-rating .star.selected {
+    color: #ffc107;
+}
+
+.feedback-form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.feedback-form-actions .button {
+    flex: 1;
+}
+
+.feedback-message {
+    text-align: center;
+    margin-top: 16px;
+    padding: 10px;
+    border-radius: 8px;
+    display: none;
+}
+
+.feedback-message.success {
+    display: block;
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.feedback-message.error {
+    display: block;
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Dark Mode - Feedback Modal */
+body.dark-mode .feedback-modal {
+    background: #2c2c2c;
+}
+
+body.dark-mode .feedback-modal h2 {
+    color: #ECDFCC;
+}
+
+body.dark-mode .feedback-modal-close {
+    color: #888;
+}
+
+body.dark-mode .feedback-modal-close:hover {
+    color: #ECDFCC;
+}
+
+body.dark-mode .feedback-form-group label {
+    color: #ECDFCC;
+}
+
+body.dark-mode .feedback-form-group select,
+body.dark-mode .feedback-form-group textarea {
+    background-color: #3a3a3a;
+    color: #ECDFCC;
+    border-color: #555;
+}
+
+body.dark-mode .feedback-form-group select:focus,
+body.dark-mode .feedback-form-group textarea:focus {
+    border-color: #697565;
+    box-shadow: 0 0 0 3px rgba(105, 117, 101, 0.3);
+}
+
+body.dark-mode .star-rating .star {
+    color: #555;
+}
+
+body.dark-mode .star-rating .star:hover,
+body.dark-mode .star-rating .star.hovered,
+body.dark-mode .star-rating .star.selected {
+    color: #ffc107;
+}
+
+body.dark-mode .feedback-message.success {
+    background-color: #1e3a21;
+    color: #8fd19e;
+}
+
+body.dark-mode .feedback-message.error {
+    background-color: #3a1e1e;
+    color: #f5a5a5;
 }

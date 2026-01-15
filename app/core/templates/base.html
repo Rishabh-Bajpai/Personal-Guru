@@ -30,8 +30,50 @@
             {% endif %}
             <a href="/" class="button">Home</a>
             <button id="theme-switcher" class="button">Toggle Theme</button>
+            <button id="feedback-btn" class="button">📝 Feedback</button>
         </div>
         {% block content %}{% endblock %}
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="feedback-modal-overlay">
+        <div class="feedback-modal">
+            <button class="feedback-modal-close" id="feedback-close">&times;</button>
+            <h2>Share Your Feedback</h2>
+            <form id="feedback-form">
+                <div class="feedback-form-group">
+                    <label for="feedback-type">Feedback Type</label>
+                    <select id="feedback-type" name="feedback_type" required>
+                        <option value="">Select type...</option>
+                        <option value="bug_report">🐛 Bug Report</option>
+                        <option value="feature_request">💡 Feature Request</option>
+                        <option value="general_feedback">💬 General Feedback</option>
+                        <option value="content_issue">📚 Content Issue</option>
+                    </select>
+                </div>
+                <div class="feedback-form-group">
+                    <label>Rating</label>
+                    <div class="star-rating" id="star-rating">
+                        <span class="star" data-value="1">★</span>
+                        <span class="star" data-value="2">★</span>
+                        <span class="star" data-value="3">★</span>
+                        <span class="star" data-value="4">★</span>
+                        <span class="star" data-value="5">★</span>
+                    </div>
+                    <input type="hidden" id="feedback-rating" name="rating" value="0">
+                </div>
+                <div class="feedback-form-group">
+                    <label for="feedback-comment">Your Comments</label>
+                    <textarea id="feedback-comment" name="comment" rows="4" placeholder="Tell us what's on your mind..."
+                        required></textarea>
+                </div>
+                <div class="feedback-form-actions">
+                    <button type="submit" class="button">Submit Feedback</button>
+                    <button type="button" class="button secondary" id="feedback-cancel">Cancel</button>
+                </div>
+                <p id="feedback-message" class="feedback-message"></p>
+            </form>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='base.js') }}"></script>

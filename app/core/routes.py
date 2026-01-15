@@ -376,3 +376,53 @@ def transcribe():
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
+
+
+@main_bp.route('/api/feedback', methods=['POST'])
+@login_required
+def submit_feedback():
+    from flask import jsonify
+    from app.core.extensions import db
+    from app.core.models import Feedback
+
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        feedback_type = data.get('feedback_type')
+        rating = data.get('rating')
+        comment = data.get('comment')
+
+        if not feedback_type:
+            return jsonify({'error': 'Feedback type is required'}), 400
+        if not rating or not isinstance(rating, int) or rating < 1 or rating > 5:
+            return jsonify({'error': 'Rating must be between 1 and 5'}), 400
+        if not comment or not comment.strip():
+            return jsonify({'error': 'Comment is required'}), 400
+
+        new_feedback = Feedback(
+            user_id=current_user.userid,
+            feedback_type=feedback_type,
+            content_reference='feedback_form',
+            rating=rating,
+            comment=comment.strip()
+        )
+        db.session.add(new_feedback)
+        db.session.commit()
+
+        # Telemetry Hook: Feedback Submitted
+        try:
+            log_telemetry(
+                event_type='feedback_submitted',
+                triggers={'source': 'web_ui', 'action': 'modal_form'},
+                payload={'feedback_type': feedback_type, 'rating': rating}
+            )
+        except Exception:
+            pass  # Telemetry failures must not block user flow
+
+        return jsonify({'success': True, 'message': 'Feedback submitted successfully'})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
