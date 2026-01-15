@@ -39,8 +39,8 @@ class LogCapture:
         self.worker_thread = None
 
         # Configuration
-        self.batch_size = 100
-        self.flush_interval = 5  # seconds
+        self.batch_size = 1000
+        self.flush_interval = 300  # seconds
 
         try:
             # Install hooks
@@ -124,6 +124,8 @@ class LogCapture:
                     remaining = 0.1
 
                 item = self.queue.get(timeout=remaining)
+                if item is None:
+                    break
                 buffer.append(item)
 
                 # Flush if full
@@ -148,7 +150,9 @@ class LogCapture:
         rest = []
         while not self.queue.empty():
             try:
-                rest.append(self.queue.get_nowait())
+                item = self.queue.get_nowait()
+                if item is not None:
+                    rest.append(item)
             except queue.Empty:
                 break
         if rest:
@@ -200,13 +204,15 @@ class LogCapture:
     def stop(self):
         """Stops the worker thread and restores streams."""
         self.stop_event.set()
+        # Wake up worker immediately
+        self.queue.put(None)
 
         if self.worker_thread:
             # Wait for worker to finish processing
-            self.worker_thread.join(timeout=2.0)
+            self.worker_thread.join(timeout=5.0)
             if self.worker_thread.is_alive():
                 logging.getLogger(__name__).warning(
-                    "LogCapture worker thread did not terminate within the 2.0 second timeout; "
+                    "LogCapture worker thread did not terminate within the 5.0 second timeout; "
                     "some buffered logs may not have been flushed."
                 )
 
