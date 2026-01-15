@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Ensure script runs from project root
+cd "$(dirname "$0")/.."
+
 echo "🚀 Starting Personal Guru Setup..."
 
 # --- Function Definitions ---

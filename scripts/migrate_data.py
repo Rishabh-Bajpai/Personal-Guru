@@ -1,7 +1,10 @@
-
+import sys
 import os
 import json
 from dotenv import load_dotenv
+
+# Add the project root to the python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 load_dotenv()
 

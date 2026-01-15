@@ -58,18 +58,19 @@ We offer three ways to install Personal Guru, depending on your needs.
 ### Global Prerequisites (All Methods)
 
 Before starting, ensure you have the following:
+
 1. **Conda** (Required for the Application).
-    *   [Download Miniconda](https://docs.conda.io/en/latest/miniconda.html)
-2.  **Docker Desktop** (Required for the Database).
-    *   [Download Docker](https://www.docker.com/products/docker-desktop/)
-3.  **FFmpeg** (Required for Audio Processing).
-    *   **Linux**: `sudo apt install ffmpeg`
-    *   **Mac**: `brew install ffmpeg`
-    *   **Windows**: `winget install ffmpeg` or [Download from ffmpeg.org](https://ffmpeg.org/download.html)
-4.  **LLM Provider** (One of the following):
-    *   [Ollama](https://ollama.com/) (Free, Local - Recommended)
-    *   [LM Studio](https://lmstudio.ai/) (Free, Local)
-    *   **OpenAI / Gemini API Key or any other openai compatible LLM API Key** (Cloud)
+    - [Download Miniconda](https://docs.conda.io/en/latest/miniconda.html)
+2. **Docker Desktop** (Required for the Database).
+    - [Download Docker](https://www.docker.com/products/docker-desktop/)
+3. **FFmpeg** (Required for Audio Processing).
+    - **Linux**: `sudo apt install ffmpeg`
+    - **Mac**: `brew install ffmpeg`
+    - **Windows**: `winget install ffmpeg` or [Download from ffmpeg.org](https://ffmpeg.org/download.html)
+4. **LLM Provider** (One of the following):
+    - [Ollama](https://ollama.com/) (Free, Local - Recommended)
+    - [LM Studio](https://lmstudio.ai/) (Free, Local)
+    - **OpenAI / Gemini API Key or any other openai compatible LLM API Key** (Cloud)
 
 ### Getting Started
 
@@ -81,39 +82,44 @@ cd Personal-Guru
 ```
 
 ### Method 1: Automatic Setup (Recommended)
+
 Best for most users. An interactive script guides you through the process, setting up the environment and dependencies for you.
 
-- **Linux/Mac**: `./setup.sh`
-- **Windows**: `setup.bat`
+- **Linux/Mac**: `bash installation/setup.sh`
+- **Windows**: `installation\setup.bat`
 
 ### Method 2: Docker
+
 Run the entire stack (App + DB + Optional TTS) in containers.
 
-1.  **Configure Environment (Optional)**:
+1. **Configure Environment (Optional)**:
     Create a `.env` file if you want to connect to a specific LLM (e.g. LMStudio on another machine).
+
     ```bash
     LLM_BASE_URL=http://localhost:1234/v1
     ```
+
     *If not set, it defaults to connecting to your local host's Ollama at port 11434.*
 
-2.  **Run**:
-    - **Linux/Mac**: `./start_docker.sh`
-    - **Windows**: `start_docker.bat`
+2. **Run**:
+    - **Linux/Mac**: `bash installation/start_docker.sh`
+    - **Windows**: `installation\start_docker.bat`
 
     *Note: The script will ask if you want to run in detached mode (background).*
 
-3.  **Access the App**:
+3. **Access the App**:
     Open your browser and go to:
-    - **http://localhost:5011** (or the port defined in your `.env`)
+    - **<http://localhost:5011>** (or the port defined in your `.env`)
 
     *Tip: You can change the configuration (LLM, Keys, etc.) directly from the UI by clicking "⚙️ Setup Environment" on the home page.*
 
 ### Method 3: Manual Installation (For Developers)
+
 If you prefer full control over your environment.
 
-1.  **Create Environment**: `conda create -n Personal-Guru python=3.11 && conda activate Personal-Guru`
-2.  **Install Dependencies**: `pip install -r requirements.txt`
-3.  **Setup Environment Variables**:
+1. **Create Environment**: `conda create -n Personal-Guru python=3.11 && conda activate Personal-Guru`
+2. **Install Dependencies**: `pip install -r requirements.txt`
+3. **Setup Environment Variables**:
     Creating a `.env` file is **optional** as the application has a built-in UI Wizard to help you configure these settings. However, you can configure it manually:
 
     ```bash
@@ -132,19 +138,24 @@ If you prefer full control over your environment.
     - `TTS_BASE_URL`: `http://localhost:8969/v1` (Replace `localhost` with your machine's actual LAN IP address if running on another machine).
     - `STT_BASE_URL`: `http://localhost:8969/v1` (Same as TTS if using Speaches).
 
-4.  **Database Setup (Docker)**:
+4. **Database Setup (Docker)**:
     Start the Postgres database using Docker:
+
     ```bash
     docker compose up -d db
     ```
+
     *Starts PostgreSQL on `localhost:5433`.*
-5.  **Start the Speech Server (TTS & STT)**:
+5. **Start the Speech Server (TTS & STT)**:
+
     ```bash
     docker compose up -d speaches
     ```
+
     *Starts Speaches on `localhost:8969`.*
 
     Download the models inside the container (Wait a few seconds for the container to start):
+
     ```bash
     # TTS Model
     docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
@@ -154,6 +165,7 @@ If you prefer full control over your environment.
     ```
 
     **Test TTS:**
+
     ```bash
     curl "http://localhost:8969/v1/audio/speech" -s -H "Content-Type: application/json" \
       --output test.mp3 \
@@ -166,6 +178,7 @@ If you prefer full control over your environment.
     ```
 
     **Test STT:**
+
     ```bash
     curl "http://localhost:8969/v1/audio/transcriptions" \
       -F "file=@test.mp3" \
@@ -174,12 +187,14 @@ If you prefer full control over your environment.
       -F "temperature=0"
     ```
 
-6.  **Init Database**:
+6. **Init Database**:
+
     ```bash
     python scripts/update_database.py
     ```
 
-7.  **Run**:
+7. **Run**:
+
     ```bash
     python run.py
     ```
@@ -216,7 +231,6 @@ If you plan to move data between different types of computers (e.g., your Linux 
    docker compose exec db psql -U postgres -d personal_guru -f /backup.sql
    ```
 
-
 ## Enabling HTTPS for Microphone Access, reels and other security features
 
 Modern web browsers require a secure (HTTPS) connection to allow web pages to access the microphone, and to enable reels mode.
@@ -225,7 +239,7 @@ Modern web browsers require a secure (HTTPS) connection to allow web pages to ac
 
 This is the simplest way to enable HTTPS for local testing.
 
-1.  **Generate the Certificate:**
+1. **Generate the Certificate:**
     The repository includes a script to generate a self-signed certificate.
 
     ```bash
@@ -234,10 +248,10 @@ This is the simplest way to enable HTTPS for local testing.
 
     This will create a `certs` directory with `cert.pem` and `key.pem` files.
 
-2.  **Run the Application:**
+2. **Run the Application:**
     Start Personal-Guru as you normally would. The Flask server will automatically detect the certificate and start with HTTPS.
 
-3.  **Trust the Certificate in Your Browser:**
+3. **Trust the Certificate in Your Browser:**
     When you navigate to `https://localhost:5002`, your browser will show a privacy warning. You must accept the risk to proceed.
 
 ### Method B: Reverse Proxy (for Production)
@@ -246,15 +260,15 @@ Using a reverse proxy like Nginx or Caddy is the standard way to handle HTTPS in
 
 **General Steps:**
 
-1.  **Run Personal-Guru:** Start the Personal-Guru application on its default port (`5002`) without any SSL context.
-2.  **Set Up Reverse Proxy:**
+1. **Run Personal-Guru:** Start the Personal-Guru application on its default port (`5002`) without any SSL context.
+2. **Set Up Reverse Proxy:**
     - Configure your reverse proxy (e.g., Nginx Proxy Manager, Caddy) to create a new proxy host.
     - **Domain:** Your public domain (e.g., `personal-guru.your-domain.com`).
     - **Scheme:** `http`.
     - **Forward Hostname/IP:** The IP address of the machine running Personal-Guru.
     - **Forward Port:** `5002`.
     - **Enable WebSocket Support:** This is critical for the voice communication to work.
-3.  **Enable SSL:**
+3. **Enable SSL:**
     - In your reverse proxy's SSL settings, request a new SSL certificate (e.g., using Let's Encrypt).
     - Enable "Force SSL" and "HTTP/2 Support".
 
@@ -267,29 +281,29 @@ The `scripts/` folder contains several utility scripts to assist with developmen
 ### Database Tools
 
 - **`scripts/generate_dbml.py`**
-    - **Purpose:** Generates a DBML (Database Markup Language) file from your SQLAlchemy models.
-    - **Usage:** `python scripts/generate_dbml.py > schema.dbml`
-    - **Use Case:** Copy the output to [dbdiagram.io](https://dbdiagram.io) to visualize and interactively edit your schema.
+  - **Purpose:** Generates a DBML (Database Markup Language) file from your SQLAlchemy models.
+  - **Usage:** `python scripts/generate_dbml.py > schema.dbml`
+  - **Use Case:** Copy the output to [dbdiagram.io](https://dbdiagram.io) to visualize and interactively edit your schema.
 
 - **`scripts/visualize_db.py`**
-    - **Purpose:** Generates a Mermaid.js Entity Relationship Diagram (ERD).
-    - **Usage:** `python scripts/visualize_db.py`
-    - **Use Case:** Copy the output into a Markdown file (like `docs/schema.md`) to view the diagram directly in GitHub or compatible editors.
+  - **Purpose:** Generates a Mermaid.js Entity Relationship Diagram (ERD).
+  - **Usage:** `python scripts/visualize_db.py`
+  - **Use Case:** Copy the output into a Markdown file (like `docs/schema.md`) to view the diagram directly in GitHub or compatible editors.
 
 - **`scripts/db_viewer.py`**
-    - **Purpose:** Launches a visual web interface (Flask-Admin) to browse and manage database records.
-    - **Usage:** `python scripts/db_viewer.py`
-    - **URL:** Open `http://localhost:5012` to view tables.
+  - **Purpose:** Launches a visual web interface (Flask-Admin) to browse and manage database records.
+  - **Usage:** `python scripts/db_viewer.py`
+  - **URL:** Open `http://localhost:5012` to view tables.
 
 - **`scripts/update_database.py`**
-    - **Purpose:** Initializes tables and performs safe migrations (adding new columns/tables).
-    - **Usage:** `python scripts/update_database.py`
+  - **Purpose:** Initializes tables and performs safe migrations (adding new columns/tables).
+  - **Usage:** `python scripts/update_database.py`
 
 ### Other Utilities
 
 - **`scripts/generate_cert.py`**
-    - **Purpose:** Generates self-signed SSL certificates (`cert.pem`, `key.pem`) for local HTTPS development (required for microphone access).
-    - **Usage:** `python scripts/generate_cert.py`
+  - **Purpose:** Generates self-signed SSL certificates (`cert.pem`, `key.pem`) for local HTTPS development (required for microphone access).
+  - **Usage:** `python scripts/generate_cert.py`
 
 ## For Developers: Running Tests
 
@@ -333,18 +347,21 @@ This project uses `pre-commit` to ensure code quality (linting, formatting, chec
 
 ### Installation
 
-1.  **Install the hooks:**
+1. **Install the hooks:**
+
     ```bash
     pre-commit install
     ```
 
-2.  **Run manually (optional):**
+2. **Run manually (optional):**
     To run the hooks on all files without committing:
+
     ```bash
     pre-commit run --all-files
     ```
 
 ### Hooks Included
+
 - **Trailing Whitespace**: Removes trailing whitespace.
 - **Merge Conflicts**: Checks for unresolved merge conflict markers.
 - **Black**: Formats Python code.
