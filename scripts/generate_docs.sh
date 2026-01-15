@@ -9,7 +9,10 @@ fi
 
 # Generate documentation
 echo "Generating documentation..."
-if ! pydoc-markdown; then
+# Ensure we are in project root
+cd "$(dirname "$0")/.."
+
+if ! pydoc-markdown docs/pydoc-markdown.yml; then
     echo "Error: Failed to generate documentation with pydoc-markdown." >&2
     exit 1
 fi
