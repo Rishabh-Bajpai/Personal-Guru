@@ -21,6 +21,326 @@ body {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
+/* Dropdown System */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background-color: #ffffff;
+    min-width: 220px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    z-index: 1001;
+    padding: 8px 0;
+    margin-top: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.2s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+/* Bridge the gap so hover doesn't break */
+.dropdown-content::before {
+    content: "";
+    position: absolute;
+    top: -12px;
+    left: 0;
+    width: 100%;
+    height: 12px;
+    background: transparent;
+}
+
+.dropdown:hover .dropdown-content {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+body.dark-mode .dropdown-content {
+    background-color: #252525;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dropdown-header {
+    padding: 12px 16px 8px;
+    font-size: 0.8rem;
+    color: #888;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid transparent;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+body.dark-mode .dropdown-item {
+    color: #e0e0e0;
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+    color: #007bff;
+    padding-left: 20px;
+    /* Subtle slide effect */
+}
+
+body.dark-mode .dropdown-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #4da3ff;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background-color: #eee;
+    margin: 4px 0;
+}
+
+body.dark-mode .dropdown-divider {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+.dropdown-item.text-danger:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: #dc3545 !important;
+}
+
+/* Navbar Icons & Images */
+.nav-icon-img {
+    height: 20px;
+    width: auto;
+    object-fit: contain;
+}
+
+/* Auth Buttons Highlight */
+.highlight-btn {
+    background-color: #007bff !important;
+    color: white !important;
+    border: 1px solid #007bff !important;
+    box-shadow: 0 4px 6px rgba(0, 123, 255, 0.2);
+}
+
+.highlight-btn:hover {
+    background-color: #0056b3 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 123, 255, 0.3);
+}
+
+body.dark-mode .highlight-btn {
+    background-color: #007bff;
+    /* Keep primary blue in dark mode */
+}
+
+/* Animation Keyframes */
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown:hover .dropdown-content {
+    animation: fadeInSlide 0.2s ease forwards;
+}
+
+/* Navigation Bar */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1.5rem;
+    background: rgba(255, 255, 255, 0.85);
+    /* Light mode glass */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    position: sticky;
+    top: 10px;
+    z-index: 1000;
+}
+
+body.dark-mode .navbar {
+    background: rgba(30, 30, 30, 0.85);
+    /* Dark mode glass */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.nav-brand a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+    gap: 12px;
+}
+
+.brand-logo {
+    height: 32px;
+    width: auto;
+}
+
+.brand-text {
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: #2c3e50;
+    font-family: 'Lato', sans-serif;
+    letter-spacing: -0.5px;
+}
+
+body.dark-mode .brand-text {
+    color: #e0e6ed;
+}
+
+.nav-menu {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.nav-actions {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+}
+
+.nav-user {
+    font-weight: 500;
+    color: #555;
+    margin-right: 0.5rem;
+    font-size: 0.9rem;
+}
+
+body.dark-mode .nav-user {
+    color: #aaa;
+}
+
+.nav-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #555;
+    font-weight: 600;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.95rem;
+}
+
+body.dark-mode .nav-link {
+    color: #bbb;
+}
+
+/* Hover effects */
+.nav-link:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #007bff;
+    transform: translateY(-1px);
+}
+
+body.dark-mode .nav-link:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #4da3ff;
+}
+
+/* Active State */
+.nav-link.active {
+    background: rgba(0, 123, 255, 0.1);
+    color: #007bff;
+}
+
+body.dark-mode .nav-link.active {
+    background: rgba(77, 163, 255, 0.15);
+    color: #4da3ff;
+}
+
+/* Icon Link */
+.nav-link.icon-link {
+    gap: 6px;
+}
+
+.nav-link.icon-only {
+    padding: 8px;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+}
+
+/* Delete button special style */
+.nav-link.delete-button {
+    color: #dc3545;
+}
+
+.nav-link.delete-button:hover {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+}
+
+/* Responsiveness */
+@media (max-width: 900px) {
+    .navbar {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+        position: relative;
+        top: 0;
+    }
+
+    .nav-menu {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .nav-actions {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .nav-user {
+        display: none;
+        /* Hide welcome msg on mobile */
+    }
+
+    .brand-text {
+        font-size: 1.5rem;
+    }
+}
+
+
 /* Headings */
 h1,
 h2,

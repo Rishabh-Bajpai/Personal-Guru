@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     {% block head %}{% endblock %}
     <!-- Allow child templates to inject custom styles (e.g., Chat mode) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     {% block styles %}{% endblock %}
 </head>
 
@@ -19,19 +20,61 @@
         <div class="spinner"></div>
     </div>
     <div class="container">
-        <div style="text-align: right; margin-bottom: 1rem;">
-            {% if current_user.is_authenticated %}
-            <span style="margin-right: 15px; color: var(--text-color);">Hello, {{ current_user.display_name }}</span>
-            <a href="{{ url_for('main.user_profile') }}" class="button">Profile</a>
-            <a href="{{ url_for('main.logout') }}" class="button">Logout</a>
-            {% else %}
-            <a href="{{ url_for('main.login') }}" class="button">Log In</a>
-            <a href="{{ url_for('main.signup') }}" class="button">Sign Up</a>
-            {% endif %}
-            <a href="/" class="button">Home</a>
-            <button id="theme-switcher" class="button">Toggle Theme</button>
-            <button id="feedback-btn" class="button">📝 Feedback</button>
-        </div>
+        <nav class="navbar">
+            <div class="nav-brand">
+                <a href="/">
+                    <img src="{{ url_for('static', filename='img/PG.svg') }}" alt="PG Logo" class="brand-logo">
+                    <span class="brand-text">Personal Guru</span>
+                </a>
+            </div>
+
+            <div class="nav-menu">
+                <a href="/" class="nav-link icon-link" title="Home">
+                    <i class="fas fa-home"></i> Home
+                </a>
+                <a href="https://samosa-ai.com/personal-guru/docs" target="_blank" class="nav-link icon-link"
+                    title="Documentation">
+                    <i class="fas fa-book"></i> Docs
+                </a>
+                <a href="https://github.com/Rishabh-Bajpai/Personal-Guru" target="_blank" class="nav-link icon-link"
+                    title="GitHub">
+                    <i class="fab fa-github"></i> GitHub
+                </a>
+                <a href="https://samosa-ai.com/" target="_blank" class="nav-link icon-link" title="Samosa AI">
+                    <img src="{{ url_for('static', filename='img/samosa_logo.png') }}" alt="Samosa"
+                        class="nav-icon-img"> Samosa
+                </a>
+            </div>
+
+            <div class="nav-actions">
+                <button id="theme-switcher" class="nav-link icon-only" title="Toggle Theme">🌓</button>
+                <button id="feedback-btn" class="nav-link icon-link">📝 Feedback</button>
+
+                {% if current_user.is_authenticated %}
+                <div class="dropdown">
+                    <button class="nav-link dropdown-toggle" title="Profile">
+                        <i class="fas fa-user-circle"></i> Profile
+                    </button>
+                    <div class="dropdown-content">
+                        <div class="dropdown-header">Hello, {{ current_user.display_name }}</div>
+                        <a href="{{ url_for('main.user_profile') }}" class="dropdown-item">
+                            <i class="fas fa-user-edit"></i> Edit Profile
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="{{ url_for('main.logout') }}" class="dropdown-item text-danger">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <a href="{{ url_for('main.login') }}"
+                    class="nav-link {% if request.endpoint == 'main.signup' %}highlight-btn{% endif %}">Log In</a>
+                <a href="{{ url_for('main.signup') }}"
+                    class="nav-link {% if request.endpoint == 'main.login' or request.endpoint != 'main.signup' %}highlight-btn{% endif %}">Sign
+                    Up</a>
+                {% endif %}
+            </div>
+        </nav>
         {% block content %}{% endblock %}
     </div>
 
