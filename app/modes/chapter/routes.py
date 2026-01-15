@@ -142,6 +142,8 @@ def update_plan(topic_name):
     except Exception:
         # Error will be caught by global handler
         raise
+        # Error will be caught by global handler
+        raise
 
     # Smart Update: Preserve content for unchanged steps
     from app.common.utils import reconcile_plan_steps

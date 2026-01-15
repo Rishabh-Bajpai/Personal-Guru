@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.disabled = true;
                 btn.innerText = 'Updating Plan...';
             }
-            planInput.disabled = true;
+            planInput.readOnly = true;
         });
     }
 });
