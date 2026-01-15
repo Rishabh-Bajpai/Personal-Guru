@@ -19,7 +19,7 @@ def get_study_plan_prompt(topic, user_background):
 You are an expert in creating personalized study plans. For the topic '{topic}', create a high-level learning plan with 2-7 manageable steps, depending on the complexity of the topic.
 The user's background is: '{user_background}'
 The output should be a JSON object with a single key "plan", which is an array of strings. Each string is a step in the learning plan.
-Do not generate the content for each step, only the plan itself.
+Do not generate the content for each step, only the plan itself. Each step should be like a chapter title with maximum 150 characters.
 
 Example of a good plan for the topic 'Flask':
 "Our Flask Learning Plan:
