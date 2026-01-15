@@ -139,28 +139,7 @@ def save_topic(topic_name, data):
                 content_reference=content_ref
             ).delete()
 
-            feedbacks_data = step_data.get('feedback')
-            if feedbacks_data:
-                # normalize to list
-                if not isinstance(feedbacks_data, list):
-                    feedbacks_data = [feedbacks_data]
 
-                for fb_item in feedbacks_data:
-                    # fb_item might be string or dict
-                    comment = fb_item
-                    rating = None
-                    if isinstance(fb_item, dict):
-                        comment = fb_item.get('comment')
-                        rating = fb_item.get('rating')
-
-                    new_fb = Feedback(
-                        user_id=current_user.userid,
-                        feedback_type='in_place',
-                        content_reference=content_ref,
-                        comment=comment,
-                        rating=rating
-                    )
-                    db.session.add(new_fb)
 
         # Delete removed steps
         for s in topic.chapter_mode:
