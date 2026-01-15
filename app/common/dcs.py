@@ -11,12 +11,16 @@ logger = logging.getLogger(__name__)
 DCS_BASE_URL = os.getenv("DCS_BASE_URL", "https://telemetry.samosa-ai.com")
 
 class DCSClient:
+    """Client for communicating with the Data Collection Server (DCS)."""
+
     def __init__(self):
+        """Initialize DCS client with base URL and load installation ID."""
         self.base_url = DCS_BASE_URL
         self.installation_id = None
         self._load_installation_id()
 
     def _load_installation_id(self):
+        """Load installation ID from database if available."""
         try:
             from app.core.models import Installation
             inst = Installation.query.first()
@@ -88,6 +92,7 @@ class DCSClient:
             return False
 
     def update_device_details(self):
+        """Send updated device details to DCS server."""
         if not self.installation_id:
             return False
 
@@ -348,13 +353,17 @@ class DCSClient:
                 pass
 
 class SyncManager:
+    """Background manager that periodically syncs data with DCS."""
+
     def __init__(self, app):
+        """Initialize sync manager with Flask app context."""
         self.app = app
         self.client = DCSClient()
         self.stop_event = threading.Event()
         self.thread = None
 
     def start(self):
+        """Start the background sync thread."""
         # Initial check/register (blocking or non-blocking? User said "As soon as app starts... check")
         # We'll do it in the thread to not block startup UI, BUT required for valid functionality.
         # Ideally, we block `run.py` to ensure registration?
@@ -366,6 +375,7 @@ class SyncManager:
         self.thread.start()
 
     def _loop(self):
+        """Main sync loop that runs in background thread."""
         with self.app.app_context():
             # Ensure registration first thing in the thread if not done
             if not self.client.register_device():

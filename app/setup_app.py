@@ -3,6 +3,12 @@ import os
 
 
 def create_setup_app():
+    """
+    Create a minimal Flask app for initial environment setup.
+
+    Returns:
+        Flask application with setup wizard routes.
+    """
     app = Flask(__name__, template_folder='core/templates')
 
     # Load defaults

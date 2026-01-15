@@ -69,7 +69,10 @@ class LogCapture:
         capture_instance = self
 
         class StreamWrapper:
+            """Stream wrapper that mirrors writes to a queue for capture."""
+
             def write(self, message):
+                """Write message to original stream and capture queue."""
                 # Write to original stream (console)
                 original_stream.write(message)
 
@@ -83,9 +86,11 @@ class LogCapture:
                     })
 
             def flush(self):
+                """Flush the original stream."""
                 original_stream.flush()
 
             def isatty(self):
+                """Check if the stream is a TTY."""
                 return getattr(original_stream, 'isatty', lambda: False)()
 
             @property
@@ -96,6 +101,7 @@ class LogCapture:
         return StreamWrapper()
 
     def _start_worker(self):
+        """Start the background worker thread if not already running."""
         if self.worker_thread is None or not self.worker_thread.is_alive():
             self.worker_thread = threading.Thread(
                 target=self._worker_loop,

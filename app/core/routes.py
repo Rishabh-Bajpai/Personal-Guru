@@ -8,6 +8,7 @@ main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/', methods=['GET', 'POST'])
 def index():
+    """Render home page with topics list or redirect to selected learning mode."""
     # Cleanup persistent sandbox if exists
     sandbox_id = session.get('sandbox_id')
     if sandbox_id:
@@ -108,6 +109,7 @@ def index():
 
 @main_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    """Handle user login with username and password authentication."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
 
@@ -141,6 +143,7 @@ def login():
 
 @main_bp.route('/signup', methods=['GET', 'POST'])
 def signup():
+    """Handle new user registration and profile creation."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
 
@@ -210,6 +213,7 @@ def signup():
 
 @main_bp.route('/logout')
 def logout():
+    """Log out the current user and redirect to home page."""
     logout_user()
     return redirect(url_for('main.index'))
 
@@ -217,6 +221,7 @@ def logout():
 @main_bp.route('/user_profile', methods=['GET', 'POST'])
 @login_required
 def user_profile():
+    """Display and update user profile information."""
     from app.core.extensions import db
 
     user = current_user.user_profile
@@ -252,6 +257,7 @@ def user_profile():
 
 @main_bp.route('/delete/<topic_name>')
 def delete_topic_route(topic_name):
+    """Delete the specified topic and redirect to home page."""
     from app.common.storage import delete_topic
     delete_topic(topic_name)
 
@@ -271,6 +277,7 @@ def delete_topic_route(topic_name):
 @main_bp.route('/api/suggest-topics', methods=['GET', 'POST'])
 @login_required
 def suggest_topics():
+    """Generate AI-powered topic suggestions based on user profile."""
     from app.common.agents import SuggestionAgent
     from app.common.storage import get_all_topics
     from flask import jsonify
@@ -296,6 +303,7 @@ def suggest_topics():
 
 @main_bp.route('/settings', methods=['GET', 'POST'])
 def settings():
+    """Display and update application settings stored in .env file."""
     # Load defaults
     defaults = {}
 
@@ -350,6 +358,7 @@ def settings():
 @main_bp.route('/api/transcribe', methods=['POST'])
 @login_required
 def transcribe():
+    """Transcribe uploaded audio file to text using STT service."""
     from flask import jsonify
     from app.common.utils import transcribe_audio
     import tempfile
@@ -383,6 +392,15 @@ def transcribe():
 @main_bp.route('/api/feedback', methods=['POST'])
 @login_required
 def submit_feedback():
+    """
+    Handle user feedback form submissions.
+
+    Accepts JSON with feedback_type, rating (1-5), and comment.
+    Saves to the Feedback table and logs telemetry event.
+
+    Returns:
+        JSON response with success status or error message.
+    """
     from flask import jsonify
     from app.core.extensions import db
     from app.core.models import Feedback

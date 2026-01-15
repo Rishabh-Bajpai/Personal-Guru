@@ -22,4 +22,3 @@ verbose = 2
 
 [tool.codespell]
 skip = "*.svg,*.map,*.min.js,thirdparty/*,pyproject.toml"
-ignore-words-list = ""

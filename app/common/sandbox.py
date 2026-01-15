@@ -20,6 +20,8 @@ if not logger.handlers:
 
 
 class Sandbox:
+    """Isolated Python execution environment for running untrusted code."""
+
     def __init__(
             self,
             base_path="/tmp/personal_guru_sandbox",

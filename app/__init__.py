@@ -15,6 +15,15 @@ login_manager.login_view = 'main.login'
 
 
 def create_app(config_class=Config):
+    """
+    Application factory that creates and configures the Flask application.
+
+    Args:
+        config_class: Configuration class to use. Defaults to Config.
+
+    Returns:
+        Configured Flask application instance.
+    """
     app = Flask(__name__, template_folder='core/templates')
     app.config.from_object(config_class)
 

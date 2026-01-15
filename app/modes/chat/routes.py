@@ -13,6 +13,7 @@ popup_agent = ChatModeChatPopupAgent()
 
 @chat_bp.route('/<topic_name>')
 def mode(topic_name):
+    """Render the main chat interface for a topic."""
     # Try to load from DB first
     topic_data = load_topic(topic_name)
     if not topic_data:
@@ -74,6 +75,7 @@ def mode(topic_name):
 
 @chat_bp.route('/<topic_name>/update_plan', methods=['POST'])
 def update_plan(topic_name):
+    """Handle study plan modification requests from user feedback."""
     comment = request.form.get('comment')
     if not comment or not comment.strip():
         return redirect(url_for('chat.mode', topic_name=topic_name))
@@ -126,6 +128,7 @@ def update_plan(topic_name):
 
 @chat_bp.route('/<topic_name>/send', methods=['POST'])
 def send_message(topic_name):
+    """Process and respond to a user chat message."""
     user_message = request.form.get('message')
     try:
         time_spent = int(request.form.get('time_spent', 0))
@@ -208,6 +211,7 @@ def send_message(topic_name):
 
 @chat_bp.route('/<topic_name>/update_time', methods=['POST'])
 def update_time(topic_name):
+    """Update time spent on chat session."""
     try:
         time_spent = int(request.form.get('time_spent', 0))
     except (ValueError, TypeError):
@@ -223,6 +227,7 @@ def update_time(topic_name):
 
 @chat_bp.route('/<topic_name>/<int:step_index>', methods=['POST'])
 def chat(topic_name, step_index):
+    """Handle popup chat messages within chapter steps."""
     user_question = request.json.get('question')
     try:
         time_spent = int(request.json.get('time_spent', 0))

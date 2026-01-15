@@ -9,14 +9,21 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 
 class TimestampMixin:
+    """Mixin providing created_at and modified_at timestamp columns."""
+
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
     modified_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, nullable=False)
 
+
 class SyncMixin:
+    """Mixin providing sync_status column for DCS synchronization."""
+
     sync_status = db.Column(db.Text, default='pending', onupdate='pending', nullable=True)
 
 
 class Topic(TimestampMixin, SyncMixin, db.Model):
+    """User study topic with associated learning modes."""
+
     __tablename__ = 'topics'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -37,6 +44,8 @@ class Topic(TimestampMixin, SyncMixin, db.Model):
     login = db.relationship('Login', back_populates='topics')
 
 class ChatMode(TimestampMixin, SyncMixin, db.Model):
+    """Stores chat conversation history for a topic."""
+
     __tablename__ = 'chat_mode'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -51,6 +60,8 @@ class ChatMode(TimestampMixin, SyncMixin, db.Model):
     topic = db.relationship('Topic', back_populates='chat_mode')
 
 class ChapterMode(TimestampMixin, SyncMixin, db.Model):
+    """Stores chapter-based learning content and assessments."""
+
     __tablename__ = 'chapter_mode'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -76,6 +87,8 @@ class ChapterMode(TimestampMixin, SyncMixin, db.Model):
     topic = db.relationship('Topic', back_populates='chapter_mode')
 
 class QuizMode(TimestampMixin, SyncMixin, db.Model):
+    """Stores quiz questions and results for a topic."""
+
     __tablename__ = 'quiz_mode'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -92,6 +105,8 @@ class QuizMode(TimestampMixin, SyncMixin, db.Model):
 
 
 class FlashcardMode(TimestampMixin, SyncMixin, db.Model):
+    """Stores flashcard term-definition pairs for a topic."""
+
     __tablename__ = 'flashcard_mode'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -106,6 +121,8 @@ class FlashcardMode(TimestampMixin, SyncMixin, db.Model):
 
 
 class User(TimestampMixin, SyncMixin, db.Model):
+    """Extended user profile with learning preferences and demographics."""
+
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -162,6 +179,8 @@ class User(TimestampMixin, SyncMixin, db.Model):
         return "\n".join(parts)
 
 class Installation(TimestampMixin, SyncMixin, db.Model):
+    """Tracks application installations with hardware info."""
+
     __tablename__ = 'installations'
 
     installation_id = db.Column(db.String(36), primary_key=True)  # UUID
@@ -178,6 +197,8 @@ class Installation(TimestampMixin, SyncMixin, db.Model):
 
 # SyncLog: Stores the result of background data synchronization attempts
 class SyncLog(TimestampMixin, db.Model):
+    """Records background data synchronization attempts."""
+
     __tablename__ = 'sync_logs'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -191,6 +212,8 @@ class SyncLog(TimestampMixin, db.Model):
 
 # TelemetryLog: Stores user action events for analytics
 class TelemetryLog(TimestampMixin, SyncMixin, db.Model):
+    """Stores user action events for analytics."""
+
     __tablename__ = 'telemetry_logs'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -207,6 +230,8 @@ class TelemetryLog(TimestampMixin, SyncMixin, db.Model):
     installation = db.relationship('Installation', back_populates='telemetry_logs')
 
 class Feedback(TimestampMixin, SyncMixin, db.Model):
+    """Stores user feedback and ratings."""
+
     __tablename__ = 'feedback'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -221,6 +246,8 @@ class Feedback(TimestampMixin, SyncMixin, db.Model):
 
 
 class AIModelPerformance(TimestampMixin, SyncMixin, db.Model):
+    """Tracks AI model latency and token usage metrics."""
+
     __tablename__ = 'ai_model_performance'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -237,6 +264,8 @@ class AIModelPerformance(TimestampMixin, SyncMixin, db.Model):
 
 
 class PlanRevision(TimestampMixin, SyncMixin, db.Model):
+    """Records changes made to study plans."""
+
     __tablename__ = 'plan_revisions'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -253,6 +282,8 @@ class PlanRevision(TimestampMixin, SyncMixin, db.Model):
 
 
 class Login(UserMixin, TimestampMixin, db.Model):
+    """User authentication and identity model."""
+
     __tablename__ = 'logins'
 
     userid = db.Column(db.String(100), primary_key=True)
@@ -263,6 +294,7 @@ class Login(UserMixin, TimestampMixin, db.Model):
 
     @staticmethod
     def generate_userid(installation_id=None):
+        """Generate a unique user ID, optionally prefixed with installation ID."""
         import uuid
         base_id = str(uuid.uuid4())
         if installation_id:
@@ -270,12 +302,15 @@ class Login(UserMixin, TimestampMixin, db.Model):
         return base_id
 
     def set_password(self, password):
+        """Hash and store the user password."""
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
+        """Verify password against stored hash."""
         return check_password_hash(self.password_hash, password)
 
     def get_id(self):
+        """Return the user ID for Flask-Login."""
         return self.userid
 
     @property
