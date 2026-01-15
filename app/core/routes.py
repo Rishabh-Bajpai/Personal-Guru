@@ -191,7 +191,7 @@ def signup():
             telemetry_payload = {}
             from app.common.utils import get_system_info
             sys_info = get_system_info()
-            if 'sys_info' in locals():
+            if isinstance(sys_info, dict) and 'install_method' in sys_info:
                 telemetry_payload['install_method'] = sys_info['install_method']
 
             log_telemetry(
