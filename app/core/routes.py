@@ -206,7 +206,7 @@ def signup():
         except Exception:
             pass # Telemetry failures must not block user flow; ignore logging errors.
 
-        return redirect(url_for('main.user_profile'))
+        return redirect(url_for('main.user_profile', new_user='true'))
 
     return render_template('signup.html')
 
@@ -251,7 +251,7 @@ def user_profile():
         db.session.commit()
         return redirect(url_for('main.index'))
 
-    show_terms = False
+    show_terms = request.args.get('new_user') == 'true'
     return render_template('user_profile.html', user=user, show_terms=show_terms)
 
 

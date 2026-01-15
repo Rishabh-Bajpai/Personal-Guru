@@ -15,9 +15,14 @@
         width: 100%;
         height: 100%;
         background-color: rgba(0, 0, 0, 0.6);
-        align-items: center;
+        align-items: flex-start;
+        /* Changed from center to top */
         justify-content: center;
         backdrop-filter: blur(2px);
+        padding-top: 50px;
+        /* Add space from top */
+        overflow-y: auto;
+        /* Ensure scrolling if content is long */
     }
 
     .modal-content {
