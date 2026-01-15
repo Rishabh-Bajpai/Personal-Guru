@@ -32,7 +32,7 @@ body.dark-mode {
     right: 20px;
     width: 60px;
     height: 60px;
-    background: linear-gradient(135deg, #3d5afe, #8e24aa);
+    background: linear-gradient(135deg, #ffffff, #000000);
     border-radius: 30px;
     cursor: pointer;
     display: flex;
