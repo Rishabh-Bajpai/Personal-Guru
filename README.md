@@ -115,7 +115,9 @@ Run the entire stack (App + DB + Optional TTS) in containers.
 
 ### Method 3: Manual Installation (For Developers)
 
-If you prefer full control over your environment.
+If you prefer full control over your environment or want to contribute, please check our **[Contribution Guide](CONTRIBUTING.md)** for detailed setup instructions.
+
+Below is a quick summary for manual setup:
 
 1. **Create Environment**: `conda create -n Personal-Guru python=3.11 && conda activate Personal-Guru`
 2. **Install Dependencies**: `pip install -r requirements.txt`
@@ -273,6 +275,13 @@ Using a reverse proxy like Nginx or Caddy is the standard way to handle HTTPS in
     - Enable "Force SSL" and "HTTP/2 Support".
 
 After saving, you can access Personal-Guru securely at your public domain.
+
+## Project & Community
+
+- **[Roadmap](ROADMAP.md)**: View our current priorities and future plans.
+- **[Contributing](CONTRIBUTING.md)**: Learn how to set up the dev environment and submit PRs.
+- **[Security Policy](SECURITY.md)**: Read about how we handle security and report vulnerabilities.
+- **[License](LICENSE)**: Released under the AGPL-3.0 License.
 
 ## Utility Scripts for Developers
 
