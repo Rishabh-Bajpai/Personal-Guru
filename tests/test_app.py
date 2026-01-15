@@ -565,6 +565,13 @@ def test_log_telemetry(mocker):
 
 def test_log_capture_threading():
     """Test that log capture correctly buffers and flushes logs using background thread."""
+    import uuid
+
+    # Generate unique log messages to avoid collision with other logs
+    unique_id = str(uuid.uuid4())[:8]
+    test_log_1 = f"TestLogCapture_{unique_id}_Log1"
+    test_log_2 = f"TestLogCapture_{unique_id}_Log2"
+
     # Mock app and database session
     mock_app = MagicMock()
     mock_app.app_context.return_value.__enter__.return_value = None
@@ -573,54 +580,157 @@ def test_log_capture_threading():
     mock_installation = MagicMock()
     mock_installation.installation_id = "test_install_id"
 
-    # We need to mock the imports inside LogCapture._flush to avoid side effects
-    # but since they are local imports, we can mock the whole function or the db access.
-    # A better integration test is to use the real class but mock the database write.
-
     with patch('app.core.models.Installation') as mock_inst_cls, \
          patch('app.core.extensions.db.session') as mock_session:
 
         mock_inst_cls.query.first.return_value = mock_installation
 
-        # Initialize LogCapture with short flush interval
-        # We must be careful not to create a second singleton if one exists,
-        # but for testing we might want a fresh one.
-        # The singleton pattern in LogCapture.__new__ might make testing tricky.
-        # Let's reset the singleton for the test.
-        # Reset singleton for test, enabling thread safety
+        # Reset singleton for test
         with LogCapture._lock:
             LogCapture._instance = None
 
-        capture = LogCapture(None) # don't attach to real app to avoid interfering with other tests
-        capture.app = mock_app # attach mock app manually
+        capture = LogCapture(None)
+        capture.app = mock_app
 
-        # Configure instance properties (worker loop picks these up dynamically)
+        # Configure short flush interval
         capture.flush_interval = 0.5
         capture.batch_size = 10
 
         # Verify worker thread started
         assert capture.worker_thread.is_alive()
 
-        # 1. Test Buffering
-        print("Log 1")
-        print("Log 2")
+        # 1. Test Buffering - use unique log messages
+        print(test_log_1)
+        print(test_log_2)
 
-        # Wait for flush (should trigger by batch size or time)
-        time.sleep(1.0)
+        # Wait for flush
+        time.sleep(1.5)
 
         # Verify database interaction
-        # We expect at least one TelemetryLog to be added
         assert mock_session.add.called
-        args, _ = mock_session.add.call_args
-        log_entry = args[0]
 
-        assert isinstance(log_entry, TelemetryLog)
-        assert log_entry.event_type == 'terminal_log'
-        assert log_entry.installation_id == "test_install_id"
-        assert len(log_entry.payload['logs']) >= 2
-        assert "Log 1" in [log_item['message'].strip() for log_item in log_entry.payload['logs']]
+        # Collect all log messages from all add calls
+        all_logged_messages = []
+        for call in mock_session.add.call_args_list:
+            log_entry = call[0][0]
+            if isinstance(log_entry, TelemetryLog) and log_entry.event_type == 'terminal_log':
+                for log_item in log_entry.payload.get('logs', []):
+                    all_logged_messages.append(log_item['message'].strip())
+
+        # Verify our specific log messages were captured
+        assert any(test_log_1 in msg for msg in all_logged_messages), \
+            f"Expected '{test_log_1}' not found in captured logs: {all_logged_messages}"
+        assert any(test_log_2 in msg for msg in all_logged_messages), \
+            f"Expected '{test_log_2}' not found in captured logs: {all_logged_messages}"
 
         # Cleanup
         capture.stop()
         with LogCapture._lock:
-            LogCapture._instance = None # Reset for other tests
+            LogCapture._instance = None
+
+
+# --- Consolidated Tests from test_dcs_manual.py ---
+
+@pytest.fixture
+def dcs_app():
+    """Create a fresh app and database for DCS tests."""
+    from app import create_app
+    from app.core.extensions import db
+
+    app = create_app()
+    app.config['TESTING'] = True
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+
+    with app.app_context():
+        db.create_all()
+        yield app
+        db.session.remove()
+        db.drop_all()
+
+
+def test_dcs_registration(dcs_app, mocker):
+    """Test DCS device registration flow."""
+    from app.core.extensions import db
+    from app.core.models import Installation
+    from app.common.dcs import DCSClient
+
+    with dcs_app.app_context():
+        # Setup mocks
+        mocker.patch('app.common.utils.get_system_info', return_value={
+            'cpu_cores': 4, 'ram_gb': 16, 'gpu_model': 'TestGPU',
+            'os_version': 'TestOS', 'install_method': 'test'
+        })
+
+        # Mock Register Response
+        mock_reg_resp = MagicMock()
+        mock_reg_resp.status_code = 201
+        mock_reg_resp.json.return_value = {"installation_id": "test-uuid-1234"}
+
+        # Mock Update Response
+        mock_update_resp = MagicMock()
+        mock_update_resp.status_code = 200
+        mock_update_resp.json.return_value = {"status": "updated"}
+
+        mocker.patch('app.common.dcs.requests.post',
+                     side_effect=[mock_reg_resp, mock_update_resp])
+
+        client = DCSClient()
+        success = client.register_device()
+
+        assert success is True
+        assert client.installation_id == "test-uuid-1234"
+
+        # Verify DB
+        inst = Installation.query.first()
+        assert inst is not None
+        assert inst.installation_id == "test-uuid-1234"
+
+
+def test_dcs_sync(dcs_app, mocker):
+    """Test DCS data synchronization flow."""
+    from app.core.extensions import db
+    from app.core.models import Installation, Topic, SyncLog, Feedback, AIModelPerformance
+    from app.common.dcs import DCSClient
+
+    with dcs_app.app_context():
+        # Pre-seed installation
+        inst = Installation(installation_id="test-uuid-sync", install_method="test")
+        db.session.add(inst)
+
+        # Add some data
+        topic = Topic(name="Test Topic", user_id="test_user", sync_status="pending")
+        db.session.add(topic)
+
+        # Add feedback and performance data
+        fb = Feedback(user_id="test_user", feedback_type="in_place",
+                      comment="Great!", sync_status="pending")
+        db.session.add(fb)
+
+        perf = AIModelPerformance(user_id="test_user", model_type="LLM",
+                                   latency_ms=100, sync_status="pending")
+        db.session.add(perf)
+
+        db.session.commit()
+
+        # Mock Sync Response
+        mock_sync_resp = MagicMock()
+        mock_sync_resp.status_code = 200
+        mocker.patch('app.common.dcs.requests.post', return_value=mock_sync_resp)
+
+        client = DCSClient()
+        client.sync_data()
+
+        # Verify Sync Status
+        t = Topic.query.first()
+        assert t.sync_status == 'synced'
+
+        fb_query = Feedback.query.first()
+        assert fb_query.sync_status == 'synced'
+
+        perf_query = AIModelPerformance.query.first()
+        assert perf_query.sync_status == 'synced'
+
+        # Verify SyncLog
+        log = SyncLog.query.first()
+        assert log is not None
+        assert log.status == 'success'

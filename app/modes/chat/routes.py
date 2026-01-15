@@ -43,8 +43,8 @@ def mode(topic_name):
                 topic_data = {"name": topic_name}
             topic_data['plan'] = plan_steps
             # Initialize empty steps list to match plan length (required by
-            # storage logic)
-            topic_data['steps'] = [{} for _ in plan_steps]
+            # storage logic). Include step_index to avoid duplicate assignment.
+            topic_data['steps'] = [{'step_index': i} for i in range(len(plan_steps))]
             save_topic(topic_name, topic_data)
             # Reload to ensure consistency
             topic_data = load_topic(topic_name)
