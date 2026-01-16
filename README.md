@@ -102,8 +102,8 @@ Run the entire stack (App + DB + Optional TTS) in containers.
     *If not set, it defaults to connecting to your local host's Ollama at port 11434.*
 
 2. **Run**:
-    - **Linux/Mac**: `bash installation/start_docker.sh`
-    - **Windows**: `installation\start_docker.bat`
+    - **Linux/Mac**: `bash scripts/installation/start_docker.sh`
+    - **Windows**: `scripts\installation\start_docker.bat`
 
     *Note: The script will ask if you want to run in detached mode (background).*
 
