@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function handleInput() {
-
+        updateScrollIndicators();
     }
 
     // Scroll Arrow Event Listeners

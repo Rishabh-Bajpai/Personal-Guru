@@ -159,6 +159,7 @@ body.dark-mode {
     /* Ensure textarea inherits font */
     line-height: 1.4;
     max-height: 150px;
+    overflow-y: auto;
     scrollbar-width: none;
     /* Hide default scrollbar */
     -ms-overflow-style: none;
