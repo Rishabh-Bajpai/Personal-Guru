@@ -86,7 +86,7 @@ cd Personal-Guru
 Best for most users. An interactive script guides you through the process, setting up the environment and dependencies for you.
 
 - **Linux/Mac**: `bash scripts/installation/setup.sh`
-- **Windows**: `scripts/installation/setup.bat`
+- **Windows**: `scripts\installation\setup.bat`
 
 ### Method 2: Docker
 
