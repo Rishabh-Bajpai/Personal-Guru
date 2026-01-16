@@ -12,11 +12,11 @@ We provide a simple script to get everything up and running in minutes.
 1.  **Run the setup script:**
     - **Linux/Mac**:
       ```bash
-      ./setup.sh
+      ./scripts/installation/setup.sh
       ```
     - **Windows**:
       ```cmd
-      setup.bat
+      scripts\installation\setup.bat
       ```
     This script will:
     - Create a Conda environment called `Personal-Guru`.

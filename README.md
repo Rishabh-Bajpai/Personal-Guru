@@ -85,8 +85,8 @@ cd Personal-Guru
 
 Best for most users. An interactive script guides you through the process, setting up the environment and dependencies for you.
 
-- **Linux/Mac**: `bash installation/setup.sh`
-- **Windows**: `installation\setup.bat`
+- **Linux/Mac**: `bash scripts/installation/setup.sh`
+- **Windows**: `scripts\installation\setup.bat`
 
 ### Method 2: Docker
 
@@ -102,8 +102,8 @@ Run the entire stack (App + DB + Optional TTS) in containers.
     *If not set, it defaults to connecting to your local host's Ollama at port 11434.*
 
 2. **Run**:
-    - **Linux/Mac**: `bash installation/start_docker.sh`
-    - **Windows**: `installation\start_docker.bat`
+    - **Linux/Mac**: `bash scripts/installation/start_docker.sh`
+    - **Windows**: `scripts\installation\start_docker.bat`
 
     *Note: The script will ask if you want to run in detached mode (background).*
 
