@@ -108,6 +108,22 @@ def call_llm(prompt_or_messages, is_json=False):
             headers=headers,
             json=data,
             timeout=300)
+
+        # Check specifically for model not found (404 from Ollama often means this)
+        if response.status_code == 404:
+             try:
+                 err_body = response.json()
+                 if "model" in err_body.get('error', {}).get('message', '').lower():
+                     logger.error(f"Model not found: {LLM_MODEL_NAME}")
+                     raise LLMConnectionError(
+                        f"Model '{LLM_MODEL_NAME}' not found. Please pull it first.",
+                        endpoint=api_url,
+                        error_code="LLM015", # New code for Model Not Found
+                        debug_info={"model": LLM_MODEL_NAME}
+                     )
+             except (json.JSONDecodeError, AttributeError):
+                 pass
+
         response.raise_for_status()
 
         response_json = response.json()
@@ -194,6 +210,7 @@ def call_llm(prompt_or_messages, is_json=False):
         )
     except requests.exceptions.ConnectionError as e:
         logger.error(f"Cannot connect to LLM: {e}")
+        # Check if it was connection refused
         raise LLMConnectionError(
             "Unable to connect to LLM service",
             endpoint=api_url,
@@ -202,17 +219,15 @@ def call_llm(prompt_or_messages, is_json=False):
         )
     except requests.exceptions.RequestException as e:
         logger.error(f"LLM request failed: {e}")
+
+        status_code = getattr(e.response, 'status_code', None) if hasattr(e, 'response') else None
+
         raise LLMConnectionError(
             f"LLM request failed: {str(e)}",
             endpoint=api_url,
             error_code="LLM013",
-            debug_info={
-                "status_code": getattr(
-                    e.response,
-                    'status_code',
-                    None) if hasattr(
-                    e,
-                    'response') else None})
+            debug_info={"status_code": status_code}
+        )
     except (KeyError, IndexError) as e:
         logger.error(f"Invalid LLM response structure: {e}")
         raise LLMResponseError(
