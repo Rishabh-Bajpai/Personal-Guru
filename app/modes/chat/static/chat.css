@@ -365,7 +365,7 @@ body.dark-mode .message-content pre {
 
 #chat-input {
     flex-grow: 1;
-    padding: 15px 25px;
+    padding: 15px 35px 15px 25px; /* Increased right padding for arrows */
     border: 2px solid rgba(0, 0, 0, 0.1);
     border-radius: 30px;
     font-size: 1.1rem;
@@ -381,6 +381,54 @@ body.dark-mode .message-content pre {
     line-height: 1.5;
     box-sizing: border-box;
     /* Crucial for correct scrollHeight calculation */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+#chat-input::-webkit-scrollbar {
+    display: none;
+}
+
+.chat-input-wrapper {
+    position: relative;
+    flex-grow: 1;
+    display: flex;
+}
+
+.scroll-indicator {
+    position: absolute;
+    right: 15px;
+    width: 24px;
+    height: 24px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 10px;
+    color: var(--assistant-text);
+    opacity: 0.6;
+    transition: opacity 0.2s, background-color 0.2s;
+    user-select: none;
+    z-index: 5;
+}
+
+.scroll-indicator:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.scroll-indicator.up {
+    top: 10px;
+}
+
+.scroll-indicator.down {
+    bottom: 10px;
+}
+
+.scroll-indicator.hidden {
+    display: none;
 }
 
 #chat-input:focus {
