@@ -7,11 +7,11 @@ The easiest way to self-host is using the provided `setup.sh` script or Docker C
 ### Option 1: Hybrid (Local Python + Docker DB)
 This is best for development or if you want to use local hardware (GPU) natively for the LLM.
 
-1.  Run `./setup.sh`
+1.  Run `./scripts/installation/setup.sh`
 2.  Updates/Dev: `pip install -r requirements.txt`
 
 ### Option 2: Full Docker
-Run `docker compose up -d`. This runs the Web App and the Database in containers.
+Run `docker compose up -d` from the root directory. This runs the Web App and the Database in containers.
 Note: To access a local LLM (like Ollama) from inside the container, use `http://host.docker.internal:11434`.
 
 ## LLM Configuration
