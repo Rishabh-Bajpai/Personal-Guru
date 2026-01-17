@@ -235,7 +235,7 @@ class Feedback(TimestampMixin, SyncMixin, db.Model):
     __tablename__ = 'feedback'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
+    user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=True)
     feedback_type = db.Column(db.String(50), nullable=False)  # 'form', 'in_place'
     content_reference = db.Column(db.String(255))  # TODO: Define content tag like 'chapter_1', 'quiz_2', etc. Use topic_id, step_index etc. to uniquely identify content
     rating = db.Column(db.Integer)
