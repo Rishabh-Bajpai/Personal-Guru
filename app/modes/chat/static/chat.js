@@ -223,6 +223,11 @@ document.addEventListener('DOMContentLoaded', function () {
                             }
 
                             const data = await response.json();
+
+                            if (data.error) {
+                                throw new Error(data.error);
+                            }
+
                             if (data.transcript) {
                                 chatInput.value += (chatInput.value ? " " : "") + data.transcript;
                                 // Auto-submit: ensure the input is enabled so its value is included in form submission
