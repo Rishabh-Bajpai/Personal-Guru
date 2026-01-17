@@ -27,7 +27,7 @@ class Sandbox:
             self,
             base_path=None,
             sandbox_id=None):
-        
+
         # Use system temp directory if no base path provided
         if base_path is None:
             base_path = os.path.join(tempfile.gettempdir(), "personal_guru_sandbox")
@@ -76,7 +76,7 @@ class Sandbox:
 
         logger.info(f"Installing dependencies: {libraries}...")
         pip_path = self._get_executable("pip")
-        
+
         try:
             subprocess.run([pip_path, "install"] + libraries,
                            check=True, cwd=self.path, capture_output=True)
