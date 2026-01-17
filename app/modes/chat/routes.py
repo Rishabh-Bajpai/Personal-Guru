@@ -227,6 +227,47 @@ def update_time(topic_name):
 
 @chat_bp.route('/<topic_name>/<int:step_index>', methods=['POST'])
 def chat(topic_name, step_index):
+    """
+    Handle popup chat messages within chapter steps.
+
+    ---
+    tags:
+      - Chat
+    parameters:
+      - name: topic_name
+        in: path
+        type: string
+        required: true
+      - name: step_index
+        in: path
+        type: integer
+        required: true
+        description: Step index or 9999 for general chat
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - question
+          properties:
+            question:
+              type: string
+            time_spent:
+              type: integer
+    responses:
+      200:
+        description: AI response
+        schema:
+          type: object
+          properties:
+            answer:
+              type: string
+      400:
+        description: Invalid request
+      500:
+        description: Processing error
+    """
     """Handle popup chat messages within chapter steps."""
     user_question = request.json.get('question')
     try:

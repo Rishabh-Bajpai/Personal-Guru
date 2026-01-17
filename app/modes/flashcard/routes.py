@@ -25,6 +25,38 @@ def mode(topic_name):
 
 @flashcard_bp.route('/generate', methods=['POST'])
 def generate_flashcards_route():
+    """
+    Generate flashcards for a topic.
+
+    ---
+    tags:
+      - Flashcards
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            topic:
+              type: string
+            count:
+              type: string
+              description: Number of cards or 'auto'
+              default: 'auto'
+    responses:
+      200:
+        description: Generated flashcards
+        schema:
+          type: object
+          properties:
+            flashcards:
+              type: array
+              items:
+                type: object
+      400:
+        description: No topic provided
+    """
     data = request.get_json() or {}
     topic_name = data.get('topic')
     count = data.get('count', 'auto')
@@ -69,6 +101,7 @@ def generate_flashcards_route():
 
 @flashcard_bp.route('/<topic_name>/update_time', methods=['POST'])
 def update_time(topic_name):
+    """Update time spent on flashcards."""
     try:
         time_spent = int(request.form.get('time_spent', 0))
     except (ValueError, TypeError):
@@ -85,6 +118,33 @@ def update_time(topic_name):
 
 @flashcard_bp.route('/<topic_name>/update_progress', methods=['POST'])
 def update_progress(topic_name):
+    """
+    Update progress/time-spent for specific flashcards.
+
+    ---
+    tags:
+      - Flashcards
+    parameters:
+      - name: topic_name
+        in: path
+        type: string
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            flashcards:
+              type: array
+              items:
+                type: object
+    responses:
+      200:
+        description: Progress updated successfully
+      404:
+        description: Topic not found
+    """
     data = request.json
     topic_data = load_topic(topic_name)
     if not topic_data:
@@ -116,6 +176,7 @@ def update_progress(topic_name):
 
 @flashcard_bp.route('/<topic_name>/export/pdf')
 def export_pdf(topic_name):
+    """Export flashcards as a PDF."""
     topic_data = load_topic(topic_name)
     if not topic_data:
         return "Topic not found", 404

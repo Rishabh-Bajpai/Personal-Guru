@@ -4,6 +4,7 @@ from .core.extensions import db, migrate
 from flask_wtf.csrf import CSRFProtect
 from flask_session import Session  # Server-side sessions for large chat histories
 from flask_login import LoginManager
+from flasgger import Swagger
 import logging
 import os
 
@@ -33,6 +34,23 @@ def create_app(config_class=Config):
     csrf.init_app(app)
     sess.init_app(app)  # Initialize server-side sessions
     login_manager.init_app(app)
+
+    # Initialize Swagger
+    swagger_config = {
+        "headers": [],
+        "specs": [
+            {
+                "endpoint": 'apispec_1',
+                "route": '/apispec_1.json',
+                "rule_filter": lambda rule: True,  # all in
+                "model_filter": lambda tag: True,  # all in
+            }
+        ],
+        "static_url_path": "/flasgger_static",
+        "swagger_ui": True,
+        "specs_route": "/apidocs/"
+    }
+    Swagger(app, config=swagger_config)
 
     # Initialize Telemetry Log Capture
     if app.config.get('ENABLE_TELEMETRY_LOGGING', True):
