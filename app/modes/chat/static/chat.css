@@ -366,7 +366,7 @@ body.dark-mode .message-content pre {
 #chat-input {
     flex-grow: 1;
     padding: 15px 35px 15px 25px;
-    /* Increased right padding for arrows */
+    /* Extra right padding for scrollbar */
     border: 2px solid rgba(0, 0, 0, 0.1);
     border-radius: 30px;
     font-size: 1.1rem;
