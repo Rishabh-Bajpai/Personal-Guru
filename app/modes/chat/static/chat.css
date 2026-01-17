@@ -365,7 +365,8 @@ body.dark-mode .message-content pre {
 
 #chat-input {
     flex-grow: 1;
-    padding: 15px 35px 15px 25px; /* Increased right padding for arrows */
+    padding: 15px 35px 15px 25px;
+    /* Extra right padding for scrollbar */
     border: 2px solid rgba(0, 0, 0, 0.1);
     border-radius: 30px;
     font-size: 1.1rem;
@@ -375,18 +376,35 @@ body.dark-mode .message-content pre {
     color: var(--assistant-text);
     resize: none;
     /* Controlled by JS */
-    max-height: 200px;
+    max-height: 190px;
     overflow-y: auto;
     font-family: inherit;
     line-height: 1.5;
     box-sizing: border-box;
     /* Crucial for correct scrollHeight calculation */
-    scrollbar-width: none;
-    -ms-overflow-style: none;
 }
 
+/* Custom Scrollbar for Chat Input */
 #chat-input::-webkit-scrollbar {
-    display: none;
+    width: 14px;
+    /* Increased width to allow for border padding */
+}
+
+#chat-input::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#chat-input::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    border: 4px solid transparent;
+    /* Creates padding around thumb */
+    background-clip: content-box;
+    /* Only paint background inside content box */
+}
+
+body.dark-mode #chat-input::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
 }
 
 .chat-input-wrapper {
@@ -395,41 +413,7 @@ body.dark-mode .message-content pre {
     display: flex;
 }
 
-.scroll-indicator {
-    position: absolute;
-    right: 15px;
-    width: 24px;
-    height: 24px;
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 10px;
-    color: var(--assistant-text);
-    opacity: 0.6;
-    transition: opacity 0.2s, background-color 0.2s;
-    user-select: none;
-    z-index: 5;
-}
 
-.scroll-indicator:hover {
-    opacity: 1;
-    background: rgba(0, 0, 0, 0.2);
-}
-
-.scroll-indicator.up {
-    top: 10px;
-}
-
-.scroll-indicator.down {
-    bottom: 10px;
-}
-
-.scroll-indicator.hidden {
-    display: none;
-}
 
 #chat-input:focus {
     border-color: #667eea;
@@ -454,6 +438,35 @@ body.dark-mode #chat-input:focus {
 
 #send-button:active {
     transform: scale(0.95);
+}
+
+/* Disabled State for Buttons */
+#send-button:disabled,
+#mic-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(50%);
+    pointer-events: none;
+    /* Ensure no clicks register */
+}
+
+#send-button:disabled:hover,
+#send-button:disabled:active,
+#mic-button:disabled:hover,
+#mic-button:disabled:active {
+    transform: none;
+    filter: grayscale(50%);
+}
+
+#chat-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: rgba(0, 0, 0, 0.05);
+    /* Slight darken to indicate disabled */
+}
+
+body.dark-mode #chat-input:disabled {
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 /* Custom Scrollbar */

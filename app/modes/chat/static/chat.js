@@ -97,53 +97,31 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Auto-resize and Keydown logic for main chat input
     const chatInput = document.getElementById('chat-input');
+    const CHAT_INPUT_MAX_HEIGHT = 190;
 
-    const scrollUpBtn = document.getElementById('scroll-up-indicator');
-    const scrollDownBtn = document.getElementById('scroll-down-indicator');
-
-    function updateScrollIndicators() {
-        if (!scrollUpBtn || !scrollDownBtn) return;
-
-        // Tolerance to handle sub-pixel rendering
-        const tolerance = 2;
-        const canScrollUp = chatInput.scrollTop > tolerance;
-        const canScrollDown = chatInput.scrollTop + chatInput.clientHeight < chatInput.scrollHeight - tolerance;
-
-        // Only show arrows if content actually overflows
-        const hasOverflow = chatInput.scrollHeight > chatInput.clientHeight;
-
-        if (hasOverflow) {
-            if (canScrollUp) scrollUpBtn.classList.remove('hidden');
-            else scrollUpBtn.classList.add('hidden');
-
-            if (canScrollDown) scrollDownBtn.classList.remove('hidden');
-            else scrollDownBtn.classList.add('hidden');
-        } else {
-            scrollUpBtn.classList.add('hidden');
-            scrollDownBtn.classList.add('hidden');
-        }
-    }
+    // Removed scrollUpBtn/scrollDownBtn selectors and logic
 
     function handleInput() {
-        updateScrollIndicators();
+        chatInput.style.height = 'auto'; // Reset height to calculate scrollHeight
+
+        const scrollHeight = chatInput.scrollHeight;
+
+        chatInput.style.height = Math.min(scrollHeight, CHAT_INPUT_MAX_HEIGHT) + 'px';
+
+        // Hide scrollbar if content fits, show if it overflows
+        chatInput.style.overflowY = scrollHeight > CHAT_INPUT_MAX_HEIGHT ? 'auto' : 'hidden';
     }
 
-    // Scroll Arrow Event Listeners
-    if (scrollUpBtn) {
-        scrollUpBtn.addEventListener('click', () => {
-            chatInput.scrollBy({ top: -40, behavior: 'smooth' });
-        });
-    }
-
-    if (scrollDownBtn) {
-        scrollDownBtn.addEventListener('click', () => {
-            chatInput.scrollBy({ top: 40, behavior: 'smooth' });
-        });
-    }
-
-    chatInput.addEventListener('scroll', updateScrollIndicators);
+    /* Removed updateScrollIndicators function and its listeners */
 
     chatInput.addEventListener('input', handleInput);
+
+    // Change cursor to default when hovering over scrollbar
+    chatInput.addEventListener('mousemove', function (e) {
+        // clientWidth excludes scrollbar, offsetWidth includes it
+        const isOverScrollbar = e.offsetX > this.clientWidth || e.offsetY > this.clientHeight;
+        this.style.cursor = isOverScrollbar ? 'default' : 'text';
+    });
 
     chatInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -190,6 +168,13 @@ document.addEventListener('DOMContentLoaded', function () {
         // Show loading state
         button.disabled = true;
         input.readOnly = true;
+
+        // Disable mic button
+        const micButton = document.getElementById('mic-button');
+        if (micButton) {
+            micButton.disabled = true;
+        }
+
         loading.style.display = 'inline';
 
     });
@@ -222,6 +207,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         const originalPlaceholder = chatInput.placeholder;
                         chatInput.placeholder = "Transcribing...";
                         chatInput.disabled = true;
+                        micButton.disabled = true; // Disable mic button
 
                         try {
                             const response = await fetch("/api/transcribe", {
@@ -237,24 +223,28 @@ document.addEventListener('DOMContentLoaded', function () {
                             }
 
                             const data = await response.json();
-                            if (data.transcript) {
-                                chatInput.value += (chatInput.value ? " " : "") + data.transcript;
-                                // Auto-submit: Input must be enabled for it to be included in the form submission
-                                chatInput.disabled = false;
-                                document.getElementById('chat-form').requestSubmit();
-                            } else if (data.error) {
-                                console.error("Transcription error:", data.error);
-                                alert("Transcription failed: " + data.error);
+
+                            if (data.error) {
+                                throw new Error(data.error);
                             }
 
+                            if (data.transcript) {
+                                chatInput.value += (chatInput.value ? " " : "") + data.transcript;
+                                // Auto-submit: ensure the input is enabled so its value is included in form submission
+                                chatInput.disabled = false;
+                                chatInput.readOnly = false; // Ensure it's not readonly from previous state
+                                document.getElementById('chat-form').requestSubmit();
+                            }
                         } catch (err) {
                             console.error("Error sending audio:", err);
                             alert("Error sending audio: " + err);
                         } finally {
                             chatInput.disabled = false;
-                            chatInput.placeholder = originalPlaceholder;
+                            chatInput.placeholder = originalPlaceholder || "Ask your AI tutor a question...";
+                            micButton.disabled = false;
                             chatInput.focus();
-                            // Stop all tracks to release microphone
+
+                            // Ensure microphone is released
                             stream.getTracks().forEach(track => track.stop());
                         }
                     });
