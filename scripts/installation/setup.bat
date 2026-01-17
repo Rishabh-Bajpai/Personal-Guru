@@ -2,7 +2,7 @@
 setlocal
 chcp 65001 >nul 2>nul
 
-:: Navigate to project root (scripts/installation -> project root)
+REM Navigate to project root
 pushd "%~dp0\..\.."
 
 echo [INFO] Starting Personal Guru Setup...
