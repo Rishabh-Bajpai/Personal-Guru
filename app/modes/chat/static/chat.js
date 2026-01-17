@@ -168,6 +168,13 @@ document.addEventListener('DOMContentLoaded', function () {
         // Show loading state
         button.disabled = true;
         input.readOnly = true;
+
+        // Disable mic button
+        const micButton = document.getElementById('mic-button');
+        if (micButton) {
+            micButton.disabled = true;
+        }
+
         loading.style.display = 'inline';
 
     });
@@ -200,6 +207,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         const originalPlaceholder = chatInput.placeholder;
                         chatInput.placeholder = "Transcribing...";
                         chatInput.disabled = true;
+                        micButton.disabled = true; // Disable mic button
 
                         try {
                             const response = await fetch("/api/transcribe", {
@@ -217,23 +225,22 @@ document.addEventListener('DOMContentLoaded', function () {
                             const data = await response.json();
                             if (data.transcript) {
                                 chatInput.value += (chatInput.value ? " " : "") + data.transcript;
-                                // Auto-submit: Input must be enabled for it to be included in the form submission
+                                // Auto-submit: ensure the input is enabled so its value is included in form submission
                                 chatInput.disabled = false;
+                                chatInput.readOnly = false; // Ensure it's not readonly from previous state
                                 document.getElementById('chat-form').requestSubmit();
-                            } else if (data.error) {
-                                console.error("Transcription error:", data.error);
-                                alert("Transcription failed: " + data.error);
                             }
-
+                            // Stop all tracks to release microphone
+                            stream.getTracks().forEach(track => track.stop());
                         } catch (err) {
                             console.error("Error sending audio:", err);
                             alert("Error sending audio: " + err);
                         } finally {
                             chatInput.disabled = false;
-                            chatInput.placeholder = originalPlaceholder;
+                            chatInput.placeholder = originalPlaceholder || "Ask your AI tutor a question...";
+                            micButton.disabled = false;
                             chatInput.focus();
-                            // Stop all tracks to release microphone
-                            stream.getTracks().forEach(track => track.stop());
+
                         }
                     });
 

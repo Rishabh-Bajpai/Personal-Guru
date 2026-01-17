@@ -440,6 +440,35 @@ body.dark-mode #chat-input:focus {
     transform: scale(0.95);
 }
 
+/* Disabled State for Buttons */
+#send-button:disabled,
+#mic-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(50%);
+    pointer-events: none;
+    /* Ensure no clicks register */
+}
+
+#send-button:disabled:hover,
+#send-button:disabled:active,
+#mic-button:disabled:hover,
+#mic-button:disabled:active {
+    transform: none;
+    filter: grayscale(50%);
+}
+
+#chat-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: rgba(0, 0, 0, 0.05);
+    /* Slight darken to indicate disabled */
+}
+
+body.dark-mode #chat-input:disabled {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
 /* Custom Scrollbar */
 #chat-window::-webkit-scrollbar {
     width: 8px;

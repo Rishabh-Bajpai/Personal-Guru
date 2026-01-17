@@ -102,8 +102,11 @@ function initChatPopup(config) {
 
         // Disable input and submit button during request
         const submitButton = chatForm.querySelector('button[type="submit"]');
+        const micButton = document.getElementById('mic-button-popup');
+
         chatInput.disabled = true;
         if (submitButton) submitButton.disabled = true;
+        if (micButton) micButton.disabled = true;
 
         const userMessage = document.createElement('div');
         userMessage.className = 'chat-message user-message';
@@ -111,7 +114,6 @@ function initChatPopup(config) {
         userMessage.appendChild(document.createTextNode(question));
         chatHistory.appendChild(userMessage);
         chatHistory.scrollTop = chatHistory.scrollHeight;
-
 
         // This is a placeholder for a loader
         const tutorMessage = document.createElement('div');
@@ -150,6 +152,7 @@ function initChatPopup(config) {
             // Re-enable input and submit button after request completes
             chatInput.disabled = false;
             if (submitButton) submitButton.disabled = false;
+            if (micButton) micButton.disabled = false;
             chatInput.focus();
         }
     });
