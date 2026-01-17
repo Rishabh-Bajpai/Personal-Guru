@@ -115,6 +115,7 @@
         {% endif %}
 
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="section-title">Database</div>
             <div class="form-group">
                 <label for="database_url">Database URL</label>
