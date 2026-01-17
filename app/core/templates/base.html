@@ -20,63 +20,6 @@
         <div class="spinner"></div>
     </div>
     <div class="container">
-        <!-- Notification Banners -->
-        {% if system_notifications %}
-        <div id="notification-container" style="margin-bottom: 1rem;">
-            {% for note in system_notifications %}
-            <div class="notification-banner {{ note.notification_type }}" id="note-{{ note.id }}"
-                style="padding: 1rem; margin-bottom: 0.5rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <div style="flex: 1;">
-                    <strong style="margin-right: 0.5rem;">{{ note.title }}</strong>
-                    <span>{{ note.message }}</span>
-                    {% if note.url %}
-                    <a href="{{ note.url }}" target="_blank"
-                        style="margin-left: 0.5rem; text-decoration: underline; color: inherit;">View Release</a>
-                    {% endif %}
-                </div>
-                <button onclick="dismissNotification('{{ note.id }}')"
-                    style="background: none; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.6;">&times;</button>
-            </div>
-            {% endfor %}
-        </div>
-        <script>
-            function dismissNotification(id) {
-                // Hide element
-                document.getElementById('note-' + id).style.display = 'none';
-                // Store in local storage (optional enhancement for persistence)
-                localStorage.setItem('dismissed_note_' + id, 'true');
-            }
-
-            // Check dismissal on load
-            document.addEventListener("DOMContentLoaded", function () {
-                {% for note in system_notifications %}
-                if (localStorage.getItem('dismissed_note_{{ note.id }}') === 'true') {
-                    document.getElementById('note-{{ note.id }}').style.display = 'none';
-                }
-                {% endfor %}
-            });
-        </script>
-        <style>
-            .notification-banner.info {
-                background-color: #e0f2fe;
-                color: #0369a1;
-                border: 1px solid #bae6fd;
-            }
-
-            .notification-banner.warning {
-                background-color: #fefce8;
-                color: #854d0e;
-                border: 1px solid #fef08a;
-            }
-
-            .notification-banner.urgent {
-                background-color: #fee2e2;
-                color: #991b1b;
-                border: 1px solid #fecaca;
-            }
-        </style>
-        {% endif %}
-
         <nav class="navbar">
             <div class="nav-brand">
                 <a href="/">
