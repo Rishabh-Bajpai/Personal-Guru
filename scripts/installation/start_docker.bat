@@ -10,7 +10,7 @@ echo.
 
 set PROFILES=
 
-:: Check TTS
+REM Check TTS
 set /p run_tts="Do you want to run local Speaches/Kokoro (TTS/STT)? (Large download ~5GB) [y/N]: "
 if /i "%run_tts%"=="y" (
     set PROFILES=%PROFILES% --profile tts
