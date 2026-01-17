@@ -274,6 +274,7 @@ class DCSClient:
             for log_event in logs:
                 payload["telemetry_events"].append({
                     "session_id": log_event.session_id,
+                    "user_id": log_event.user_id,
                     "timestamp": log_event.timestamp.isoformat(),
                     "event_type": log_event.event_type,
                     "payload": log_event.payload,
