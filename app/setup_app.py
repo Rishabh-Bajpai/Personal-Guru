@@ -2,6 +2,8 @@ from flask import Flask, render_template, request
 import os
 
 
+from flask_wtf.csrf import CSRFProtect
+
 def create_setup_app():
     """
     Create a minimal Flask app for initial environment setup.
@@ -10,6 +12,8 @@ def create_setup_app():
         Flask application with setup wizard routes.
     """
     app = Flask(__name__, template_folder='core/templates')
+    app.secret_key = os.urandom(24) # Required for CSRF
+    CSRFProtect(app)
 
     # Load defaults
     defaults = {}
