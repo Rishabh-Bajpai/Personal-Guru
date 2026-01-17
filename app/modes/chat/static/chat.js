@@ -230,8 +230,6 @@ document.addEventListener('DOMContentLoaded', function () {
                                 chatInput.readOnly = false; // Ensure it's not readonly from previous state
                                 document.getElementById('chat-form').requestSubmit();
                             }
-                            // Stop all tracks to release microphone
-                            stream.getTracks().forEach(track => track.stop());
                         } catch (err) {
                             console.error("Error sending audio:", err);
                             alert("Error sending audio: " + err);
@@ -241,6 +239,8 @@ document.addEventListener('DOMContentLoaded', function () {
                             micButton.disabled = false;
                             chatInput.focus();
 
+                            // Ensure microphone is released
+                            stream.getTracks().forEach(track => track.stop());
                         }
                     });
 
