@@ -277,6 +277,7 @@ class DCSClient:
                     "user_id": log_event.user_id,
                     "timestamp": log_event.timestamp.isoformat(),
                     "event_type": log_event.event_type,
+                    "triggers": log_event.triggers,
                     "payload": log_event.payload,
                     "created_at": log_event.created_at.isoformat(),
                     "modified_at": log_event.modified_at.isoformat()
