@@ -316,7 +316,7 @@ The `scripts/` folder contains several utility scripts to assist with developmen
 
 ## For Developers: API Documentation
 
-You can access the interactive API documentation (Swagger UI) at **http://localhost:5011/apidocs** to explore endpoints and test requests.
+You can access the interactive API documentation (Swagger UI) at **http://localhost:5011/apidocs/#/** to explore endpoints and test requests.
 
 ## For Developers: Running Tests
 
