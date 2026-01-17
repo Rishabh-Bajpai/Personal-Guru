@@ -119,6 +119,7 @@ class DCSClient:
 
         payload = {
             "installation_id": self.installation_id,
+            "installations": [],
             "topics": [],
             "chat_modes": [],
             "chapter_modes": [],
@@ -151,6 +152,21 @@ class DCSClient:
             included_topic_ids.add(topic.id)
 
         try:
+            # 0. Installations (Pending)
+            installations = Installation.query.filter((Installation.sync_status == 'pending') | (Installation.sync_status is None)).limit(BATCH_SIZE).all()
+            for inst in installations:
+                payload["installations"].append({
+                    "installation_id": inst.installation_id,
+                    "cpu_cores": inst.cpu_cores,
+                    "ram_gb": inst.ram_gb,
+                    "gpu_model": inst.gpu_model,
+                    "os_version": inst.os_version,
+                    "install_method": inst.install_method,
+                    "created_at": inst.created_at.isoformat(),
+                    "modified_at": inst.modified_at.isoformat()
+                })
+                objects_to_update.append(inst)
+
             # 1. Topics (Pending)
             topics = Topic.query.filter((Topic.sync_status == 'pending') | (Topic.sync_status is None)).limit(BATCH_SIZE).all()
             for t in topics:
