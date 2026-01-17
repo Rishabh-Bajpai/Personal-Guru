@@ -20,12 +20,47 @@ function initLearnStep(cfg) {
     setupCodeExecution(renderedContent);
     setupReadAloud(markdownContent);
     setupPodcast();
+    setupSelectionMenu();
 }
 
 function toggleSidebar() {
     const sidebar = document.getElementById('plan-sidebar');
     sidebar.classList.toggle('collapsed');
 }
+
+// Plan Modification Logic (Chapter Mode)
+document.addEventListener('DOMContentLoaded', () => {
+    const planInput = document.getElementById('plan-modification-input');
+    const planForm = document.getElementById('plan-modification-form');
+
+    if (planInput && planForm) {
+        // Keydown for Shift+Enter
+        planInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (this.value.trim()) {
+                    planForm.requestSubmit();
+                }
+            }
+        });
+
+        // Auto-resize
+        planInput.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+        });
+
+        // Disable input and button on submit
+        planForm.addEventListener('submit', function () {
+            const btn = document.getElementById('plan-modification-button');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = 'Updating Plan...';
+            }
+            planInput.readOnly = true;
+        });
+    }
+});
 
 // Code Execution Logic
 function setupCodeExecution(renderedContent) {
@@ -40,6 +75,7 @@ function setupCodeExecution(renderedContent) {
         const btn = document.createElement('button');
         btn.className = 'execute-button';
         btn.innerText = 'Execute Code';
+        btn.title = 'Experimental feature: execution environment is in beta for only Python code';
         btn.onclick = () => executeCode(block.textContent);
         wrapper.appendChild(btn);
     });
@@ -243,6 +279,9 @@ function setupPodcast() {
         generateBtn.disabled = true;
         generateBtn.innerHTML = '<span class="loader-small"></span> Generating...';
 
+        // Disable other interactive elements
+        setInteractiveElementsDisabled(true);
+
         try {
             const response = await fetch(config.urls.generate_podcast, {
                 method: 'POST',
@@ -267,10 +306,18 @@ function setupPodcast() {
             alert('Network error: ' + e.message);
             generateBtn.disabled = false;
             generateBtn.innerHTML = originalText;
+        } finally {
+            // Re-enable interactive elements
+            setInteractiveElementsDisabled(false);
         }
     });
 
-    function initPlayer(url) {
+    // Check if audio already exists (reloaded from DB)
+    if (audio.src && audio.src.length > 0 && audio.src !== window.location.href) {
+        initPlayer(audio.src, false);
+    }
+
+    function initPlayer(url, autoplay = true) {
         audio.src = url;
         audio.load();
 
@@ -286,7 +333,11 @@ function setupPodcast() {
         };
 
         // Auto-play
-        togglePlay();
+        if (autoplay) {
+            togglePlay();
+        } else {
+            updatePlayIcon(false);
+        }
     }
 
     function togglePlay() {
@@ -325,4 +376,184 @@ function setupPodcast() {
         const sec = Math.floor(seconds % 60);
         return `${min}:${sec < 10 ? '0' + sec : sec}`;
     }
+}
+
+// Ask Personal Guru Selection Menu
+function setupSelectionMenu() {
+    // 1. Create the button dynamically
+    let guruBtn = document.createElement('button');
+    guruBtn.className = 'guru-ask-btn';
+    guruBtn.innerHTML = 'Ask the Personal Guru';
+    document.body.appendChild(guruBtn);
+
+    const contentArea = document.querySelector('.learning-content');
+
+    // 2. Handle Selection
+    function handleSelection() {
+        const selection = window.getSelection();
+
+        // Basic Validation
+        if (!selection.rangeCount || selection.isCollapsed) {
+            hideButton();
+            return;
+        }
+
+        const range = selection.getRangeAt(0);
+        const selectedText = selection.toString().trim();
+
+        // Check if selection is within learning content
+        if (!contentArea.contains(range.commonAncestorContainer)) {
+            hideButton();
+            return;
+        }
+
+        if (selectedText.length === 0) {
+            hideButton();
+            return;
+        }
+
+        // 3. Position Button
+        const rect = range.getBoundingClientRect();
+
+        // Calculate position: Centered above the selection
+        // We use fixed positioning, so client rects are perfect
+        const btnHeight = 40; // Approx height
+        const btnWidth = 200; // Approx width to center
+
+        let top = rect.top - btnHeight - 10;
+        let left = rect.left + (rect.width / 2) - (guruBtn.offsetWidth / 2);
+
+        // Ensure not off-screen
+        if (top < 10) top = rect.bottom + 10; // Show below if too high up
+        if (left < 10) left = 10;
+        if (left + guruBtn.offsetWidth > window.innerWidth) left = window.innerWidth - guruBtn.offsetWidth - 10;
+
+        guruBtn.style.top = `${top}px`;
+        guruBtn.style.left = `${left}px`;
+
+        showButton();
+    }
+
+    function showButton() {
+        guruBtn.classList.add('visible');
+    }
+
+    function hideButton() {
+        guruBtn.classList.remove('visible');
+    }
+
+    // Events
+    if (contentArea) {
+        contentArea.addEventListener('mouseup', () => {
+            // Small delay to ensure selection is final
+            setTimeout(handleSelection, 10);
+        });
+
+        contentArea.addEventListener('keyup', (e) => {
+            if (e.key === 'Shift' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                setTimeout(handleSelection, 10);
+            }
+        });
+    }
+
+    // Hide when clicking elsewhere
+    document.addEventListener('mousedown', (e) => {
+        if (e.target !== guruBtn) {
+            // Delay hiding so button click can register
+            // We don't hide immediately on mousedown if it is the button,
+            // but if it is not the button, we hide.
+            // Actually, selection clears on mousedown usually, so we rely on selection change mainly,
+            // but let's be explicit.
+            if (!guruBtn.contains(e.target)) {
+                hideButton();
+            }
+        }
+    });
+
+    // Also listen for selectionchange on document to hide if selection is cleared
+    document.addEventListener('selectionchange', () => {
+        const selection = window.getSelection();
+        if (selection.isCollapsed) {
+            hideButton();
+        }
+    });
+
+    // 4. Click Handler
+    guruBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent clearing selection immediately if needed
+
+        const selection = window.getSelection();
+        const text = selection.toString().trim();
+
+        if (text) {
+            openChatAndPaste(text);
+        }
+
+        hideButton();
+        selection.removeAllRanges(); // Clear selection after asking
+    });
+
+    function openChatAndPaste(text) {
+        const chatPopup = document.getElementById('chat-popup');
+        const chatLauncher = document.getElementById('chat-launcher');
+        const chatInput = document.getElementById('chat-input-popup');
+
+        if (!chatPopup || !chatInput) return;
+
+        // Open chat if closed
+        if (chatPopup.style.display === 'none' || chatPopup.style.display === '') {
+            if (chatLauncher) chatLauncher.click();
+        }
+
+        // Paste text
+        chatInput.value = text;
+        chatInput.focus();
+
+        // Optional: Dispatch input event if you have auto-resize logic bound to it
+        chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+}
+
+/**
+ * Toggles the disabled state of interactive elements in Chapter Mode.
+ * Used during long-running operations like Podcast Generation.
+ * @param {boolean} disabled
+ */
+function setInteractiveElementsDisabled(disabled) {
+    // 1. Navigation Buttons (Links styled as buttons)
+    const navIds = ['nav-prev-btn', 'nav-next-btn', 'nav-finish-btn'];
+    navIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (disabled) {
+                el.classList.add('disabled-state');
+            } else {
+                el.classList.remove('disabled-state');
+            }
+        }
+    });
+
+    // 2. Quiz Submit Button
+    const quizBtn = document.getElementById('quiz-submit-btn');
+    if (quizBtn) {
+        quizBtn.disabled = disabled;
+    }
+
+    // 3. Plan Modification
+    const planInput = document.getElementById('plan-modification-input');
+    const planBtn = document.getElementById('plan-modification-button');
+
+    if (planInput) planInput.disabled = disabled;
+    if (planBtn) planBtn.disabled = disabled;
+
+    // 4. Code Execution Buttons
+    const execBtns = document.querySelectorAll('.execute-button');
+    execBtns.forEach(btn => btn.disabled = disabled);
+
+    // 5. Read Aloud Controls
+    const readBtn = document.getElementById('read-button');
+    const readSwitch = document.getElementById('read-aloud-switch');
+    if (readBtn) readBtn.disabled = disabled;
+    if (readSwitch) readSwitch.disabled = disabled;
 }

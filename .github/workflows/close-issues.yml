@@ -3,7 +3,7 @@ name: Issues Cleanup
 on:
   pull_request_target:
     types: [closed]
-    branches: [new-feature-branch, main]
+    branches: [main, development]
 
 permissions:
   issues: write

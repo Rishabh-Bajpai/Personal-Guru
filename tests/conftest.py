@@ -1,6 +1,13 @@
 import pytest
-from app import create_app
-from app.core.models import db
+import sys
+from unittest.mock import MagicMock
+
+# Mock weasyprint to avoid GTK dependency issues during tests
+sys.modules['weasyprint'] = MagicMock()
+sys.modules['weasyprint.HTML'] = MagicMock()
+
+from app import create_app  # noqa: E402
+from app.core.models import db  # noqa: E402
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -26,7 +33,7 @@ class TestLogger:
     def response(self, label, content):
         if self.enabled:
             print(f"\n📝 {label}:\n{'-'*40}\n{content}\n{'-'*40}")
-    
+
     def info(self, message):
         if self.enabled:
             print(f"   ℹ️  {message}")
@@ -59,16 +66,21 @@ def client(app):
 def auth_client(client, app):
     """A logged-in test client."""
     from app.core.models import User
-    
+
     with app.app_context():
-        # Create test user
-        # Check if exists first to be safe (though db dropped per test)
-        if not User.query.get('testuser'):
-            user = User(username='testuser')
-            user.set_password('password')
+
+        from app.core.models import Login
+        if not Login.query.filter_by(username='testuser').first():
+            import uuid
+            uid = str(uuid.uuid4())
+            login = Login(userid=uid, username='testuser', name='Test User')
+            login.set_password('password')
+            db.session.add(login)
+
+            user = User(login_id=uid)
             db.session.add(user)
             db.session.commit()
-            
+
     # Login
     client.post('/login', data={'username': 'testuser', 'password': 'password'}, follow_redirects=True)
     return client

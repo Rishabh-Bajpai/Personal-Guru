@@ -79,6 +79,8 @@ function initChatPopup(config) {
             chatMaximizeBtn.textContent = '□';
             chatMaximizeBtn.title = 'Maximize';
         }
+        // Recalculate input height as width might have changed
+        // setTimeout(updatePopupScrollIndicators, 100);
     }
 
     chatLauncher.addEventListener('click', openChat);
@@ -100,8 +102,11 @@ function initChatPopup(config) {
 
         // Disable input and submit button during request
         const submitButton = chatForm.querySelector('button[type="submit"]');
+        const micButton = document.getElementById('mic-button-popup');
+
         chatInput.disabled = true;
         if (submitButton) submitButton.disabled = true;
+        if (micButton) micButton.disabled = true;
 
         const userMessage = document.createElement('div');
         userMessage.className = 'chat-message user-message';
@@ -109,7 +114,6 @@ function initChatPopup(config) {
         userMessage.appendChild(document.createTextNode(question));
         chatHistory.appendChild(userMessage);
         chatHistory.scrollTop = chatHistory.scrollHeight;
-
 
         // This is a placeholder for a loader
         const tutorMessage = document.createElement('div');
@@ -148,8 +152,48 @@ function initChatPopup(config) {
             // Re-enable input and submit button after request completes
             chatInput.disabled = false;
             if (submitButton) submitButton.disabled = false;
+            if (micButton) micButton.disabled = false;
             chatInput.focus();
         }
+    });
+
+    // Scroll Indicator Logic - Removed as we now use native scrollbar
+    // Auto-resize logic
+    function handlePopupInput() {
+        chatInput.style.height = 'auto';
+
+        const POPUP_INPUT_MAX_HEIGHT = 142;
+        const scrollHeight = chatInput.scrollHeight;
+
+        chatInput.style.height = Math.min(scrollHeight, POPUP_INPUT_MAX_HEIGHT) + 'px';
+
+        // Hide scrollbar if content fits, show if it overflows
+        chatInput.style.overflowY = scrollHeight > POPUP_INPUT_MAX_HEIGHT ? 'auto' : 'hidden';
+    }
+
+    chatInput.addEventListener('input', handlePopupInput);
+
+    // Change cursor to default when hovering over scrollbar
+    chatInput.addEventListener('mousemove', function (e) {
+        // clientWidth excludes scrollbar, offsetWidth includes it
+        const isOverScrollbar = e.offsetX > this.clientWidth || e.offsetY > this.clientHeight;
+        this.style.cursor = isOverScrollbar ? 'default' : 'text';
+    });
+
+    chatInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (this.value.trim()) {
+                chatForm.requestSubmit();
+            }
+        }
+    });
+
+    // Reset height on submit
+    chatForm.addEventListener('submit', () => {
+        setTimeout(() => {
+            chatInput.style.height = 'auto';
+        }, 0);
     });
 
     // Initially make sure the launcher is visible and popup is hidden

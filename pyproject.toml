@@ -1,0 +1,24 @@
+
+[tool.ruff]
+exclude = ["tests"]
+
+[tool.ruff.lint]
+select = ["E", "F"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.interrogate]
+ignore-init-module = true
+ignore-init-method = true
+ignore-module = true
+ignore-nested-functions = true
+ignore-magic = true
+ignore-regex = ["^get$", "^mock_.*", ".*BaseClass.*"]
+exclude = ["setup.py", "docs", "build", "tests", "thirdparty"]
+fail-under = 80
+verbose = 2
+
+[tool.codespell]
+skip = "*.svg,*.map,*.min.js,thirdparty/*,pyproject.toml"

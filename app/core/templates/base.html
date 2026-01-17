@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     {% block head %}{% endblock %}
     <!-- Allow child templates to inject custom styles (e.g., Chat mode) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     {% block styles %}{% endblock %}
 </head>
 
@@ -19,19 +20,160 @@
         <div class="spinner"></div>
     </div>
     <div class="container">
-        <div style="text-align: right; margin-bottom: 1rem;">
-            {% if current_user.is_authenticated %}
-            <span style="margin-right: 15px; color: var(--text-color);">Hello, {{ current_user.username }}</span>
-            <a href="{{ url_for('main.user_profile') }}" class="button">Profile</a>
-            <a href="{{ url_for('main.logout') }}" class="button">Logout</a>
-            {% else %}
-            <a href="{{ url_for('main.login') }}" class="button">Log In</a>
-            <a href="{{ url_for('main.signup') }}" class="button">Sign Up</a>
-            {% endif %}
-            <a href="/" class="button">Home</a>
-            <button id="theme-switcher" class="button">Toggle Theme</button>
+        <!-- Notification Banners -->
+        {% if system_notifications %}
+        <div id="notification-container" style="margin-bottom: 1rem;">
+            {% for note in system_notifications %}
+            <div class="notification-banner {{ note.notification_type }}" id="note-{{ note.id }}"
+                style="padding: 1rem; margin-bottom: 0.5rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div style="flex: 1;">
+                    <strong style="margin-right: 0.5rem;">{{ note.title }}</strong>
+                    <span>{{ note.message }}</span>
+                    {% if note.url %}
+                    <a href="{{ note.url }}" target="_blank"
+                        style="margin-left: 0.5rem; text-decoration: underline; color: inherit;">View Release</a>
+                    {% endif %}
+                </div>
+                <button onclick="dismissNotification('{{ note.id }}')"
+                    style="background: none; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.6;">&times;</button>
+            </div>
+            {% endfor %}
         </div>
+        <script>
+            function dismissNotification(id) {
+                // Hide element
+                document.getElementById('note-' + id).style.display = 'none';
+                // Store in local storage (optional enhancement for persistence)
+                localStorage.setItem('dismissed_note_' + id, 'true');
+            }
+
+            // Check dismissal on load
+            document.addEventListener("DOMContentLoaded", function () {
+                {% for note in system_notifications %}
+                if (localStorage.getItem('dismissed_note_{{ note.id }}') === 'true') {
+                    document.getElementById('note-{{ note.id }}').style.display = 'none';
+                }
+                {% endfor %}
+            });
+        </script>
+        <style>
+            .notification-banner.info {
+                background-color: #e0f2fe;
+                color: #0369a1;
+                border: 1px solid #bae6fd;
+            }
+
+            .notification-banner.warning {
+                background-color: #fefce8;
+                color: #854d0e;
+                border: 1px solid #fef08a;
+            }
+
+            .notification-banner.urgent {
+                background-color: #fee2e2;
+                color: #991b1b;
+                border: 1px solid #fecaca;
+            }
+        </style>
+        {% endif %}
+
+        <nav class="navbar">
+            <div class="nav-brand">
+                <a href="/">
+                    <img src="{{ url_for('static', filename='img/PG.svg') }}" alt="PG Logo" class="brand-logo">
+                    <span class="brand-text">Personal Guru</span>
+                </a>
+            </div>
+
+            <div class="nav-menu">
+                <a href="/" class="nav-link icon-link" title="Home">
+                    <i class="fas fa-home"></i> Home
+                </a>
+                <a href="https://samosa-ai.com/personal-guru/docs" target="_blank" class="nav-link icon-link"
+                    title="Documentation">
+                    <i class="fas fa-book"></i> Docs
+                </a>
+                <a href="https://github.com/Rishabh-Bajpai/Personal-Guru" target="_blank" class="nav-link icon-link"
+                    title="GitHub">
+                    <i class="fab fa-github"></i> GitHub
+                </a>
+                <a href="https://samosa-ai.com/" target="_blank" class="nav-link icon-link" title="Samosa AI">
+                    <img src="{{ url_for('static', filename='img/samosa_logo.png') }}" alt="Samosa"
+                        class="nav-icon-img"> Samosa
+                </a>
+            </div>
+
+            <div class="nav-actions">
+                <button id="theme-switcher" class="nav-link icon-only" title="Toggle Theme">🌓</button>
+                <button id="feedback-btn" class="nav-link icon-link">📝 Feedback</button>
+
+                {% if current_user.is_authenticated %}
+                <div class="dropdown">
+                    <button class="nav-link dropdown-toggle" title="Profile">
+                        <i class="fas fa-user-circle"></i> Profile
+                    </button>
+                    <div class="dropdown-content">
+                        <div class="dropdown-header">Hello, {{ current_user.display_name }}</div>
+                        <a href="{{ url_for('main.user_profile') }}" class="dropdown-item">
+                            <i class="fas fa-user-edit"></i> Edit Profile
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="{{ url_for('main.logout') }}" class="dropdown-item text-danger">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <a href="{{ url_for('main.login') }}"
+                    class="nav-link {% if request.endpoint == 'main.signup' %}highlight-btn{% endif %}">Log In</a>
+                <a href="{{ url_for('main.signup') }}"
+                    class="nav-link {% if request.endpoint == 'main.login' or request.endpoint != 'main.signup' %}highlight-btn{% endif %}">Sign
+                    Up</a>
+                {% endif %}
+            </div>
+        </nav>
         {% block content %}{% endblock %}
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="feedback-modal-overlay">
+        <div class="feedback-modal">
+            <button class="feedback-modal-close" id="feedback-close">&times;</button>
+            <h2>Share Your Feedback</h2>
+            <form id="feedback-form">
+                <div class="feedback-form-group">
+                    <label for="feedback-type">Feedback Type</label>
+                    <select id="feedback-type" name="feedback_type" required>
+                        <option value="">Select type...</option>
+                        <option value="bug_report">🐛 Bug Report</option>
+                        <option value="feature_request">💡 Feature Request</option>
+                        <option value="general_feedback">💬 General Feedback</option>
+                        <option value="content_issue">📚 Content Issue</option>
+                    </select>
+                </div>
+                <div class="feedback-form-group">
+                    <label>Rating</label>
+                    <div class="star-rating" id="star-rating">
+                        <span class="star" data-value="1">★</span>
+                        <span class="star" data-value="2">★</span>
+                        <span class="star" data-value="3">★</span>
+                        <span class="star" data-value="4">★</span>
+                        <span class="star" data-value="5">★</span>
+                    </div>
+                    <input type="hidden" id="feedback-rating" name="rating" value="0">
+                </div>
+                <div class="feedback-form-group">
+                    <label for="feedback-comment">Your Comments</label>
+                    <textarea id="feedback-comment" name="comment" rows="4" placeholder="Tell us what's on your mind..."
+                        required></textarea>
+                </div>
+                <div class="feedback-form-actions">
+                    <button type="submit" class="button">Submit Feedback</button>
+                    <button type="button" class="button secondary" id="feedback-cancel">Cancel</button>
+                </div>
+                <p id="feedback-message" class="feedback-message"></p>
+            </form>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='base.js') }}"></script>

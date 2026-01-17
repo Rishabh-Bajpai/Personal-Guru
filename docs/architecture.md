@@ -60,7 +60,7 @@ C4Component
     Container(web_app, "Web Application", "Flask", "The main application container")
 
     Component(app_routes, "App Routes", "app.py", "Handles HTTP requests and routing.")
-    
+
     Container_Boundary(agents, "AI Agents") {
         Component(planner, "PlannerAgent", "class", "Generates study plans.")
         Component(teacher, "TopicTeachingAgent", "class", "Generates lesson content and flashcards.")
@@ -83,13 +83,13 @@ C4Component
     Rel(app_routes, assessor, "Uses")
     Rel(app_routes, feedback, "Uses")
     Rel(app_routes, chat, "Uses")
-    
+
     Rel(app_routes, start_reels, "Uses")
     Rel(start_reels, validator, "Uses")
     Rel(app_routes, logger, "Uses")
 
     Rel(app_routes, storage, "Persists Data")
-    
+
     Rel(planner, llm_client, "Calls")
     Rel(teacher, llm_client, "Calls")
     Rel(assessor, llm_client, "Calls")
@@ -112,15 +112,15 @@ sequenceDiagram
     User->>App: POST / (topic="Quantum Physics")
     App->>Storage: load_topic("Quantum Physics")
     Storage-->>App: None (New Topic)
-    
+
     App->>Planner: generate_study_plan("Quantum Physics")
     Planner->>LLM: _call_llm(Prompt)
     LLM-->>Planner: JSON Plan
     Planner-->>App: List[Steps]
-    
+
     App->>Storage: save_topic("Quantum Physics", Plan)
     Storage-->>App: confirm save
-    
+
     App-->>User: Redirect to /learn/Quantum Physics/0
 ```
 
@@ -139,21 +139,21 @@ sequenceDiagram
     User->>App: GET /learn/<topic>/<step_index>
     App->>Storage: load_topic(topic)
     Storage-->>App: Topic Data
-    
+
     opt "teaching_material" not yet generated
         App->>Teacher: generate_teaching_material(Step, FullPlan, Background)
         Teacher->>LLM: _call_llm(Prompt)
         LLM-->>Teacher: Markdown Content
         Teacher-->>App: Content
-        
+
         App->>Assessor: generate_question(Content, Background)
         Assessor->>LLM: _call_llm(Prompt)
         LLM-->>Assessor: JSON Questions
         Assessor-->>App: Questions List
-        
+
         App->>Storage: save_topic(Updated Data)
     end
-    
+
     App-->>User: Render learn_step.html
 ```
 
@@ -168,18 +168,18 @@ sequenceDiagram
     participant Storage
 
     User->>App: POST /assess/<topic>/<step_index> (Answers)
-    
+
     loop For each Question
         App->>Feedback: evaluate_answer(UserAns, CorrectAns)
         Feedback-->>App: Result (Correct/Incorrect)
     end
-    
+
     App->>App: Calculate Score
-    
+
     opt Score < 50%
         App->>App: Store Incorrect Questions in Session
     end
-    
+
     App->>Storage: Save Results (Score, Feedback)
     App-->>User: Render feedback.html
 ```
@@ -218,12 +218,12 @@ sequenceDiagram
     App->>Teacher: get_flashcard_count_for_topic(Topic) (Optional)
     Teacher->>LLM: _call_llm
     LLM-->>App: Count
-    
+
     App->>Teacher: generate_flashcards(Topic, Count)
     Teacher->>LLM: _call_llm
     LLM-->>Teacher: List[Flashcards]
     Teacher-->>App: Flashcards
-    
+
     App->>Storage: save_topic(Topic, Flashcards)
     App-->>User: JSON Flashcards
 ```
@@ -245,14 +245,14 @@ sequenceDiagram
     App->>ReelSearch: search_youtube_reels(Topic)
     ReelSearch->>ExtYT: Search Query
     ExtYT-->>ReelSearch: Video List
-    
+
     App->>Validator: validate_videos_batch(Videos)
     Validator->>Validator: Check Embeddability
     Validator-->>App: Authenticated Embeddable Videos
-    
+
     App->>Storage: Save Session Log
     App-->>User: JSON Video List + SessionID
-    
+
     par Async Interaction Logging
         User->>App: POST /api/reels/video-event (Play/Skip)
         App->>Logger: update_video_interaction(Event)

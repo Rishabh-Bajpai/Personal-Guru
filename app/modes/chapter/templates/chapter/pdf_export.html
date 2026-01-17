@@ -1,23 +1,27 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>{{ topic.name }}</title>
     <style>
         body {
             font-family: sans-serif;
         }
+
         h1 {
             text-align: center;
         }
+
         .question {
             margin-left: 20px;
         }
     </style>
 </head>
+
 <body>
     <h1>{{ topic.name }}</h1>
     <h2>Average Score: {{ average_score }}%</h2>
-    {% for step in topic.steps %}
+    {% for step in topic.chapter_mode %}
     <h2>{{ topic.plan[loop.index0] }}</h2>
     <div>{{ step.teaching_material | safe }}</div>
     {% if step.questions %}
@@ -39,4 +43,5 @@
     {% endif %}
     {% endfor %}
 </body>
+
 </html>

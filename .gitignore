@@ -14,6 +14,9 @@ certs/
 flask_session
 postgres_data/
 backup.sql
+API_DOCS.md
+DCS_code/
+app_DCS
 # ==============================================================================
 # PYTHON CORE (Byte-compiled, C extensions)
 # ==============================================================================
@@ -92,7 +95,6 @@ instance/
 # DOCUMENTATION & DATA SCIENCE
 # ==============================================================================
 docs/_build/
-docs/reference/
 /site
 .ipynb_checkpoints
 profile_default/

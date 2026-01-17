@@ -30,6 +30,7 @@ Example JSON response:
 Now, generate a quiz with exactly {count} questions for the topic: '{topic}'.
 """
 
+
 def get_quiz_count_prompt(topic, user_background):
     return f"""
 Analyze the complexity of the topic '{topic}' for a user with background: '{user_background}'.

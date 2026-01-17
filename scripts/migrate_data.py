@@ -1,7 +1,10 @@
-
+import sys
 import os
 import json
 from dotenv import load_dotenv
+
+# Add the project root to the python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 load_dotenv()
 
@@ -17,7 +20,7 @@ def migrate():
         # Create all tables first
         db.create_all()
         print("Database tables created.")
-        
+
         data_dir = 'data'
         if not os.path.exists(data_dir):
             print("No data directory found.")
@@ -25,18 +28,18 @@ def migrate():
 
         files = [f for f in os.listdir(data_dir) if f.endswith('.json')]
         print(f"Found {len(files)} JSON files to migrate.")
-        
+
         for filename in files:
             topic_name = filename.replace('.json', '')
             filepath = os.path.join(data_dir, filename)
-            
+
             try:
                 with open(filepath, 'r') as f:
                     data = json.load(f)
-                    
+
                 print(f"Migrating topic: {topic_name}")
                 storage.save_topic(topic_name, data)
-                
+
             except Exception as e:
                 print(f"Failed to migrate {filename}: {e}")
 

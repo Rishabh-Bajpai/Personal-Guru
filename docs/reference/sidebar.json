@@ -1,0 +1,64 @@
+{
+  "items": [
+    {
+      "items": [
+        "reference/common/agents"
+      ],
+      "label": "common",
+      "type": "category"
+    },
+    {
+      "items": [
+        "reference/core/models",
+        "reference/core/routes"
+      ],
+      "label": "core",
+      "type": "category"
+    },
+    {
+      "items": [
+        {
+          "items": [
+            "reference/modes/chapter/agent"
+          ],
+          "label": "modes.chapter",
+          "type": "category"
+        },
+        {
+          "items": [
+            "reference/modes/chat/agent",
+            "reference/modes/chat/routes"
+          ],
+          "label": "modes.chat",
+          "type": "category"
+        },
+        {
+          "items": [
+            "reference/modes/flashcard/routes"
+          ],
+          "label": "modes.flashcard",
+          "type": "category"
+        },
+        {
+          "items": [
+            "reference/modes/quiz/agent",
+            "reference/modes/quiz/routes"
+          ],
+          "label": "modes.quiz",
+          "type": "category"
+        },
+        {
+          "items": [
+            "reference/modes/reel/routes"
+          ],
+          "label": "modes.reel",
+          "type": "category"
+        }
+      ],
+      "label": "modes",
+      "type": "category"
+    }
+  ],
+  "label": "API Reference",
+  "type": "category"
+}

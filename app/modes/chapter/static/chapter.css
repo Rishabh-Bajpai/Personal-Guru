@@ -250,10 +250,15 @@ body.dark-mode #plan-sidebar li.active {
     border: 1px solid rgba(0, 0, 0, 0.1);
     font-size: 0.95rem;
     margin-bottom: 10px;
-    resize: vertical;
+    resize: none;
     transition: opacity 0.3s ease, background-color 0.3s ease;
     background: var(--input-bg, #fff);
     color: inherit;
+    box-sizing: border-box;
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: inherit;
+    line-height: 1.4;
 }
 
 body.dark-mode #plan-modification-input {
@@ -306,8 +311,8 @@ body.dark-mode #plan-modification-input {
     background: white;
     padding: 15px;
     border-radius: 50px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    border: 1px solid rgba(0,0,0,0.05);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 body.dark-mode .podcast-player {
@@ -358,7 +363,7 @@ body.dark-mode .podcast-player {
 .podcast-progress-bar {
     flex-grow: 1;
     height: 6px;
-    background: rgba(0,0,0,0.1);
+    background: rgba(0, 0, 0, 0.1);
     border-radius: 3px;
     cursor: pointer;
     position: relative;
@@ -366,7 +371,7 @@ body.dark-mode .podcast-player {
 }
 
 body.dark-mode .podcast-progress-bar {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .podcast-progress-fill {
@@ -407,6 +412,56 @@ body.dark-mode .podcast-progress-bar {
 }
 
 @keyframes rotation {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Ask Personal Guru Floating Button */
+.guru-ask-btn {
+    position: fixed;
+    /* Fixed to keep it relative to viewport */
+    z-index: 1000;
+    background: linear-gradient(135deg, #6e8efb, #a777e3);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    /* Initial state for animation */
+    margin-top: 10px;
+    opacity: 0;
+    transition: opacity 0.2s ease, margin-top 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+}
+
+.guru-ask-btn.visible {
+    opacity: 1;
+    margin-top: 0;
+    pointer-events: auto;
+}
+
+.guru-ask-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.guru-ask-btn::before {
+    content: "✨";
+    margin-right: 6px;
+}
+
+/* Disabled state for non-input elements */
+.disabled-state {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: not-allowed;
+    user-select: none;
 }

@@ -21,6 +21,7 @@ function initFlashcardMode(config) {
 
         let cards = [];
         let idx = 0;
+        let currentCardStartTime = Date.now();
 
         if (existingFlashcards && existingFlashcards.length > 0) {
             cards = existingFlashcards;
@@ -30,6 +31,9 @@ function initFlashcardMode(config) {
 
         function renderCard(i) {
             if (!cards || cards.length === 0) return;
+            // Reset timer for the new card
+            currentCardStartTime = Date.now();
+
             const c = cards[i];
             termEl.textContent = c.term;
             defEl.textContent = c.definition;
@@ -46,17 +50,75 @@ function initFlashcardMode(config) {
             }
         }
 
+        // --- Time Tracking Logic ---
+        function saveCurrentCardProgress() {
+            if (!cards || cards.length === 0 || idx >= cards.length) return;
+            const now = Date.now();
+            if (!currentCardStartTime) return; // Paused or not started
+
+            const duration = Math.round((now - currentCardStartTime) / 1000);
+            if (duration <= 0) return;
+
+            const card = cards[idx];
+            const payload = {
+                flashcards: [{
+                    term: card.term,
+                    id: card.id, // ID might be undefined for legacy/newly generated but unsaved cards, handled by backend fallback
+                    time_spent: duration
+                }]
+            };
+
+            // Use sendBeacon if available for reliability on unload, else fetch
+            const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+            // Add CSRF token? sendBeacon doesn't support headers easily.
+            // standard fetch with keepalive is better for JSON + Headers.
+
+            fetch(config.urls.update_progress, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify(payload),
+                keepalive: true
+            }).catch(e => console.error("Progress save failed", e));
+
+            currentCardStartTime = now; // Reset to avoid double counting if we stay on same card
+        }
+
+        // Hook into visibility and unload
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                saveCurrentCardProgress();
+                currentCardStartTime = null; // Pause
+            } else {
+                currentCardStartTime = Date.now(); // Resume
+            }
+        });
+
+        window.addEventListener('beforeunload', () => {
+            saveCurrentCardProgress();
+        });
+
         flashcard.addEventListener('click', () => {
             flashcard.classList.toggle('flipped');
         });
 
         prevBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (idx > 0) { idx--; renderCard(idx); }
+            if (idx > 0) {
+                saveCurrentCardProgress();
+                idx--;
+                renderCard(idx);
+            }
         });
         nextBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (idx < cards.length - 1) { idx++; renderCard(idx); }
+            if (idx < cards.length - 1) {
+                saveCurrentCardProgress();
+                idx++;
+                renderCard(idx);
+            }
         });
 
         // Export PDF button handler
@@ -101,7 +163,7 @@ function initFlashcardMode(config) {
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    cards = data.flashcards || [];
+                    cards = data.flashcard_mode || data.flashcards || [];
                     if (cards.length === 0) { err.textContent = 'No flashcards generated.'; }
                     idx = 0;
                     renderCard(idx);
