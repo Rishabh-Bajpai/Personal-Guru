@@ -426,7 +426,20 @@ input[type="text"] {
     padding: 12px;
     border: 1px solid #ccc;
     border-radius: 8px;
+    border-radius: 8px;
     font-size: 1em;
+}
+
+/* Validation Errors */
+.input-limit-error {
+    color: #dc2626;
+    font-size: 0.85rem;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.input-invalid {
+    border-color: #dc2626 !important;
 }
 
 /* Main Layout */

@@ -10,7 +10,7 @@
 </div>
 <form method="post" onsubmit="showLoader()">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-    <input type="text" name="topic" size="50" placeholder="Enter a new topic..." required>
+    <input type="text" name="topic" size="50" placeholder="Enter a new topic..." required maxlength="255">
     {% if error %}
     <p class="error error-text">{{ error }}</p>
     {% endif %}
