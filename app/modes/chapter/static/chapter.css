@@ -457,3 +457,11 @@ body.dark-mode .podcast-progress-bar {
     content: "✨";
     margin-right: 6px;
 }
+
+/* Disabled state for non-input elements */
+.disabled-state {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: not-allowed;
+    user-select: none;
+}
