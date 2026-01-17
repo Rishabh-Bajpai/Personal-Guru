@@ -6,6 +6,7 @@ import sys
 import base64
 import glob
 import logging
+from config import Config
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -19,15 +20,30 @@ if not logger.handlers:
     logger.addHandler(handler)
 
 
+def cleanup_old_sandboxes(base_path=None):
+    """Removes the entire sandbox directory to clean up old sessions."""
+    if base_path is None:
+        base_path = Config.SANDBOX_PATH
+
+    if os.path.exists(base_path):
+        try:
+            logger.info(f"Cleaning up old sandboxes at: {base_path}")
+            shutil.rmtree(base_path)
+            logger.info("Sandbox cleanup complete.")
+        except Exception as e:
+            logger.error(f"Failed to clean up sandbox directory: {e}")
+
+
 class Sandbox:
     """Isolated Python execution environment for running untrusted code."""
 
     def __init__(
             self,
-            base_path="/tmp/personal_guru_sandbox",
+            base_path=None,
             sandbox_id=None):
+        self.base_path = base_path if base_path else Config.SANDBOX_PATH
         self.id = sandbox_id if sandbox_id else str(uuid.uuid4())
-        self.path = os.path.join(base_path, self.id)
+        self.path = os.path.join(self.base_path, self.id)
         self.venv_path = os.path.join(self.path, "venv")
 
         if sandbox_id and os.path.exists(self.venv_path):
@@ -54,7 +70,11 @@ class Sandbox:
             return
 
         logger.info(f"Installing dependencies: {libraries}...")
-        pip_path = os.path.join(self.venv_path, "bin", "pip")
+        if os.name == 'nt':
+            pip_path = os.path.join(self.venv_path, "Scripts", "pip")
+        else:
+            pip_path = os.path.join(self.venv_path, "bin", "pip")
+
         try:
             subprocess.run([pip_path, "install"] + libraries,
                            check=True, cwd=self.path, capture_output=True)
@@ -71,7 +91,10 @@ class Sandbox:
         with open(script_path, "w") as f:
             f.write(code)
 
-        python_path = os.path.join(self.venv_path, "bin", "python")
+        if os.name == 'nt':
+            python_path = os.path.join(self.venv_path, "Scripts", "python")
+        else:
+            python_path = os.path.join(self.venv_path, "bin", "python")
 
         try:
             logger.info(f"Executing script: {script_path}")
