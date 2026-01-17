@@ -8,6 +8,7 @@ import subprocess
 import logging
 import platform
 import psutil
+from datetime import datetime
 from dotenv import load_dotenv
 from openai import OpenAI
 from app.core.exceptions import (
@@ -858,3 +859,67 @@ def get_system_info():
             pass
 
     return info
+
+
+# Cache for update check (simple in-memory cache)
+_update_cache = {
+    "last_checked": None,
+    "data": None
+}
+
+def check_for_updates(current_version):
+    """
+    Checks GitHub for the latest release tag.
+    Returns update info dict if a new version is available, else None.
+    Default cache time: 1 hour.
+    """
+    global _update_cache
+
+    # Check cache (1 hour expiry)
+    now = datetime.now()
+    if _update_cache["data"] and _update_cache["last_checked"]:
+        if (now - _update_cache["last_checked"]).total_seconds() < 3600:
+            return _compare_versions(current_version, _update_cache["data"])
+
+    try:
+        updated_cache_data = _fetch_github_release()
+        if updated_cache_data:
+            _update_cache["data"] = updated_cache_data
+            _update_cache["last_checked"] = now
+            return _compare_versions(current_version, updated_cache_data)
+    except Exception as e:
+        level = logging.INFO
+        logging.getLogger(__name__).log(level, f"Failed to check for updates: {e}")
+
+    return None
+
+def _fetch_github_release():
+    url = "https://api.github.com/repos/Rishabh-Bajpai/Personal-Guru/releases/latest"
+    resp = requests.get(url, timeout=3)
+    if resp.status_code == 200:
+        data = resp.json()
+        return {
+            "tag_name": data.get("tag_name"),
+            "html_url": data.get("html_url"),
+            "published_at": data.get("published_at"),
+            "name": data.get("name")
+        }
+    return None
+
+def _compare_versions(current_ver, release_data):
+    if not release_data:
+        return None
+
+    latest_ver = release_data["tag_name"].lstrip("v")
+    curr_ver = current_ver.lstrip("v")
+
+    # Simple semantic version comparison (assumes format 1.0.0)
+    if latest_ver != curr_ver:
+        return {
+             "id": -1, # Using -1 to denote system update
+             "title": f"New Update Available: {release_data['tag_name']}",
+             "message": f"A new version ({release_data['tag_name']}) is available on GitHub.",
+             "notification_type": "info",
+             "url": release_data["html_url"]
+        }
+    return None

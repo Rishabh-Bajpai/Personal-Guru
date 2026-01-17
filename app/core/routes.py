@@ -107,6 +107,24 @@ def index():
     return render_template('index.html', topics=topics_data)
 
 
+@main_bp.context_processor
+def inject_notifications():
+    """Make notifications available to all templates."""
+    from app.common.utils import check_for_updates
+
+    # Define app version here or import from config
+    APP_VERSION = "v0.0.1" # TODO: Move to config
+
+    try:
+        update_note = check_for_updates(APP_VERSION)
+        if update_note:
+            return dict(system_notifications=[update_note])
+    except Exception:
+        pass
+
+    return dict(system_notifications=[])
+
+
 @main_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """Handle user login with username and password authentication."""

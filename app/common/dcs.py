@@ -370,6 +370,17 @@ class DCSClient:
             except Exception:
                 pass
 
+    def get_notifications(self):
+        """Fetch active system notifications from DCS."""
+        try:
+            resp = requests.get(f"{self.base_url}/api/notifications", timeout=5)
+            if resp.status_code == 200:
+                return resp.json()
+            return []
+        except Exception as e:
+            logger.warning(f"Failed to fetch notifications: {e}")
+            return []
+
 class SyncManager:
     """Background manager that periodically syncs data with DCS."""
 
