@@ -6,6 +6,7 @@ import sys
 import base64
 import glob
 import logging
+import tempfile
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -24,8 +25,13 @@ class Sandbox:
 
     def __init__(
             self,
-            base_path="/tmp/personal_guru_sandbox",
+            base_path=None,
             sandbox_id=None):
+        
+        # Use system temp directory if no base path provided
+        if base_path is None:
+            base_path = os.path.join(tempfile.gettempdir(), "personal_guru_sandbox")
+
         self.id = sandbox_id if sandbox_id else str(uuid.uuid4())
         self.path = os.path.join(base_path, self.id)
         self.venv_path = os.path.join(self.path, "venv")
@@ -35,6 +41,21 @@ class Sandbox:
         else:
             logger.info(f"Initializing sandbox: {self.id} at {self.path}")
             self._setup()
+
+    def _get_venv_bin_dir(self):
+        """Returns the binary directory of the venv based on OS."""
+        if os.name == 'nt':
+            return os.path.join(self.venv_path, "Scripts")
+        else:
+            return os.path.join(self.venv_path, "bin")
+
+    def _get_executable(self, name):
+        """Returns the path to an executable in the venv."""
+        bin_dir = self._get_venv_bin_dir()
+        if os.name == 'nt':
+            return os.path.join(bin_dir, f"{name}.exe")
+        else:
+            return os.path.join(bin_dir, name)
 
     def _setup(self):
         """Creates the sandbox directory and virtual environment."""
@@ -54,7 +75,8 @@ class Sandbox:
             return
 
         logger.info(f"Installing dependencies: {libraries}...")
-        pip_path = os.path.join(self.venv_path, "bin", "pip")
+        pip_path = self._get_executable("pip")
+        
         try:
             subprocess.run([pip_path, "install"] + libraries,
                            check=True, cwd=self.path, capture_output=True)
@@ -71,7 +93,7 @@ class Sandbox:
         with open(script_path, "w") as f:
             f.write(code)
 
-        python_path = os.path.join(self.venv_path, "bin", "python")
+        python_path = self._get_executable("python")
 
         try:
             logger.info(f"Executing script: {script_path}")

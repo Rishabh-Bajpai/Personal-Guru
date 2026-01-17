@@ -44,7 +44,7 @@ FULL STUDY PLAN CONTEXT:
 INSTRUCTIONS:
 1. Based on the topic, the full study plan, and the user's incorrect answers (if any), generate detailed teaching material for the current topic.
 2. Avoid generating content that is covered in other steps of the study plan.
-3. The material should be comprehensive and include code examples where appropriate and real-world analogies for complex topics.
+3. The material should be comprehensive. Include code examples ONLY if the topic involves programming or technical implementation. For non-technical topics (e.g., history, languages), do NOT include code blocks. And include real-world analogies for complex topics.
 4. Don't ask any questions to the user or repeat the content.
 5. The output should be a single string of markdown-formatted text, bullet points, and code blocks for readability.
 """
