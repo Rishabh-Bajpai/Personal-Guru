@@ -271,7 +271,36 @@
         </div>
 
         <button type="submit" class="btn-save">Save Profile</button>
+
+        <div class="danger-zone" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e5e7eb;">
+            <h3 style="color: #dc2626; margin-bottom: 1rem;">Danger Zone</h3>
+            <p style="margin-bottom: 1rem; color: #4b5563;">Once you delete your account, there is no going back. Please
+                be certain.</p>
+            <button type="button" class="btn-warning"
+                onclick="document.getElementById('deleteAccountModal').style.display='flex';"
+                style="width: auto;">Delete Account</button>
+        </div>
     </form>
+
+    <!-- Delete Account Confirmation Modal -->
+    <div id="deleteAccountModal" class="modal">
+        <div class="modal-content warning">
+            <h2>⚠️ Delete Account</h2>
+            <div class="modal-body">
+                <p><strong>Are you absolutely sure?</strong></p>
+                <p>This action cannot be undone. This will permanently delete your account and remove all your data from
+                    this device.</p>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+                <button class="btn-primary" onclick="closeModal('deleteAccountModal')"
+                    style="background-color: #6b7280; width: auto;">Cancel</button>
+                <form action="{{ url_for('main.delete_account') }}" method="post" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-warning" style="width: auto;">Yes, Delete My Account</button>
+                </form>
+            </div>
+        </div>
+    </div>
     <!-- T&C Modal -->
     <div id="termsModal" class="modal" data-show-terms="{{ show_terms|tojson }}">
         <div class="modal-content">

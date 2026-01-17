@@ -255,6 +255,25 @@ def user_profile():
     return render_template('user_profile.html', user=user, show_terms=show_terms)
 
 
+@main_bp.route('/delete_account', methods=['POST'])
+@login_required
+def delete_account():
+    """Permanently delete the current user's account and all associated data."""
+    from app.core.extensions import db
+
+    try:
+        user = current_user
+        db.session.delete(user)
+        db.session.commit()
+        logout_user()
+        return redirect(url_for('main.signup')) # Redirect to signup or home
+    except Exception as e:
+        db.session.rollback()
+        # In a real app we'd flash an error, but let's just log and redirect for now
+        print(f"Error deleting account: {e}")
+        return redirect(url_for('main.user_profile'))
+
+
 @main_bp.route('/delete/<topic_name>')
 def delete_topic_route(topic_name):
     """Delete the specified topic and redirect to home page."""
