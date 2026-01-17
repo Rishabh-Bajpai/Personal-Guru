@@ -132,7 +132,7 @@
                         {% endfor %}
                     </div>
                     {% endfor %}
-                    <button type="submit" class="button">Submit Answers</button>
+                    <button id="quiz-submit-btn" type="submit" class="button">Submit Answers</button>
                 </form>
                 {% else %}
 
@@ -184,16 +184,17 @@
 
             <div class="navigation">
                 {% if step_index > 0 %}
-                <a href="{{ url_for('chapter.learn_topic', topic_name=topic.name, step_index=step_index - 1) }}"
+                <a id="nav-prev-btn"
+                    href="{{ url_for('chapter.learn_topic', topic_name=topic.name, step_index=step_index - 1) }}"
                     class="button secondary" onclick="showLoader()">Previous Step</a>
                 {% endif %}
 
-                {% if step_index < total_steps - 1 %} <a
+                {% if step_index < total_steps - 1 %} <a id="nav-next-btn"
                     href="{{ url_for('chapter.learn_topic', topic_name=topic.name, step_index=step_index + 1) }}"
                     class="button" onclick="showLoader()">Next Step</a>
                     {% else %}
-                    <a href="{{ url_for('chapter.complete_topic', topic_name=topic.name) }}" class="button"
-                        onclick="showLoader()">Finish Course</a>
+                    <a id="nav-finish-btn" href="{{ url_for('chapter.complete_topic', topic_name=topic.name) }}"
+                        class="button" onclick="showLoader()">Finish Course</a>
                     {% endif %}
             </div>
         </div>

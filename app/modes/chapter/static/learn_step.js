@@ -279,6 +279,9 @@ function setupPodcast() {
         generateBtn.disabled = true;
         generateBtn.innerHTML = '<span class="loader-small"></span> Generating...';
 
+        // Disable other interactive elements
+        setInteractiveElementsDisabled(true);
+
         try {
             const response = await fetch(config.urls.generate_podcast, {
                 method: 'POST',
@@ -303,6 +306,9 @@ function setupPodcast() {
             alert('Network error: ' + e.message);
             generateBtn.disabled = false;
             generateBtn.innerHTML = originalText;
+        } finally {
+            // Re-enable interactive elements
+            setInteractiveElementsDisabled(false);
         }
     });
 
@@ -507,4 +513,47 @@ function setupSelectionMenu() {
         // Optional: Dispatch input event if you have auto-resize logic bound to it
         chatInput.dispatchEvent(new Event('input', { bubbles: true }));
     }
+}
+
+/**
+ * Toggles the disabled state of interactive elements in Chapter Mode.
+ * Used during long-running operations like Podcast Generation.
+ * @param {boolean} disabled
+ */
+function setInteractiveElementsDisabled(disabled) {
+    // 1. Navigation Buttons (Links styled as buttons)
+    const navIds = ['nav-prev-btn', 'nav-next-btn', 'nav-finish-btn'];
+    navIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (disabled) {
+                el.classList.add('disabled-state');
+            } else {
+                el.classList.remove('disabled-state');
+            }
+        }
+    });
+
+    // 2. Quiz Submit Button
+    const quizBtn = document.getElementById('quiz-submit-btn');
+    if (quizBtn) {
+        quizBtn.disabled = disabled;
+    }
+
+    // 3. Plan Modification
+    const planInput = document.getElementById('plan-modification-input');
+    const planBtn = document.getElementById('plan-modification-button');
+
+    if (planInput) planInput.disabled = disabled;
+    if (planBtn) planBtn.disabled = disabled;
+
+    // 4. Code Execution Buttons
+    const execBtns = document.querySelectorAll('.execute-button');
+    execBtns.forEach(btn => btn.disabled = disabled);
+
+    // 5. Read Aloud Controls
+    const readBtn = document.getElementById('read-button');
+    const readSwitch = document.getElementById('read-aloud-switch');
+    if (readBtn) readBtn.disabled = disabled;
+    if (readSwitch) readSwitch.disabled = disabled;
 }
