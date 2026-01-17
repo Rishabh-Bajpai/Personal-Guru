@@ -74,6 +74,7 @@ def create_app(config_class=Config):
             if request.endpoint and request.endpoint not in [
                 'main.login',
                 'main.signup',
+                'main.submit_feedback',
                     'static'] and not request.endpoint.startswith('static'):
                 return redirect(url_for('main.login'))
 

@@ -427,7 +427,7 @@ def transcribe():
 
 
 @main_bp.route('/api/feedback', methods=['POST'])
-@login_required
+# @login_required  <-- Removed to allow feedback from login screen
 def submit_feedback():
     """
     Handle user feedback form submissions.
@@ -458,8 +458,11 @@ def submit_feedback():
         if not comment or not comment.strip():
             return jsonify({'error': 'Comment is required'}), 400
 
+        # Handle anonymous users
+        user_id = current_user.userid if current_user.is_authenticated else None
+
         new_feedback = Feedback(
-            user_id=current_user.userid,
+            user_id=user_id,
             feedback_type=feedback_type,
             content_reference='feedback_form',
             rating=rating,
