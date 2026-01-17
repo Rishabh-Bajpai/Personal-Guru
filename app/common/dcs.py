@@ -407,9 +407,11 @@ class SyncManager:
         """Main sync loop that runs in background thread."""
         with self.app.app_context():
             # Ensure registration first thing in the thread if not done
-            if not self.client.register_device():
-                logger.error("Could not register device. Sync will be disabled.")
-                return
+            while not self.client.register_device():
+                logger.warning("Could not register device yet. Retrying in 10 seconds...")
+                time.sleep(10)
+                if self.stop_event.is_set():
+                    return
 
             while not self.stop_event.is_set():
                 try:
