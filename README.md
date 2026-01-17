@@ -314,6 +314,10 @@ The `scripts/` folder contains several utility scripts to assist with developmen
   - **Purpose:** Generates self-signed SSL certificates (`cert.pem`, `key.pem`) for local HTTPS development (required for microphone access).
   - **Usage:** `python scripts/generate_cert.py`
 
+## For Developers: API Documentation
+
+You can access the interactive API documentation (Swagger UI) at **http://localhost:5011/apidocs** to explore endpoints and test requests.
+
 ## For Developers: Running Tests
 
 This project includes a comprehensive test suite.

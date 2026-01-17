@@ -314,7 +314,25 @@ def delete_topic_route(topic_name):
 @main_bp.route('/api/suggest-topics', methods=['GET', 'POST'])
 @login_required
 def suggest_topics():
-    """Generate AI-powered topic suggestions based on user profile."""
+    """
+    Generate AI-powered topic suggestions based on user profile.
+
+    ---
+    tags:
+      - Suggestions
+    responses:
+      200:
+        description: List of suggested topics
+        schema:
+          type: object
+          properties:
+            suggestions:
+              type: array
+              items:
+                type: string
+      500:
+        description: Internal Server Error
+    """
     from app.common.agents import SuggestionAgent
     from app.common.storage import get_all_topics
     from flask import jsonify
@@ -395,7 +413,29 @@ def settings():
 @main_bp.route('/api/transcribe', methods=['POST'])
 @login_required
 def transcribe():
-    """Transcribe uploaded audio file to text using STT service."""
+    """
+    Transcribe uploaded audio file to text using STT service.
+
+    ---
+    tags:
+      - Audio
+    parameters:
+      - name: audio
+        in: formData
+        type: file
+        required: true
+        description: Audio file to transcribe
+    responses:
+      200:
+        description: Transcription result
+        schema:
+          type: object
+          properties:
+            transcript:
+              type: string
+      400:
+        description: No audio file provided
+    """
     from flask import jsonify
     from app.common.utils import transcribe_audio
     import tempfile
@@ -435,8 +475,33 @@ def submit_feedback():
     Accepts JSON with feedback_type, rating (1-5), and comment.
     Saves to the Feedback table and logs telemetry event.
 
-    Returns:
-        JSON response with success status or error message.
+    ---
+    tags:
+      - Feedback
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - feedback_type
+            - comment
+          properties:
+            feedback_type:
+              type: string
+              enum: ['form', 'in_place']
+            rating:
+              type: integer
+              minimum: 1
+              maximum: 5
+            comment:
+              type: string
+    responses:
+      200:
+        description: Feedback submitted successfully
+      400:
+        description: Invalid input
     """
     from flask import jsonify
     from app.core.extensions import db
