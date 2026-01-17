@@ -151,8 +151,8 @@
 
             <div class="form-group">
                 <label for="llm_ctx">Context Window</label>
-                <input type="number" id="llm_ctx" name="llm_ctx" value="{{ defaults.get('LLM_NUM_CTX', '18000') }}">
-                <div class="hint">Recommended: 18000+ for best long-context performance.</div>
+                <input type="number" id="llm_ctx" name="llm_ctx" value="{{ defaults.get('LLM_NUM_CTX', '4096') }}">
+                <div class="hint">Recommended: 4096+ for best long-context performance.</div>
             </div>
 
             <div class="section-title">Optional Services</div>

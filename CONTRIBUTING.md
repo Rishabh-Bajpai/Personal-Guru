@@ -84,9 +84,9 @@ Personal-Guru/
 │   ├── modes/             # Learning modes (chat, chapter, quiz, etc.)
 │   └── common/            # Shared utilities and agents
 ├── scripts/               # Development utilities
+├── scripts/installation/  # Setup scripts
 ├── tests/                 # Test suite
 ├── docs/                  # Documentation
-└── installation/          # Setup scripts
 ```
 
 ## Development Tips
