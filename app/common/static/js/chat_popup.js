@@ -80,7 +80,7 @@ function initChatPopup(config) {
             chatMaximizeBtn.title = 'Maximize';
         }
         // Recalculate input height as width might have changed
-        setTimeout(resizePopupInput, 100);
+        setTimeout(updatePopupScrollIndicators, 100);
     }
 
     chatLauncher.addEventListener('click', openChat);
@@ -154,13 +154,49 @@ function initChatPopup(config) {
         }
     });
 
-    // Auto-resize and Keydown logic for popup input
-    function resizePopupInput() {
-        chatInput.style.height = 'auto';
-        chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
+    // Scroll Indicator Logic
+    const scrollUpBtn = document.getElementById('scroll-up-indicator-popup');
+    const scrollDownBtn = document.getElementById('scroll-down-indicator-popup');
+
+    function updatePopupScrollIndicators() {
+        if (!scrollUpBtn || !scrollDownBtn) return;
+
+        const tolerance = 2;
+        const canScrollUp = chatInput.scrollTop > tolerance;
+        const canScrollDown = chatInput.scrollTop + chatInput.clientHeight < chatInput.scrollHeight - tolerance;
+        const hasOverflow = chatInput.scrollHeight > chatInput.clientHeight;
+
+        if (hasOverflow) {
+            if (canScrollUp) scrollUpBtn.classList.remove('hidden');
+            else scrollUpBtn.classList.add('hidden');
+
+            if (canScrollDown) scrollDownBtn.classList.remove('hidden');
+            else scrollDownBtn.classList.add('hidden');
+        } else {
+            scrollUpBtn.classList.add('hidden');
+            scrollDownBtn.classList.add('hidden');
+        }
     }
 
-    chatInput.addEventListener('input', resizePopupInput);
+    if (scrollUpBtn) {
+        scrollUpBtn.addEventListener('click', () => {
+            chatInput.scrollBy({ top: -40, behavior: 'smooth' });
+        });
+    }
+
+    if (scrollDownBtn) {
+        scrollDownBtn.addEventListener('click', () => {
+            chatInput.scrollBy({ top: 40, behavior: 'smooth' });
+        });
+    }
+
+    chatInput.addEventListener('scroll', updatePopupScrollIndicators);
+
+    function handlePopupInput() {
+        updatePopupScrollIndicators();
+    }
+
+    chatInput.addEventListener('input', handlePopupInput);
 
     chatInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -171,10 +207,10 @@ function initChatPopup(config) {
         }
     });
 
-    // Reset height on submit
+    // Reset height on submit - No longer needed for fixed height, but update indicators
     chatForm.addEventListener('submit', () => {
         setTimeout(() => {
-            chatInput.style.height = 'auto';
+            updatePopupScrollIndicators();
         }, 0);
     });
 

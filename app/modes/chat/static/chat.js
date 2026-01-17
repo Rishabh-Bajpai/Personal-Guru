@@ -98,12 +98,52 @@ document.addEventListener('DOMContentLoaded', function () {
     // Auto-resize and Keydown logic for main chat input
     const chatInput = document.getElementById('chat-input');
 
-    function resizeInput() {
-        chatInput.style.height = 'auto';
-        chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + 'px';
+    const scrollUpBtn = document.getElementById('scroll-up-indicator');
+    const scrollDownBtn = document.getElementById('scroll-down-indicator');
+
+    function updateScrollIndicators() {
+        if (!scrollUpBtn || !scrollDownBtn) return;
+
+        // Tolerance to handle sub-pixel rendering
+        const tolerance = 2;
+        const canScrollUp = chatInput.scrollTop > tolerance;
+        const canScrollDown = chatInput.scrollTop + chatInput.clientHeight < chatInput.scrollHeight - tolerance;
+
+        // Only show arrows if content actually overflows
+        const hasOverflow = chatInput.scrollHeight > chatInput.clientHeight;
+
+        if (hasOverflow) {
+            if (canScrollUp) scrollUpBtn.classList.remove('hidden');
+            else scrollUpBtn.classList.add('hidden');
+
+            if (canScrollDown) scrollDownBtn.classList.remove('hidden');
+            else scrollDownBtn.classList.add('hidden');
+        } else {
+            scrollUpBtn.classList.add('hidden');
+            scrollDownBtn.classList.add('hidden');
+        }
     }
 
-    chatInput.addEventListener('input', resizeInput);
+    function handleInput() {
+        updateScrollIndicators();
+    }
+
+    // Scroll Arrow Event Listeners
+    if (scrollUpBtn) {
+        scrollUpBtn.addEventListener('click', () => {
+            chatInput.scrollBy({ top: -40, behavior: 'smooth' });
+        });
+    }
+
+    if (scrollDownBtn) {
+        scrollDownBtn.addEventListener('click', () => {
+            chatInput.scrollBy({ top: 40, behavior: 'smooth' });
+        });
+    }
+
+    chatInput.addEventListener('scroll', updateScrollIndicators);
+
+    chatInput.addEventListener('input', handleInput);
 
     chatInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -149,6 +189,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Show loading state
         button.disabled = true;
+        input.readOnly = true;
         loading.style.display = 'inline';
 
     });
