@@ -47,8 +47,8 @@ class DCSClient:
                 # Optionally update details
                 self.update_device_details()
                 return True
-        except OperationalError:
-            logger.warning("Database tables not ready yet. Retrying registration later.")
+        except OperationalError as e:
+            logger.warning(f"Database tables not ready yet: {e}. Retrying registration later.")
             return False
         except Exception as e:
             logger.error(f"Error checking registration: {e}")
@@ -406,6 +406,9 @@ class SyncManager:
     def _loop(self):
         """Main sync loop that runs in background thread."""
         with self.app.app_context():
+            # DEBUG: Check DB Config
+            logger.info(f"SyncManager App Config DB: {self.app.config.get('SQLALCHEMY_DATABASE_URI')}")
+
             # Ensure registration first thing in the thread if not done
             while not self.client.register_device():
                 logger.warning("Could not register device yet. Retrying in 10 seconds...")

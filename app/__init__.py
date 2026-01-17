@@ -252,8 +252,14 @@ def create_app(config_class=Config):
             ), 500
 
     # Initialize Background Sync
-    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-        # Prevent double initialization in debug mode reloader
+    # In debug mode with reloader, the parent process spawns a child.
+    # WERKZEUG_RUN_MAIN is 'true' ONLY in the child process.
+    # We skip starting in the parent (where WERKZEUG_RUN_MAIN is not set but reloader is active)
+    # to avoid double initialization and incorrect config.
+    # In production (without reloader), WERKZEUG_RUN_MAIN won't be set, so we also start.
+    run_main_env = os.environ.get('WERKZEUG_RUN_MAIN')
+    if run_main_env == 'true':
+        # Child process of reloader - this is the main server process
         try:
             from app.common.dcs import SyncManager
             sync_manager = SyncManager(app)
