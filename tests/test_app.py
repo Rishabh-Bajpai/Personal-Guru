@@ -275,6 +275,7 @@ def test_validate_config_partial_missing(monkeypatch):
 def setup_client():
     app = create_setup_app()
     app.config['TESTING'] = True
+    app.config['WTF_CSRF_ENABLED'] = False  # Disable CSRF for testing
     with app.test_client() as client:
         yield client
 
