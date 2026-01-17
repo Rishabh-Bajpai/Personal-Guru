@@ -118,7 +118,7 @@ def update_plan(topic_name):
     topic_data = load_topic(topic_name)
     chat_history = topic_data.get('chat_history', [])
 
-    system_message = f"Based on your feedback, I've updated the study plan. The new focus will be on: {', '.join(new_plan)}. Let's proceed with the new direction."
+    system_message = "Based on your feedback, I've updated the study plan."
     chat_history.append({"role": "assistant", "content": system_message})
     save_chat_history(topic_name, chat_history)
 
