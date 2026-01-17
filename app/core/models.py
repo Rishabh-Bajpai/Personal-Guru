@@ -2,6 +2,7 @@ from app.core.extensions import db
 # from pgvector.sqlalchemy import Vector
 import datetime
 from sqlalchemy import JSON
+from sqlalchemy.orm import validates
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # UserMixin provides default implementations for the methods that Flask-Login expects user objects to have:
@@ -194,6 +195,12 @@ class Installation(TimestampMixin, SyncMixin, db.Model):
     logins = db.relationship('Login', back_populates='installation', cascade='all, delete-orphan')
     telemetry_logs = db.relationship('TelemetryLog', back_populates='installation', cascade='all, delete-orphan')
     sync_logs = db.relationship('SyncLog', back_populates='installation', cascade='all, delete-orphan')
+
+    @validates('gpu_model', 'os_version')
+    def validate_length(self, key, value):
+        if value and len(value) > 255:
+            return value[:255]
+        return value
 
 # SyncLog: Stores the result of background data synchronization attempts
 class SyncLog(TimestampMixin, db.Model):
