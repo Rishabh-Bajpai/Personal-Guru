@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-# Ensure script runs from project root
-cd "$(dirname "$0")/.."
+# Ensure script runs from project root (scripts/installation -> project root)
+cd "$(dirname "$0")/../.."
 
 echo "🚀 Starting Personal Guru Setup..."
 

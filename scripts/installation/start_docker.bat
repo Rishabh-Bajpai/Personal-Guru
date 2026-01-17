@@ -1,6 +1,10 @@
 @echo off
 setlocal
 chcp 65001 >nul 2>nul
+
+:: Navigate to project root (scripts/installation -> project root)
+pushd "%~dp0\..\.."
+
 echo 🐳 Interactive Docker Launcher
 echo.
 
