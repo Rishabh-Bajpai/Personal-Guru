@@ -43,9 +43,11 @@ Thank you for your interest in contributing to Personal Guru! We welcome contrib
 
 ### Code Contributions
 
-1. **Create a branch**
+1. **Create a branch from `development`**
 
    ```bash
+   git checkout development
+   git pull origin development
    git checkout -b feature/your-feature-name
    ```
 
@@ -64,9 +66,12 @@ Thank you for your interest in contributing to Personal Guru! We welcome contrib
 
 4. **Submit a Pull Request**
 
+   - **Target the `development` branch** (not `main`)
    - Use the PR template
    - Link related issues (if closes an issue, use `closes #123, #456`)
    - Provide a clear description
+
+> **Note:** All new features go to `development` first. The `main` branch is updated only during releases.
 
 ## Code Standards
 
