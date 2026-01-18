@@ -278,7 +278,6 @@ After saving, you can access Personal-Guru securely at your public domain.
 
 ## Project & Community
 
-- **[Roadmap](ROADMAP.md)**: View our current priorities and future plans.
 - **[Contributing](CONTRIBUTING.md)**: Learn how to set up the dev environment and submit PRs.
 - **[Security Policy](SECURITY.md)**: Read about how we handle security and report vulnerabilities.
 - **[License](LICENSE)**: Released under the AGPL-3.0 License.
