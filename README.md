@@ -25,31 +25,6 @@ This is a Flask-based web application that serves as a proof-of-concept for a pe
 - **Reel Mode:** A TikTok/Reel-style interface for browsing educational short videos.
 - **Comprehensive Test Suite:** Includes a full suite of unit tests to verify application logic.
 
-## Software Architecture
-
-We use the [C4 Model](docs/architecture.md) for architectural documentation.
-Key architectural decisions are recorded in [docs/adr](docs/adr).
-
-### System Context
-
-```mermaid
-C4Context
-    title System Context Diagram for Personal Guru
-
-    Person(user, "User", "A person who wants to learn a new topic.")
-    System(personal_guru, "Personal Guru", "Generates study plans, quizzes, and flashcards.")
-
-    System_Ext(openai, "LLM Provider", "OpenAI / Ollama / LMStudio")
-    System_Ext(youtube, "YouTube", "Provides video content for Reel Mode.")
-    System_Ext(speaches, "Speaches (Kokoro)", "OpenAI-compatible TTS server.")
-
-    Rel(user, personal_guru, "Uses", "HTTPS")
-    Rel(personal_guru, openai, "Generates Content via", "API")
-    Rel(personal_guru, youtube, "Search & Embeds", "API")
-    Rel(personal_guru, speaches, "Generates Audio via", "API")
-```
-
-See [docs/architecture.md](docs/architecture.md) for Container, Component, and Sequence diagrams.
 
 ## Installation & Setup
 
@@ -200,6 +175,32 @@ Below is a quick summary for manual setup:
     ```bash
     python run.py
     ```
+
+## Software Architecture
+
+We use the [C4 Model](docs/architecture.md) for architectural documentation.
+Key architectural decisions are recorded in [docs/adr](docs/adr).
+
+### System Context
+
+```mermaid
+C4Context
+    title System Context Diagram for Personal Guru
+
+    Person(user, "User", "A person who wants to learn a new topic.")
+    System(personal_guru, "Personal Guru", "Generates study plans, quizzes, and flashcards.")
+
+    System_Ext(openai, "LLM Provider", "OpenAI / Ollama / LMStudio")
+    System_Ext(youtube, "YouTube", "Provides video content for Reel Mode.")
+    System_Ext(speaches, "Speaches (Kokoro)", "OpenAI-compatible TTS server.")
+
+    Rel(user, personal_guru, "Uses", "HTTPS")
+    Rel(personal_guru, openai, "Generates Content via", "API")
+    Rel(personal_guru, youtube, "Search & Embeds", "API")
+    Rel(personal_guru, speaches, "Generates Audio via", "API")
+```
+
+See [docs/architecture.md](docs/architecture.md) for Container, Component, and Sequence diagrams.
 
 ## Database Schema
 
