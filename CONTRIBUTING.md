@@ -7,7 +7,7 @@ Thank you for your interest in contributing to Personal Guru! We welcome contrib
 1. **Fork & Clone**
 
    ```bash
-   git clone https://github.com/YOUR_USERNAME/Personal-Guru.git
+   git clone https://github.com/Rishabh-Bajpai/Personal-Guru.git
    cd Personal-Guru
    ```
 
