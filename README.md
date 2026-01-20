@@ -2,6 +2,8 @@
 
 This is a Flask-based web application that serves as a proof-of-concept for a personalized learning tool. It uses a multi-agent AI system to create an interactive learning experience tailored to the user's chosen topic.
 
+# For live demo: [https://pg-demo.samosa-ai.com/](https://pg-demo.samosa-ai.com)
+
 ## Features
 
 - **User Accounts:** Secure sign-up, login, and profile management.
