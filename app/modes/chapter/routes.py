@@ -36,6 +36,7 @@ def _log_plan_generated(topic_name: str, plan_steps: list) -> None:
 
 @chapter_bp.route('/<topic_name>')
 def mode(topic_name):
+    """Render the chapter mode page for a specific topic."""
     topic_data = load_topic(topic_name)
 
     # Initialize Persistent Sandbox
@@ -75,7 +76,7 @@ def mode(topic_name):
     # Save the new plan
     topic_data = topic_data or {"name": topic_name}
     topic_data['plan'] = plan_steps
-    topic_data['chapter_mode'] = [{'title': step_title} for step_title in plan_steps]
+    topic_data['chapter_mode'] = [{'title': step_title, 'step_index': i} for i, step_title in enumerate(plan_steps)]
     save_topic(topic_name, topic_data)
 
     _log_plan_generated(topic_name, plan_steps)
@@ -90,6 +91,39 @@ def mode(topic_name):
 
 @chapter_bp.route('/generate', methods=['POST'])
 def generate_plan():
+    """
+    Generate a study plan for a given topic.
+
+    ---
+    tags:
+      - Plan Generation
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - topic
+          properties:
+            topic:
+              type: string
+              description: The topic to learn about
+    responses:
+      200:
+        description: Plan generated successfully
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            plan:
+              type: array
+              items:
+                type: string
+      400:
+        description: Topic name required
+    """
     data = request.get_json()
     topic_name = data.get('topic')
     if not topic_name:
@@ -106,7 +140,7 @@ def generate_plan():
     topic_data = load_topic(topic_name) or {"name": topic_name}
     topic_data['plan'] = plan_steps
     # Initialize steps structure
-    topic_data['chapter_mode'] = [{'title': step_title} for step_title in plan_steps]
+    topic_data['chapter_mode'] = [{'title': step_title, 'step_index': i} for i, step_title in enumerate(plan_steps)]
 
     save_topic(topic_name, topic_data)
 
@@ -117,6 +151,7 @@ def generate_plan():
 
 @chapter_bp.route('/<topic_name>/update_plan', methods=['POST'])
 def update_plan(topic_name):
+    """Update the study plan based on user feedback."""
     comment = request.form.get('comment')
     current_step_index = request.form.get('current_step_index', 0)
 
@@ -140,6 +175,8 @@ def update_plan(topic_name):
         new_plan = planner.update_study_plan(
             topic_name, user_background, current_plan, comment)
     except Exception:
+        # Error will be caught by global handler
+        raise
         # Error will be caught by global handler
         raise
 
@@ -177,6 +214,7 @@ def update_plan(topic_name):
 
 @chapter_bp.route('/learn/<topic_name>/<int:step_index>')
 def learn_topic(topic_name, step_index):
+    """Render the learning content for a specific step."""
     topic_data = load_topic(topic_name)
     if not topic_data:
         return "Topic not found", 404
@@ -254,6 +292,7 @@ def learn_topic(topic_name, step_index):
 
 @chapter_bp.route('/assess/<topic_name>/<int:step_index>', methods=['POST'])
 def assess_step(topic_name, step_index):
+    """Evaluate user answers for a step's assessment."""
     topic_data = load_topic(topic_name)
     if not topic_data:
         return "Topic not found", 404
@@ -261,7 +300,7 @@ def assess_step(topic_name, step_index):
     current_step_data = topic_data['chapter_mode'][step_index]
     questions = current_step_data.get('questions', {}).get('questions', [])
     user_answers = [request.form.get(f'option_{i}') for i in range(len(questions))]
-    
+
     try:
         time_spent = int(request.form.get('time_spent', 0))
     except ValueError:
@@ -300,7 +339,7 @@ def assess_step(topic_name, step_index):
     save_topic(topic_name, topic_data)
 
     # Telemetry Hook: Step Assessed
-    try:     
+    try:
         log_telemetry(
             event_type='chapter_step_assessed',
             triggers={'source': 'web_ui', 'action': 'click_next'},
@@ -330,6 +369,7 @@ def assess_step(topic_name, step_index):
 
 @chapter_bp.route('/<topic_name>/update_time/<int:step_index>', methods=['POST'])
 def update_time(topic_name, step_index):
+    """Update the time spent on a specific step."""
     try:
         time_spent = int(request.form.get('time_spent', 0))
     except (ValueError, TypeError):
@@ -337,28 +377,29 @@ def update_time(topic_name, step_index):
 
     if time_spent > 0:
         # Prevent race condition: Use direct DB update instead of load_topic/save_topic
-        # load_topic gets a snapshot. If another request (e.g. assess_step) updates 
-        # user_answers in parallel, save_topic (which overwrites everything) would 
+        # load_topic gets a snapshot. If another request (e.g. assess_step) updates
+        # user_answers in parallel, save_topic (which overwrites everything) would
         # revert user_answers to the stale snapshot state (None).
-        
+
         from app.core.models import Topic, ChapterMode
         from flask_login import current_user
         from app.core.extensions import db
-        
-        # We need to find the specific step. 
+
+        # We need to find the specific step.
         # Note: step_index isn't unique globally, only per topic.
-        
+
         topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
         if topic:
              step = ChapterMode.query.filter_by(topic_id=topic.id, step_index=step_index).first()
              if step:
                  step.time_spent = (step.time_spent or 0) + time_spent
                  db.session.commit()
-            
+
     return '', 204
 
 @chapter_bp.route('/reset_quiz/<topic_name>/<int:step_index>', methods=['POST'])
 def reset_quiz(topic_name, step_index):
+    """Reset the quiz results for a specific step."""
     topic_data = load_topic(topic_name)
     if not topic_data:
         return "Topic not found", 404
@@ -384,6 +425,7 @@ def reset_quiz(topic_name, step_index):
 
 @chapter_bp.route('/generate-audio/<int:step_index>', methods=['POST'])
 def generate_audio_route(step_index):
+    """Generate TTS audio for the teaching material."""
     teaching_material = request.json.get('text')
     if not teaching_material:
         return {"error": "No text provided"}, 400
@@ -404,6 +446,7 @@ def generate_audio_route(step_index):
 @chapter_bp.route('/generate-podcast/<topic_name>/<int:step_index>',
                   methods=['POST'])
 def generate_podcast_route(topic_name, step_index):
+    """Generate a podcast episode for the step."""
     topic_data = load_topic(topic_name)
     if not topic_data:
         return {"error": "Topic not found"}, 404
@@ -422,14 +465,14 @@ def generate_podcast_route(topic_name, step_index):
 
     # Define output path
     step_id = current_step_data.get('id')
-    
+
     # Fallback if ID is missing (e.g. not flushed yet), though load_topic should have it if it existed.
     # If it's a new step that hasn't been saved to DB, it might not have an ID.
     # But current_step_data comes from load_topic, which comes from DB.
     # Logic in storage: if step exists in DB, it has ID.
     if not step_id:
          # Try to save to ensure ID? save_topic does flush.
-         # But wait, load_topic gets data from DB. 
+         # But wait, load_topic gets data from DB.
          # If I just generated the topic, it should be in DB.
          # Let's rely on user_id and topic name + step index if id missing?
          # The Requirement says: <step_id (ChapterMode's id)>
@@ -438,7 +481,7 @@ def generate_podcast_route(topic_name, step_index):
     from flask_login import current_user
     import werkzeug
     filename = werkzeug.utils.secure_filename(f"podcast_{current_user.userid}_{step_id}.mp3")
-    
+
     # New Path: <cwd>/data/audio/
     audio_dir = os.path.join(os.getcwd(), 'data', 'audio')
     if not os.path.exists(audio_dir):
@@ -469,18 +512,18 @@ def generate_podcast_route(topic_name, step_index):
             encoded_string = base64.b64encode(audio_file.read()).decode('utf-8')
     except Exception as e:
         return {"error": f"Failed to encode audio: {e}"}, 500
-    
+
     # Save the podcast path to the step
     current_step_data['podcast_audio_path'] = output_path
     save_topic(topic_name, topic_data)
-    
+
     # Telemetry Hook: Podcast Generated
     try:
         log_telemetry(
             event_type='content_generated',
             triggers={'source': 'web_ui', 'action': 'click_podcast'},
             payload={
-                'topic': topic_name, 
+                'topic': topic_name,
                 'step_index': step_index,
                 'content_type': 'podcast'
             }
@@ -493,6 +536,7 @@ def generate_podcast_route(topic_name, step_index):
 
 @chapter_bp.route('/complete/<topic_name>')
 def complete_topic(topic_name):
+    """Render the topic completion page."""
     topic_data, average_score = _get_topic_data_and_score(topic_name)
     if not topic_data:
         return "Topic not found", 404
@@ -507,6 +551,7 @@ def complete_topic(topic_name):
 
 @chapter_bp.route('/export/<topic_name>')
 def export_topic(topic_name):
+    """Export the topic content as a Markdown file."""
     topic_data = load_topic(topic_name)
     if not topic_data:
         return "Topic not found", 404
@@ -524,6 +569,7 @@ def export_topic(topic_name):
 
 @chapter_bp.route('/export/<topic_name>/pdf')
 def export_topic_pdf(topic_name):
+    """Export the topic content as a PDF file."""
     topic_data = load_topic(topic_name)
     if not topic_data:
         return "Topic not found", 404
@@ -577,6 +623,43 @@ code_agent = CodeExecutionAgent()
 
 @chapter_bp.route('/execute_code', methods=['POST'])
 def execute_code():
+    """
+    Execute Python code in the secure sandbox.
+
+    ---
+    tags:
+      - Code Execution
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - code
+          properties:
+            code:
+              type: string
+              description: Python code to execute
+    responses:
+      200:
+        description: Execution result
+        schema:
+          type: object
+          properties:
+            output:
+              type: string
+            error:
+              type: string
+            images:
+              type: array
+              items:
+                type: string
+            enhanced_code:
+              type: string
+      400:
+        description: No code provided
+    """
     data = request.json
     code = data.get('code')
 
@@ -615,6 +698,7 @@ def execute_code():
 
 
 def _get_topic_data_and_score(topic_name):
+    """Helper to calculate average score and retrieve topic data."""
     topic_data = load_topic(topic_name)
     if not topic_data:
         return None, 0

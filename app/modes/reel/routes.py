@@ -10,11 +10,44 @@ active_sessions = {}
 
 @reel_bp.route('/<topic_name>')
 def mode(topic_name):
+    """Render the Reel mode interface."""
     return render_template('reel/mode.html', topic_name=topic_name)
 
 
 @reel_bp.route('/api/search', methods=['POST'])
 def search_reels():
+    """
+    Search for YouTube reels/shorts for a given topic.
+
+    ---
+    tags:
+      - Reels
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - topic
+          properties:
+            topic:
+              type: string
+    responses:
+      200:
+        description: List of video results
+        schema:
+          type: object
+          properties:
+            reels:
+              type: array
+              items:
+                type: object
+            session_id:
+              type: string
+      400:
+        description: Topic is required
+    """
     try:
         data = request.get_json()
         topic = data.get('topic', '').strip()
@@ -53,6 +86,38 @@ def search_reels():
 
 @reel_bp.route('/api/video-event', methods=['POST'])
 def video_event():
+    """
+    Track video play/skip events.
+
+    ---
+    tags:
+      - Reels
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - session_id
+            - video_id
+            - event_type
+          properties:
+            session_id:
+              type: string
+            video_id:
+              type: string
+            event_type:
+              type: string
+              enum: ['played', 'skipped', 'auto_skipped']
+    responses:
+      200:
+        description: Event logged successfully
+      400:
+        description: Missing required fields
+      404:
+        description: Session not found
+    """
     """Track video play/skip events."""
     try:
         data = request.get_json()

@@ -15,9 +15,14 @@
         width: 100%;
         height: 100%;
         background-color: rgba(0, 0, 0, 0.6);
-        align-items: center;
+        align-items: flex-start;
+        /* Changed from center to top */
         justify-content: center;
         backdrop-filter: blur(2px);
+        padding-top: 50px;
+        /* Add space from top */
+        overflow-y: auto;
+        /* Ensure scrolling if content is long */
     }
 
     .modal-content {
@@ -160,26 +165,26 @@
             <div class="form-group">
                 <label for="name">Full Name</label>
                 <input type="text" id="name" name="name" class="form-control" value="{{ user.login.name or '' }}"
-                    placeholder="Enter your name">
+                    placeholder="Enter your name" maxlength="100">
             </div>
 
             <div class="form-group">
                 <label for="age">Age</label>
                 <input type="number" id="age" name="age" class="form-control" value="{{ user.age or '' }}"
-                    placeholder="Age">
+                    placeholder="Age" min="1">
             </div>
 
             <div class="form-group">
                 <label for="country">Country</label>
                 <input type="text" id="country" name="country" class="form-control" value="{{ user.country or '' }}"
-                    placeholder="Country">
+                    placeholder="Country" maxlength="100">
             </div>
 
             <div class="form-group">
                 <label for="languages">Languages</label>
                 <input type="text" id="languages" name="languages" class="form-control"
                     value="{{ user.languages | join(', ') if user.languages else '' }}"
-                    placeholder="e.g. English, Hindi">
+                    placeholder="e.g. English, Hindi" maxlength="255">
             </div>
 
             <!-- Education & Profession -->
@@ -205,13 +210,14 @@
             <div class="form-group">
                 <label for="field_of_study">Field of Study</label>
                 <input type="text" id="field_of_study" name="field_of_study" class="form-control"
-                    value="{{ user.field_of_study or '' }}" placeholder="e.g. Computer Science, Biology">
+                    value="{{ user.field_of_study or '' }}" placeholder="e.g. Computer Science, Biology"
+                    maxlength="100">
             </div>
 
             <div class="form-group full-width">
                 <label for="occupation">Current Occupation</label>
                 <input type="text" id="occupation" name="occupation" class="form-control"
-                    value="{{ user.occupation or '' }}" placeholder="e.g. Student, Software Engineer">
+                    value="{{ user.occupation or '' }}" placeholder="e.g. Student, Software Engineer" maxlength="100">
             </div>
 
             <!-- Learning Preferences -->
@@ -220,13 +226,14 @@
             <div class="form-group full-width">
                 <label for="learning_goals">Learning Goals</label>
                 <textarea id="learning_goals" name="learning_goals" class="form-control"
-                    placeholder="What do you want to achieve?">{{ user.learning_goals or '' }}</textarea>
+                    placeholder="What do you want to achieve?"
+                    maxlength="2000">{{ user.learning_goals or '' }}</textarea>
             </div>
 
             <div class="form-group full-width">
                 <label for="prior_knowledge">Prior Knowledge</label>
                 <textarea id="prior_knowledge" name="prior_knowledge" class="form-control"
-                    placeholder="What do you already know?">{{ user.prior_knowledge or '' }}</textarea>
+                    placeholder="What do you already know?" maxlength="2000">{{ user.prior_knowledge or '' }}</textarea>
             </div>
 
             <div class="form-group">
@@ -261,12 +268,42 @@
             <div class="form-group full-width">
                 <label for="time_commitment">Time Commitment</label>
                 <input type="text" id="time_commitment" name="time_commitment" class="form-control"
-                    value="{{ user.time_commitment or '' }}" placeholder="e.g. 2 hours/week, 30 mins/day">
+                    value="{{ user.time_commitment or '' }}" placeholder="e.g. 2 hours/week, 30 mins/day"
+                    maxlength="100">
             </div>
         </div>
 
         <button type="submit" class="btn-save">Save Profile</button>
+
+        <div class="danger-zone" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e5e7eb;">
+            <h3 style="color: #dc2626; margin-bottom: 1rem;">Danger Zone</h3>
+            <p style="margin-bottom: 1rem; color: #4b5563;">Once you delete your account, there is no going back. Please
+                be certain.</p>
+            <button type="button" class="btn-warning"
+                onclick="document.getElementById('deleteAccountModal').style.display='flex';"
+                style="width: auto;">Delete Account</button>
+        </div>
     </form>
+
+    <!-- Delete Account Confirmation Modal -->
+    <div id="deleteAccountModal" class="modal">
+        <div class="modal-content warning">
+            <h2>⚠️ Delete Account</h2>
+            <div class="modal-body">
+                <p><strong>Are you absolutely sure?</strong></p>
+                <p>This action cannot be undone. This will permanently delete your account and remove all your data from
+                    this device.</p>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+                <button class="btn-primary" onclick="closeModal('deleteAccountModal')"
+                    style="background-color: #6b7280; width: auto;">Cancel</button>
+                <form action="{{ url_for('main.delete_account') }}" method="post" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-warning" style="width: auto;">Yes, Delete My Account</button>
+                </form>
+            </div>
+        </div>
+    </div>
     <!-- T&C Modal -->
     <div id="termsModal" class="modal" data-show-terms="{{ show_terms|tojson }}">
         <div class="modal-content">

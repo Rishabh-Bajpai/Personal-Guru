@@ -39,8 +39,8 @@ class LogCapture:
         self.worker_thread = None
 
         # Configuration
-        self.batch_size = 100
-        self.flush_interval = 5  # seconds
+        self.batch_size = 1000
+        self.flush_interval = 300  # seconds
 
         try:
             # Install hooks
@@ -67,13 +67,16 @@ class LogCapture:
     def _make_stream_wrapper(self, original_stream, stream_name):
         """Creates a wrapper that writes to both original stream and queue."""
         capture_instance = self
-        
+
         class StreamWrapper:
+            """Stream wrapper that mirrors writes to a queue for capture."""
+
             def write(self, message):
+                """Write message to original stream and capture queue."""
                 # Write to original stream (console)
                 original_stream.write(message)
-                
-                # Filter out empty writes or just newlines if desired, 
+
+                # Filter out empty writes or just newlines if desired,
                 # but often we want to capture everything.
                 if message:
                     capture_instance.queue.put({
@@ -83,22 +86,25 @@ class LogCapture:
                     })
 
             def flush(self):
+                """Flush the original stream."""
                 original_stream.flush()
 
             def isatty(self):
+                """Check if the stream is a TTY."""
                 return getattr(original_stream, 'isatty', lambda: False)()
 
             @property
             def encoding(self):
                 """Expose the encoding of the underlying stream, if available."""
                 return getattr(original_stream, 'encoding', None)
-                
+
         return StreamWrapper()
 
     def _start_worker(self):
+        """Start the background worker thread if not already running."""
         if self.worker_thread is None or not self.worker_thread.is_alive():
             self.worker_thread = threading.Thread(
-                target=self._worker_loop, 
+                target=self._worker_loop,
                 name="LogCaptureWorker",
                 daemon=True
             )
@@ -108,7 +114,7 @@ class LogCapture:
         """Background loop to flush logs."""
         buffer = []
         last_flush = time.time()
-        
+
         while not self.stop_event.is_set():
             try:
                 # Wait for item with timeout (flush interval)
@@ -116,16 +122,18 @@ class LogCapture:
                 if remaining <= 0:
                     # Avoid timeout=0 which can cause a tight loop; use a small minimum delay
                     remaining = 0.1
-                
+
                 item = self.queue.get(timeout=remaining)
+                if item is None:
+                    break
                 buffer.append(item)
-                
+
                 # Flush if full
                 if len(buffer) >= self.batch_size:
                     self._flush(buffer)
                     buffer = []
                     last_flush = time.time()
-                    
+
             except queue.Empty:
                 # Timeout reached, flush if we have anything
                 if buffer:
@@ -133,16 +141,18 @@ class LogCapture:
                     buffer = []
                     last_flush = time.time()
                 continue
-                
+
         # Final flush on stop
         if buffer:
             self._flush(buffer)
-            
+
         # Drain queue
         rest = []
         while not self.queue.empty():
             try:
-                rest.append(self.queue.get_nowait())
+                item = self.queue.get_nowait()
+                if item is not None:
+                    rest.append(item)
             except queue.Empty:
                 break
         if rest:
@@ -175,10 +185,10 @@ class LogCapture:
                     triggers={'source': 'system_capture'},
                     payload={'logs': logs}
                 )
-                
+
                 db.session.add(log_entry)
                 db.session.commit()
-                
+
         except OperationalError as e:
             # Suppress "no such table" errors which happen during startup/setup
             # This avoids noise when logging happens before DB initialization
@@ -194,13 +204,15 @@ class LogCapture:
     def stop(self):
         """Stops the worker thread and restores streams."""
         self.stop_event.set()
-        
+        # Wake up worker immediately
+        self.queue.put(None)
+
         if self.worker_thread:
             # Wait for worker to finish processing
-            self.worker_thread.join(timeout=2.0)
+            self.worker_thread.join(timeout=5.0)
             if self.worker_thread.is_alive():
                 logging.getLogger(__name__).warning(
-                    "LogCapture worker thread did not terminate within the 2.0 second timeout; "
+                    "LogCapture worker thread did not terminate within the 5.0 second timeout; "
                     "some buffered logs may not have been flushed."
                 )
 

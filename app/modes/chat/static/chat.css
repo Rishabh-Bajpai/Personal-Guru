@@ -365,7 +365,8 @@ body.dark-mode .message-content pre {
 
 #chat-input {
     flex-grow: 1;
-    padding: 15px 25px;
+    padding: 15px 35px 15px 25px;
+    /* Extra right padding for scrollbar */
     border: 2px solid rgba(0, 0, 0, 0.1);
     border-radius: 30px;
     font-size: 1.1rem;
@@ -375,13 +376,44 @@ body.dark-mode .message-content pre {
     color: var(--assistant-text);
     resize: none;
     /* Controlled by JS */
-    max-height: 200px;
+    max-height: 190px;
     overflow-y: auto;
     font-family: inherit;
     line-height: 1.5;
     box-sizing: border-box;
     /* Crucial for correct scrollHeight calculation */
 }
+
+/* Custom Scrollbar for Chat Input */
+#chat-input::-webkit-scrollbar {
+    width: 14px;
+    /* Increased width to allow for border padding */
+}
+
+#chat-input::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#chat-input::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    border: 4px solid transparent;
+    /* Creates padding around thumb */
+    background-clip: content-box;
+    /* Only paint background inside content box */
+}
+
+body.dark-mode #chat-input::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.chat-input-wrapper {
+    position: relative;
+    flex-grow: 1;
+    display: flex;
+}
+
+
 
 #chat-input:focus {
     border-color: #667eea;
@@ -406,6 +438,35 @@ body.dark-mode #chat-input:focus {
 
 #send-button:active {
     transform: scale(0.95);
+}
+
+/* Disabled State for Buttons */
+#send-button:disabled,
+#mic-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(50%);
+    pointer-events: none;
+    /* Ensure no clicks register */
+}
+
+#send-button:disabled:hover,
+#send-button:disabled:active,
+#mic-button:disabled:hover,
+#mic-button:disabled:active {
+    transform: none;
+    filter: grayscale(50%);
+}
+
+#chat-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: rgba(0, 0, 0, 0.05);
+    /* Slight darken to indicate disabled */
+}
+
+body.dark-mode #chat-input:disabled {
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 /* Custom Scrollbar */

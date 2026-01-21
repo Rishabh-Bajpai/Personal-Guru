@@ -13,6 +13,7 @@ popup_agent = ChatModeChatPopupAgent()
 
 @chat_bp.route('/<topic_name>')
 def mode(topic_name):
+    """Render the main chat interface for a topic."""
     # Try to load from DB first
     topic_data = load_topic(topic_name)
     if not topic_data:
@@ -42,8 +43,8 @@ def mode(topic_name):
                 topic_data = {"name": topic_name}
             topic_data['plan'] = plan_steps
             # Initialize empty steps list to match plan length (required by
-            # storage logic)
-            topic_data['steps'] = [{} for _ in plan_steps]
+            # storage logic). Include step_index to avoid duplicate assignment.
+            topic_data['steps'] = [{'step_index': i} for i in range(len(plan_steps))]
             save_topic(topic_name, topic_data)
             # Reload to ensure consistency
             topic_data = load_topic(topic_name)
@@ -74,6 +75,7 @@ def mode(topic_name):
 
 @chat_bp.route('/<topic_name>/update_plan', methods=['POST'])
 def update_plan(topic_name):
+    """Handle study plan modification requests from user feedback."""
     comment = request.form.get('comment')
     if not comment or not comment.strip():
         return redirect(url_for('chat.mode', topic_name=topic_name))
@@ -116,7 +118,7 @@ def update_plan(topic_name):
     topic_data = load_topic(topic_name)
     chat_history = topic_data.get('chat_history', [])
 
-    system_message = f"Based on your feedback, I've updated the study plan. The new focus will be on: {', '.join(new_plan)}. Let's proceed with the new direction."
+    system_message = "Based on your feedback, I've updated the study plan."
     chat_history.append({"role": "assistant", "content": system_message})
     save_chat_history(topic_name, chat_history)
 
@@ -126,12 +128,13 @@ def update_plan(topic_name):
 
 @chat_bp.route('/<topic_name>/send', methods=['POST'])
 def send_message(topic_name):
+    """Process and respond to a user chat message."""
     user_message = request.form.get('message')
     try:
         time_spent = int(request.form.get('time_spent', 0))
     except (ValueError, TypeError):
         time_spent = 0
-    
+
     # Prevent empty or whitespace-only messages from being processed
     if not user_message or not user_message.strip():
         return redirect(url_for('chat.mode', topic_name=topic_name))
@@ -183,7 +186,7 @@ def send_message(topic_name):
             context,
             user_background,
             plan)
-        
+
         # Append full answer to full history
         chat_history.append({"role": "assistant", "content": answer})
 
@@ -208,21 +211,64 @@ def send_message(topic_name):
 
 @chat_bp.route('/<topic_name>/update_time', methods=['POST'])
 def update_time(topic_name):
+    """Update time spent on chat session."""
     try:
         time_spent = int(request.form.get('time_spent', 0))
     except (ValueError, TypeError):
         time_spent = 0
-        
+
     if time_spent > 0:
         topic_data = load_topic(topic_name)
         if topic_data:
             chat_history = topic_data.get('chat_history', [])
             save_chat_history(topic_name, chat_history, time_spent=time_spent)
-             
+
     return '', 204
 
 @chat_bp.route('/<topic_name>/<int:step_index>', methods=['POST'])
 def chat(topic_name, step_index):
+    """
+    Handle popup chat messages within chapter steps.
+
+    ---
+    tags:
+      - Chat
+    parameters:
+      - name: topic_name
+        in: path
+        type: string
+        required: true
+      - name: step_index
+        in: path
+        type: integer
+        required: true
+        description: Step index or 9999 for general chat
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - question
+          properties:
+            question:
+              type: string
+            time_spent:
+              type: integer
+    responses:
+      200:
+        description: AI response
+        schema:
+          type: object
+          properties:
+            answer:
+              type: string
+      400:
+        description: Invalid request
+      500:
+        description: Processing error
+    """
+    """Handle popup chat messages within chapter steps."""
     user_question = request.json.get('question')
     try:
         time_spent = int(request.json.get('time_spent', 0))

@@ -2,32 +2,40 @@ from app.core.extensions import db
 # from pgvector.sqlalchemy import Vector
 import datetime
 from sqlalchemy import JSON
+from sqlalchemy.orm import validates
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # UserMixin provides default implementations for the methods that Flask-Login expects user objects to have:
 # is_authenticated, is_active, is_anonymous, and get_id.
-from flask_login import UserMixin 
+from flask_login import UserMixin
 
 class TimestampMixin:
+    """Mixin providing created_at and modified_at timestamp columns."""
+
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
     modified_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, nullable=False)
 
+
 class SyncMixin:
+    """Mixin providing sync_status column for DCS synchronization."""
+
     sync_status = db.Column(db.Text, default='pending', onupdate='pending', nullable=True)
 
 
 class Topic(TimestampMixin, SyncMixin, db.Model):
+    """User study topic with associated learning modes."""
+
     __tablename__ = 'topics'
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     name = db.Column(db.String(255), nullable=False)
     study_plan = db.Column(JSON) # Storing list of strings as JSON
-    
+
     __table_args__ = (
         db.UniqueConstraint('user_id', 'name', name='_user_topic_uc'),
     )
-    
+
     # Relationships
     chapter_mode = db.relationship('ChapterMode', back_populates='topic', order_by='ChapterMode.step_index', cascade='all, delete-orphan')
     quiz_mode = db.relationship('QuizMode', back_populates='topic', uselist=False, cascade='all, delete-orphan')
@@ -37,8 +45,10 @@ class Topic(TimestampMixin, SyncMixin, db.Model):
     login = db.relationship('Login', back_populates='topics')
 
 class ChatMode(TimestampMixin, SyncMixin, db.Model):
+    """Stores chat conversation history for a topic."""
+
     __tablename__ = 'chat_mode'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False, unique=True)
@@ -51,8 +61,10 @@ class ChatMode(TimestampMixin, SyncMixin, db.Model):
     topic = db.relationship('Topic', back_populates='chat_mode')
 
 class ChapterMode(TimestampMixin, SyncMixin, db.Model):
+    """Stores chapter-based learning content and assessments."""
+
     __tablename__ = 'chapter_mode'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
@@ -60,7 +72,7 @@ class ChapterMode(TimestampMixin, SyncMixin, db.Model):
     title = db.Column(db.String(255))
     content = db.Column(db.Text) # Markdown content
     podcast_audio_path = db.Column(db.String(512)) # path e.g. "/data/audio/podcast_<user_id><topic><step_id>.mp3"
-    
+
     # Questions and Feedback stored as JSON
     questions = db.Column(JSON)
     user_answers = db.Column(JSON)
@@ -74,10 +86,12 @@ class ChapterMode(TimestampMixin, SyncMixin, db.Model):
 
     # Relationships
     topic = db.relationship('Topic', back_populates='chapter_mode')
-    
+
 class QuizMode(TimestampMixin, SyncMixin, db.Model):
+    """Stores quiz questions and results for a topic."""
+
     __tablename__ = 'quiz_mode'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     # TODO: Remove unique constraint to allow multiple quizzes per topic
@@ -92,8 +106,10 @@ class QuizMode(TimestampMixin, SyncMixin, db.Model):
 
 
 class FlashcardMode(TimestampMixin, SyncMixin, db.Model):
+    """Stores flashcard term-definition pairs for a topic."""
+
     __tablename__ = 'flashcard_mode'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
@@ -106,8 +122,10 @@ class FlashcardMode(TimestampMixin, SyncMixin, db.Model):
 
 
 class User(TimestampMixin, SyncMixin, db.Model):
+    """Extended user profile with learning preferences and demographics."""
+
     __tablename__ = 'users'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     login_id = db.Column(db.String(100), db.ForeignKey('logins.userid'))
     age = db.Column(db.Integer)
@@ -128,7 +146,7 @@ class User(TimestampMixin, SyncMixin, db.Model):
     def to_context_string(self):
         """Generates a text description of the user profile for LLM context."""
         parts = []
-        if self.login: 
+        if self.login:
             parts.append(f"Name: {self.login.display_name}")
         if self.age:
             parts.append(f"Age: {self.age}")
@@ -162,6 +180,8 @@ class User(TimestampMixin, SyncMixin, db.Model):
         return "\n".join(parts)
 
 class Installation(TimestampMixin, SyncMixin, db.Model):
+    """Tracks application installations with hardware info."""
+
     __tablename__ = 'installations'
 
     installation_id = db.Column(db.String(36), primary_key=True)  # UUID
@@ -176,8 +196,16 @@ class Installation(TimestampMixin, SyncMixin, db.Model):
     telemetry_logs = db.relationship('TelemetryLog', back_populates='installation', cascade='all, delete-orphan')
     sync_logs = db.relationship('SyncLog', back_populates='installation', cascade='all, delete-orphan')
 
+    @validates('gpu_model', 'os_version')
+    def validate_length(self, key, value):
+        if value and len(value) > 255:
+            return value[:255]
+        return value
+
 # SyncLog: Stores the result of background data synchronization attempts
 class SyncLog(TimestampMixin, db.Model):
+    """Records background data synchronization attempts."""
+
     __tablename__ = 'sync_logs'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -191,6 +219,8 @@ class SyncLog(TimestampMixin, db.Model):
 
 # TelemetryLog: Stores user action events for analytics
 class TelemetryLog(TimestampMixin, SyncMixin, db.Model):
+    """Stores user action events for analytics."""
+
     __tablename__ = 'telemetry_logs'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -207,10 +237,12 @@ class TelemetryLog(TimestampMixin, SyncMixin, db.Model):
     installation = db.relationship('Installation', back_populates='telemetry_logs')
 
 class Feedback(TimestampMixin, SyncMixin, db.Model):
+    """Stores user feedback and ratings."""
+
     __tablename__ = 'feedback'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=False)
+    user_id = db.Column(db.String(100), db.ForeignKey('logins.userid'), nullable=True)
     feedback_type = db.Column(db.String(50), nullable=False)  # 'form', 'in_place'
     content_reference = db.Column(db.String(255))  # TODO: Define content tag like 'chapter_1', 'quiz_2', etc. Use topic_id, step_index etc. to uniquely identify content
     rating = db.Column(db.Integer)
@@ -221,6 +253,8 @@ class Feedback(TimestampMixin, SyncMixin, db.Model):
 
 
 class AIModelPerformance(TimestampMixin, SyncMixin, db.Model):
+    """Tracks AI model latency and token usage metrics."""
+
     __tablename__ = 'ai_model_performance'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -237,6 +271,8 @@ class AIModelPerformance(TimestampMixin, SyncMixin, db.Model):
 
 
 class PlanRevision(TimestampMixin, SyncMixin, db.Model):
+    """Records changes made to study plans."""
+
     __tablename__ = 'plan_revisions'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -253,9 +289,11 @@ class PlanRevision(TimestampMixin, SyncMixin, db.Model):
 
 
 class Login(UserMixin, TimestampMixin, db.Model):
+    """User authentication and identity model."""
+
     __tablename__ = 'logins'
 
-    userid = db.Column(db.String(100), primary_key=True) 
+    userid = db.Column(db.String(100), primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
     name = db.Column(db.String(100))
     password_hash = db.Column(db.String(255))
@@ -263,6 +301,7 @@ class Login(UserMixin, TimestampMixin, db.Model):
 
     @staticmethod
     def generate_userid(installation_id=None):
+        """Generate a unique user ID, optionally prefixed with installation ID."""
         import uuid
         base_id = str(uuid.uuid4())
         if installation_id:
@@ -270,12 +309,15 @@ class Login(UserMixin, TimestampMixin, db.Model):
         return base_id
 
     def set_password(self, password):
+        """Hash and store the user password."""
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
+        """Verify password against stored hash."""
         return check_password_hash(self.password_hash, password)
 
     def get_id(self):
+        """Return the user ID for Flask-Login."""
         return self.userid
 
     @property

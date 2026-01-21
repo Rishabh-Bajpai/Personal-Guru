@@ -69,8 +69,10 @@
         <div id="input-area">
             <form id="chat-form" method="POST" action="{{ url_for('chat.send_message', topic_name=topic_name) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <textarea id="chat-input" name="message" placeholder="Ask your AI tutor a question..."
-                    autocomplete="off" autofocus required rows="1" style="resize: none;"></textarea>
+                <div class="chat-input-wrapper">
+                    <textarea id="chat-input" name="message" placeholder="Ask your AI tutor a question..."
+                        autocomplete="off" autofocus required rows="1" style="resize: none;"></textarea>
+                </div>
                 <button type="button" id="mic-button" class="button secondary" title="Voice Input">🎙️</button>
                 <button id="send-button" class="button" type="submit">Send</button>
                 <span id="loading-indicator" class="loading-indicator" style="display: none;">Thinking...</span>

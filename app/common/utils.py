@@ -8,6 +8,7 @@ import subprocess
 import logging
 import platform
 import psutil
+from datetime import datetime
 from dotenv import load_dotenv
 from openai import OpenAI
 from app.core.exceptions import (
@@ -23,7 +24,7 @@ load_dotenv()
 
 LLM_BASE_URL = os.getenv("LLM_BASE_URL")
 LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME")
-LLM_NUM_CTX = int(os.getenv("LLM_NUM_CTX", 18000))
+LLM_NUM_CTX = int(os.getenv("LLM_NUM_CTX", 4096))
 LLM_API_KEY = os.getenv("LLM_API_KEY", "dummy")
 TTS_BASE_URL = os.getenv("TTS_BASE_URL", "http://localhost:8969/v1")
 STT_BASE_URL = os.getenv("STT_BASE_URL", "http://localhost:8969/v1")
@@ -108,11 +109,27 @@ def call_llm(prompt_or_messages, is_json=False):
             headers=headers,
             json=data,
             timeout=300)
+
+        # Check specifically for model not found (404 from Ollama often means this)
+        if response.status_code == 404:
+             try:
+                 err_body = response.json()
+                 if "model" in err_body.get('error', {}).get('message', '').lower():
+                     logger.error(f"Model not found: {LLM_MODEL_NAME}")
+                     raise LLMConnectionError(
+                        f"Model '{LLM_MODEL_NAME}' not found. Please pull it first.",
+                        endpoint=api_url,
+                        error_code="LLM015", # New code for Model Not Found
+                        debug_info={"model": LLM_MODEL_NAME}
+                     )
+             except (json.JSONDecodeError, AttributeError):
+                 pass
+
         response.raise_for_status()
 
         response_json = response.json()
         content = response_json['choices'][0]['message']['content']
-        
+
         # Calculate latency
         end_time = time.time()
         latency_ms = int((end_time - start_time) * 1000)
@@ -194,6 +211,7 @@ def call_llm(prompt_or_messages, is_json=False):
         )
     except requests.exceptions.ConnectionError as e:
         logger.error(f"Cannot connect to LLM: {e}")
+        # Check if it was connection refused
         raise LLMConnectionError(
             "Unable to connect to LLM service",
             endpoint=api_url,
@@ -202,17 +220,15 @@ def call_llm(prompt_or_messages, is_json=False):
         )
     except requests.exceptions.RequestException as e:
         logger.error(f"LLM request failed: {e}")
+
+        status_code = getattr(e.response, 'status_code', None) if hasattr(e, 'response') else None
+
         raise LLMConnectionError(
             f"LLM request failed: {str(e)}",
             endpoint=api_url,
             error_code="LLM013",
-            debug_info={
-                "status_code": getattr(
-                    e.response,
-                    'status_code',
-                    None) if hasattr(
-                    e,
-                    'response') else None})
+            debug_info={"status_code": status_code}
+        )
     except (KeyError, IndexError) as e:
         logger.error(f"Invalid LLM response structure: {e}")
         raise LLMResponseError(
@@ -532,7 +548,7 @@ def generate_podcast_audio(transcript, output_filename):
     try:
         for i, (speaker, text) in enumerate(lines):
             voice = voice_map.get(speaker, 'alloy')
-            print(f"Generating: {speaker} ({voice}) -> '{text[:20]}...'")
+            # Debug: Generating: {speaker} ({voice}) -> '{text[:20]}...'
 
             response = tts_client.audio.speech.create(
                 model="tts-1",
@@ -591,7 +607,7 @@ def generate_podcast_audio(transcript, output_filename):
             from app.core.extensions import db
             from app.core.models import AIModelPerformance
             from flask_login import current_user
-            
+
             # Calculate approx input length from lines
             total_chars = sum(len(txt) for _, txt in lines)
 
@@ -602,7 +618,7 @@ def generate_podcast_audio(transcript, output_filename):
                     model_name='tts-1',
                     latency_ms=latency_ms,
                     input_tokens=total_chars,
-                    output_tokens=0 
+                    output_tokens=0
                 )
                 db.session.add(perf_log)
                 db.session.commit()
@@ -647,7 +663,7 @@ def transcribe_audio(audio_file_path):
             from app.core.extensions import db
             from app.core.models import AIModelPerformance
             from flask_login import current_user
-            
+
             # Use transcript length as proxy for output tokens
             output_len = len(transcript)
 
@@ -658,7 +674,7 @@ def transcribe_audio(audio_file_path):
                     model_name='Systran/faster-whisper-medium.en',
                     latency_ms=latency_ms,
                     input_tokens=0, # Audio input difficult to measure in tokens
-                    output_tokens=output_len 
+                    output_tokens=output_len
                 )
                 db.session.add(perf_log)
                 db.session.commit()
@@ -703,19 +719,19 @@ def log_telemetry(event_type: str, triggers: dict, payload: dict, installation_i
     """
     Logs a telemetry event to the database.
     Fails silently on errors to avoid disrupting the user experience.
-    
+
     Args:
         event_type (str): The type of event (e.g., 'user_login', 'quiz_submitted').
         triggers (dict): What triggered the event (e.g., {'source': 'web_ui', 'action': 'click'}).
         payload (dict): The data payload for the event.
         installation_id (str, optional): The installation ID. If None, attempts to resolve from current_user or DB.
-    """   
+    """
     import uuid
     from flask import session
     from flask_login import current_user
     from app.core.extensions import db
     from app.core.models import TelemetryLog, Installation
-    
+
     logger = logging.getLogger(__name__)
 
     try:
@@ -733,7 +749,7 @@ def log_telemetry(event_type: str, triggers: dict, payload: dict, installation_i
              inst_record = Installation.query.first()
              if inst_record:
                 installation_id = inst_record.installation_id
-        
+
         # If we still don't have an installation_id, we cannot log (Constraint Violation)
         if not installation_id:
             logger.debug(f"Skipping telemetry {event_type}: No installation_id found.")
@@ -742,9 +758,9 @@ def log_telemetry(event_type: str, triggers: dict, payload: dict, installation_i
         # Ensure session_id exists
         if 'telemetry_session_id' not in session:
             session['telemetry_session_id'] = str(uuid.uuid4())
-        
+
         session_id = session['telemetry_session_id']
-        
+
         log_entry = TelemetryLog(
             user_id=user_id,
             installation_id=installation_id,
@@ -753,7 +769,7 @@ def log_telemetry(event_type: str, triggers: dict, payload: dict, installation_i
             triggers=triggers,
             payload=payload
         )
-        
+
         db.session.add(log_entry)
         db.session.commit()
         logger.debug(f"Telemetry logged: {event_type}")
@@ -773,16 +789,16 @@ def get_system_info():
         'ram_gb': round(psutil.virtual_memory().total / (1024**3)),
         'os_version': platform.platform(),
         'install_method': 'local',  # Default
-        'gpu_model': 'Unknown' 
+        'gpu_model': 'Unknown'
     }
-    
+
     # Check for Docker
     if os.path.exists('/.dockerenv'):
         info['install_method'] = 'docker'
-        
+
     # GPU Detection (cross-platform, multi-vendor)
     gpu_detected = False
-    
+
     # Try NVIDIA (nvidia-smi)
     if not gpu_detected:
         try:
@@ -792,7 +808,7 @@ def get_system_info():
                 gpu_detected = True
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
-    
+
     # Try AMD (rocm-smi)
     if not gpu_detected:
         try:
@@ -803,7 +819,7 @@ def get_system_info():
                 gpu_detected = True
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
-    
+
     # Try Intel (Linux)
     if not gpu_detected and platform.system() == 'Linux':
         try:
@@ -825,7 +841,7 @@ def get_system_info():
                             break
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
-    
+
     # Try macOS (Apple Silicon / discrete GPU)
     if not gpu_detected and platform.system() == 'Darwin':
         try:
@@ -841,5 +857,69 @@ def get_system_info():
                         break
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
-        
+
     return info
+
+
+# Cache for update check (simple in-memory cache)
+_update_cache = {
+    "last_checked": None,
+    "data": None
+}
+
+def check_for_updates(current_version):
+    """
+    Checks GitHub for the latest release tag.
+    Returns update info dict if a new version is available, else None.
+    Default cache time: 1 hour.
+    """
+    global _update_cache
+
+    # Check cache (1 hour expiry)
+    now = datetime.now()
+    if _update_cache["data"] and _update_cache["last_checked"]:
+        if (now - _update_cache["last_checked"]).total_seconds() < 3600:
+            return _compare_versions(current_version, _update_cache["data"])
+
+    try:
+        updated_cache_data = _fetch_github_release()
+        if updated_cache_data:
+            _update_cache["data"] = updated_cache_data
+            _update_cache["last_checked"] = now
+            return _compare_versions(current_version, updated_cache_data)
+    except Exception as e:
+        level = logging.INFO
+        logging.getLogger(__name__).log(level, f"Failed to check for updates: {e}")
+
+    return None
+
+def _fetch_github_release():
+    url = "https://api.github.com/repos/Rishabh-Bajpai/Personal-Guru/releases/latest"
+    resp = requests.get(url, timeout=3)
+    if resp.status_code == 200:
+        data = resp.json()
+        return {
+            "tag_name": data.get("tag_name"),
+            "html_url": data.get("html_url"),
+            "published_at": data.get("published_at"),
+            "name": data.get("name")
+        }
+    return None
+
+def _compare_versions(current_ver, release_data):
+    if not release_data:
+        return None
+
+    latest_ver = release_data["tag_name"].lstrip("v")
+    curr_ver = current_ver.lstrip("v")
+
+    # Simple semantic version comparison (assumes format 1.0.0)
+    if latest_ver != curr_ver:
+        return {
+             "id": -1, # Using -1 to denote system update
+             "title": f"New Update Available: {release_data['tag_name']}",
+             "message": f"A new version ({release_data['tag_name']}) is available on GitHub.",
+             "notification_type": "info",
+             "url": release_data["html_url"]
+        }
+    return None

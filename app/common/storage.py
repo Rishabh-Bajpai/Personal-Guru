@@ -36,38 +36,38 @@ def save_topic(topic_name, data):
             topic = Topic(name=topic_name, user_id=current_user.userid)
             db.session.add(topic)
             db.session.flush()
-        
+
         # Update topic fields
-        topic.study_plan = data.get('plan', []) 
-        
+        topic.study_plan = data.get('plan', [])
+
         # Explicitly update modified_at when saving
         topic.modified_at = datetime.datetime.utcnow()
-        
+
         # --- Handle Chapter Mode (Steps) ---
         incoming_msg_data = data.get('chapter_mode', [])
         # Support legacy 'steps' key if 'chapter_mode' is missing
         if not incoming_msg_data:
             incoming_msg_data = data.get('steps') or []
-        
+
         # Maps for ID-based and Index-based lookup
         existing_steps_by_id = {s.id: s for s in topic.chapter_mode}
         existing_steps_by_index = {s.step_index: s for s in topic.chapter_mode}
-        
+
         # Track processed IDs to know what to delete/keep
         # Note: ChapterMode relation is 'cascade="all, delete-orphan"', so we need to be careful.
         # But here we are iterating incoming data.
-        
+
         processed_step_ids = set()
-        
+
         for step_data in incoming_msg_data:
             step_index = step_data.get('step_index')
             step_id = step_data.get('id')
-            
+
             # 1. Match by ID
             step = None
             if step_id and step_id in existing_steps_by_id:
                 step = existing_steps_by_id[step_id]
-            
+
             # 2. Fallback: Match by Index (e.g. initial creation or simple list update)
             # Only if index is provided and no ID match
             if not step and step_index is not None and step_index in existing_steps_by_index:
@@ -77,30 +77,30 @@ def save_topic(topic_name, data):
                 # Update existing
                 step.title = step_data.get('title', step.title)
                 step.content = step_data.get('content') or step_data.get('teaching_material') or step.content
-                
+
                 if 'questions' in step_data:
                     step.questions = step_data['questions']
-                
+
                 if 'user_answers' in step_data:
                     logging.info(f"DEBUG: Updating user_answers for step {step.step_index}. New value: {step_data['user_answers']}")
                     step.user_answers = step_data['user_answers']
-                
+
                 if 'score' in step_data:
                     step.score = step_data['score']
-                    
+
                 step.popup_chat_history = step_data.get('popup_chat_history', step.popup_chat_history)
-                
+
                 # Only update time_spent if valid positive integer
                 inc_time = step_data.get('time_spent')
                 if isinstance(inc_time, int) and inc_time >= 0:
                     step.time_spent = inc_time
-                
+
                 # Ensure step_index is correct (in case of reorder)
                 if step_index is not None:
                      step.step_index = step_index
-                     
+
                 step.podcast_audio_path = step_data.get('podcast_audio_path', step.podcast_audio_path)
-                
+
                 processed_step_ids.add(step.id)
             else:
                 # Create New
@@ -125,48 +125,27 @@ def save_topic(topic_name, data):
                     podcast_audio_path=step_data.get('podcast_audio_path')
                 )
                 db.session.add(step)
-                
+
             # --- Handle Feedback (Moved to dedicated table) ---
             # content_reference for this step: topic_{id}_step_{index}
             # Note: Topic ID might not be available if topic is new and flush not called?
             # We need to ensure topic is flushed.
             db.session.flush()
             content_ref = f"topic_{topic.id}_step_{step.step_index}"
-            
+
             # Delete existing feedback for this step/user to overwrite with current state
             Feedback.query.filter_by(
-                user_id=current_user.userid, 
+                user_id=current_user.userid,
                 content_reference=content_ref
             ).delete()
-            
-            feedbacks_data = step_data.get('feedback')
-            if feedbacks_data:
-                # normalize to list
-                if not isinstance(feedbacks_data, list):
-                    feedbacks_data = [feedbacks_data]
-                
-                for fb_item in feedbacks_data:
-                    # fb_item might be string or dict
-                    comment = fb_item
-                    rating = None
-                    if isinstance(fb_item, dict):
-                        comment = fb_item.get('comment')
-                        rating = fb_item.get('rating')
-                    
-                    new_fb = Feedback(
-                        user_id=current_user.userid,
-                        feedback_type='in_place',
-                        content_reference=content_ref,
-                        comment=comment,
-                        rating=rating
-                    )
-                    db.session.add(new_fb)
-        
+
+
+
         # Delete removed steps
         for s in topic.chapter_mode:
             if s.id not in processed_step_ids and s not in db.session.new:
                 db.session.delete(s)
-            
+
         # --- Handle QuizMode ---
         # "quiz" key in JSON (legacy), "quiz_mode" is new standard
         q_data = data.get('quiz_mode') or data.get('quiz')
@@ -174,7 +153,7 @@ def save_topic(topic_name, data):
              if True: # preserving indentation block
                  # Check existing quizzes
                  existing_quiz = topic.quiz_mode if topic.quiz_mode else None
-                 
+
                  if existing_quiz:
                      existing_quiz.questions = q_data.get('questions')
                      existing_quiz.score = q_data.get('score')
@@ -186,37 +165,37 @@ def save_topic(topic_name, data):
                          topic_id=topic.id,
                          questions=q_data.get('questions'),
                          score=q_data.get('score'),
-                         result=data.get('last_quiz_result'), 
+                         result=data.get('last_quiz_result'),
                          time_spent=q_data.get('time_spent', 0)
                      )
                      db.session.add(quiz)
 
         # --- Handle Flashcards ---
         incoming_cards = data.get('flashcard_mode') or data.get('flashcards') or []
-        
+
         # Maps for ID-based and Term-based lookup
         existing_cards_by_id = {c.id: c for c in topic.flashcard_mode}
         existing_cards_by_term = {c.term: c for c in topic.flashcard_mode}
-        
+
         # Track which existing cards are kept/updated
         processed_ids = set()
-        
+
         for card_data in incoming_cards:
             term = card_data.get('term')
-            if not term: 
+            if not term:
                 continue
-            
+
             card_id = card_data.get('id')
             matched_card = None
 
             # 1. Try match by ID
             if card_id and card_id in existing_cards_by_id:
                 matched_card = existing_cards_by_id[card_id]
-            
+
             # 2. Fallback: match by Term if ID mismatch or missing (e.g. generated but not saved yet)
             if not matched_card and term in existing_cards_by_term:
                 matched_card = existing_cards_by_term[term]
-                
+
             if matched_card:
                 # Update existing
                 matched_card.definition = card_data.get('definition', matched_card.definition)
@@ -226,7 +205,7 @@ def save_topic(topic_name, data):
                 val_time = card_data.get('time_spent')
                 if val_time is not None:
                     matched_card.time_spent = val_time
-                
+
                 processed_ids.add(matched_card.id)
             else:
                 # Create new
@@ -255,7 +234,7 @@ def save_topic(topic_name, data):
                 db.session.add(chat_session)
             else:
                 chat_session = topic.chat_mode
-            
+
             from sqlalchemy.orm.attributes import flag_modified
             if 'chat_history' in data:
                 chat_session.history = data['chat_history']
@@ -268,7 +247,7 @@ def save_topic(topic_name, data):
                 flag_modified(chat_session, 'popup_chat_history')
             if 'chat_time_spent' in data:
                 chat_session.time_spent = data['chat_time_spent']
-            
+
             db.session.add(chat_session)
 
         db.session.commit()
@@ -392,7 +371,7 @@ def load_topic(topic_name):
     topic = Topic.query.filter_by(name=topic_name, user_id=current_user.userid).first()
     if not topic:
         return None
-        
+
     # User requested Modified At to update when opened ("any time")
     try:
         topic.modified_at = datetime.datetime.utcnow()
@@ -400,7 +379,7 @@ def load_topic(topic_name):
     except Exception as e:
         logging.warning(f"Failed to update modify time on read for {topic_name}: {e}")
         # Don't block loading
-        
+
     data = {
         "name": topic.name,
         "plan": topic.study_plan or [], # Map model 'study_plan' back to app 'plan'
@@ -412,13 +391,13 @@ def load_topic(topic_name):
         "quiz_mode": None,
         "flashcard_mode": []
     }
-    
-    
+
+
     # Initialize steps list matching the plan length
     plan = topic.study_plan or []
     # Create a map of existing steps by index
     existing_steps = {s.step_index: s for s in topic.chapter_mode}
-    
+
     steps_data = []
     # If we have a plan, we want to return a list of steps matching that plan
     for i in range(len(plan)):
@@ -446,7 +425,7 @@ def load_topic(topic_name):
             if step_model.podcast_audio_path:
                 audio_path = step_model.podcast_audio_path
                 logging.info(f"DEBUG: Processing audio for step {step_model.step_index}. Raw path: {audio_path}")
-                
+
                 # If path doesn't exist as is, check if it's relative to app/static
                 if not os.path.exists(audio_path):
                      # Try resolving relative to app/static
@@ -470,29 +449,29 @@ def load_topic(topic_name):
                          logging.warning(f"Failed to load audio file for topic {topic_name} step {step_model.step_index}: {e}")
                 else:
                     logging.warning(f"Audio file not found at path: {step_model.podcast_audio_path} or resolved path {audio_path}")
-            
+
             # Populate feedback from Feedback table
             content_ref = f"topic_{topic.id}_step_{step_model.step_index}"
             feedbacks = Feedback.query.filter_by(
-                user_id=current_user.userid, 
+                user_id=current_user.userid,
                 content_reference=content_ref
             ).all()
-            
+
             # Format back to list of strings or dicts as expected by frontend
             # Assuming simple strings for now or dicts if rating present
             steps_data[-1]['feedback'] = [f.comment for f in feedbacks]
         else:
             # Placeholder for steps not yet started/saved
             steps_data.append({})
-            
+
     data["plan"] = plan
     data["chapter_mode"] = steps_data
-        
+
     # QuizMode
     # Assuming one quiz per topic for now, similar to previous JSON usually
     if topic.quiz_mode:
         # Quiz is 1-to-1
-        latest_quiz = topic.quiz_mode 
+        latest_quiz = topic.quiz_mode
         data["quiz_mode"] = {
             "questions": latest_quiz.questions,
             "score": latest_quiz.score,
@@ -501,7 +480,7 @@ def load_topic(topic_name):
         }
         # Populate last_quiz_result from the quiz
         data["last_quiz_result"] = latest_quiz.result
-        
+
     # Flashcards
     for card in topic.flashcard_mode:
         data["flashcard_mode"].append({
@@ -510,7 +489,7 @@ def load_topic(topic_name):
             "time_spent": card.time_spent or 0,
             "id": card.id
         })
-        
+
     # Chat Mode time
     if topic.chat_mode:
         data["chat_time_spent"] = topic.chat_mode.time_spent or 0
@@ -564,7 +543,7 @@ def delete_topic(topic_name):
         # before deleting the topic itself to avoid foreign key constraints.
         if topic.chat_mode:
             db.session.delete(topic.chat_mode)
-        
+
         # Delete items in collections
         for item in topic.chapter_mode:
             db.session.delete(item)

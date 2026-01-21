@@ -1,8 +1,6 @@
 import os
 import requests
-import json
 import logging
-import datetime
 import threading
 import time
 from app.core.extensions import db
@@ -13,12 +11,16 @@ logger = logging.getLogger(__name__)
 DCS_BASE_URL = os.getenv("DCS_BASE_URL", "https://telemetry.samosa-ai.com")
 
 class DCSClient:
+    """Client for communicating with the Data Collection Server (DCS)."""
+
     def __init__(self):
+        """Initialize DCS client with base URL and load installation ID."""
         self.base_url = DCS_BASE_URL
         self.installation_id = None
         self._load_installation_id()
 
     def _load_installation_id(self):
+        """Load installation ID from database if available."""
         try:
             from app.core.models import Installation
             inst = Installation.query.first()
@@ -35,7 +37,7 @@ class DCSClient:
         """
         from app.common.utils import get_system_info
         from sqlalchemy.exc import OperationalError
-        
+
         # Check if already registered
         try:
             inst = Installation.query.first()
@@ -45,8 +47,8 @@ class DCSClient:
                 # Optionally update details
                 self.update_device_details()
                 return True
-        except OperationalError:
-            logger.warning("Database tables not ready yet. Retrying registration later.")
+        except OperationalError as e:
+            logger.warning(f"Database tables not ready yet: {e}. Retrying registration later.")
             return False
         except Exception as e:
             logger.error(f"Error checking registration: {e}")
@@ -59,7 +61,7 @@ class DCSClient:
             resp.raise_for_status()
             data = resp.json()
             new_id = data.get("installation_id")
-            
+
             if not new_id:
                 logger.error("DCS did not return installation_id")
                 return False
@@ -78,9 +80,9 @@ class DCSClient:
             )
             db.session.add(new_inst)
             db.session.commit()
-            
+
             logger.info(f"Device registered successfully: {new_id}")
-            
+
             # Step 3: Update details immediately
             self.update_device_details()
             return True
@@ -90,14 +92,15 @@ class DCSClient:
             return False
 
     def update_device_details(self):
+        """Send updated device details to DCS server."""
         if not self.installation_id:
             return False
-            
+
         from app.common.utils import get_system_info
         sys_info = get_system_info()
         payload = sys_info.copy()
         payload['installation_id'] = self.installation_id
-        
+
         try:
             resp = requests.post(f"{self.base_url}/api/register/update", json=payload, timeout=10)
             resp.raise_for_status()
@@ -116,6 +119,7 @@ class DCSClient:
 
         payload = {
             "installation_id": self.installation_id,
+            "installations": [],
             "topics": [],
             "chat_modes": [],
             "chapter_modes": [],
@@ -127,13 +131,13 @@ class DCSClient:
             "telemetry_events": [],
             "feedback": []
         }
-        
-        BATCH_SIZE = 50 
+
+        BATCH_SIZE = 50
         objects_to_update = []
-        
+
         # Track which topics are included in this payload
         included_topic_ids = set()
-        
+
         def add_topic_to_payload(topic):
             if topic.id in included_topic_ids:
                 return
@@ -148,16 +152,31 @@ class DCSClient:
             included_topic_ids.add(topic.id)
 
         try:
+            # 0. Installations (Pending)
+            installations = Installation.query.filter((Installation.sync_status == 'pending') | (Installation.sync_status is None)).limit(BATCH_SIZE).all()
+            for inst in installations:
+                payload["installations"].append({
+                    "installation_id": inst.installation_id,
+                    "cpu_cores": inst.cpu_cores,
+                    "ram_gb": inst.ram_gb,
+                    "gpu_model": inst.gpu_model,
+                    "os_version": inst.os_version,
+                    "install_method": inst.install_method,
+                    "created_at": inst.created_at.isoformat(),
+                    "modified_at": inst.modified_at.isoformat()
+                })
+                objects_to_update.append(inst)
+
             # 1. Topics (Pending)
-            topics = Topic.query.filter((Topic.sync_status == 'pending') | (Topic.sync_status == None)).limit(BATCH_SIZE).all()
+            topics = Topic.query.filter((Topic.sync_status == 'pending') | (Topic.sync_status is None)).limit(BATCH_SIZE).all()
             for t in topics:
                 add_topic_to_payload(t)
                 objects_to_update.append(t)
 
             # 2. Child Objects - Ensure Parent Topic is Included
-            
+
             # ChatMode
-            chats = ChatMode.query.filter((ChatMode.sync_status == 'pending') | (ChatMode.sync_status == None)).limit(BATCH_SIZE).all()
+            chats = ChatMode.query.filter((ChatMode.sync_status == 'pending') | (ChatMode.sync_status is None)).limit(BATCH_SIZE).all()
             for c in chats:
                 payload["chat_modes"].append({
                     "topic_id": c.topic_id,
@@ -175,7 +194,7 @@ class DCSClient:
                     add_topic_to_payload(c.topic)
 
             # ChapterMode
-            chapters = ChapterMode.query.filter((ChapterMode.sync_status == 'pending') | (ChapterMode.sync_status == None)).limit(BATCH_SIZE).all()
+            chapters = ChapterMode.query.filter((ChapterMode.sync_status == 'pending') | (ChapterMode.sync_status is None)).limit(BATCH_SIZE).all()
             for c in chapters:
                 payload["chapter_modes"].append({
                     "topic_id": c.topic_id,
@@ -197,7 +216,7 @@ class DCSClient:
                     add_topic_to_payload(c.topic)
 
             # QuizMode
-            quizzes = QuizMode.query.filter((QuizMode.sync_status == 'pending') | (QuizMode.sync_status == None)).limit(BATCH_SIZE).all()
+            quizzes = QuizMode.query.filter((QuizMode.sync_status == 'pending') | (QuizMode.sync_status is None)).limit(BATCH_SIZE).all()
             for q in quizzes:
                 payload["quiz_modes"].append({
                     "topic_id": q.topic_id,
@@ -214,7 +233,7 @@ class DCSClient:
                     add_topic_to_payload(q.topic)
 
             # FlashcardMode
-            flashcards = FlashcardMode.query.filter((FlashcardMode.sync_status == 'pending') | (FlashcardMode.sync_status == None)).limit(BATCH_SIZE).all()
+            flashcards = FlashcardMode.query.filter((FlashcardMode.sync_status == 'pending') | (FlashcardMode.sync_status is None)).limit(BATCH_SIZE).all()
             for f in flashcards:
                 payload["flashcard_modes"].append({
                     "topic_id": f.topic_id,
@@ -230,7 +249,7 @@ class DCSClient:
                     add_topic_to_payload(f.topic)
 
             # User Profile
-            users = User.query.filter((User.sync_status == 'pending') | (User.sync_status == None)).limit(BATCH_SIZE).all()
+            users = User.query.filter((User.sync_status == 'pending') | (User.sync_status is None)).limit(BATCH_SIZE).all()
             for u in users:
                 payload["user_profiles"].append({
                     "login_id": u.login_id,
@@ -249,22 +268,24 @@ class DCSClient:
                     "modified_at": u.modified_at.isoformat()
                 })
                 objects_to_update.append(u)
-                
+
             # Telemetry
-            logs = TelemetryLog.query.filter((TelemetryLog.sync_status == 'pending') | (TelemetryLog.sync_status == None)).limit(BATCH_SIZE * 2).all()
-            for l in logs:
+            logs = TelemetryLog.query.filter((TelemetryLog.sync_status == 'pending') | (TelemetryLog.sync_status is None)).limit(BATCH_SIZE * 2).all()
+            for log_event in logs:
                 payload["telemetry_events"].append({
-                    "session_id": l.session_id,
-                    "timestamp": l.timestamp.isoformat(),
-                    "event_type": l.event_type,
-                    "payload": l.payload,
-                    "created_at": l.created_at.isoformat(),
-                    "modified_at": l.modified_at.isoformat()
+                    "session_id": log_event.session_id,
+                    "user_id": log_event.user_id,
+                    "timestamp": log_event.timestamp.isoformat(),
+                    "event_type": log_event.event_type,
+                    "triggers": log_event.triggers,
+                    "payload": log_event.payload,
+                    "created_at": log_event.created_at.isoformat(),
+                    "modified_at": log_event.modified_at.isoformat()
                 })
-                objects_to_update.append(l)
+                objects_to_update.append(log_event)
 
             # Feedback
-            feedbacks = Feedback.query.filter((Feedback.sync_status == 'pending') | (Feedback.sync_status == None)).limit(BATCH_SIZE).all()
+            feedbacks = Feedback.query.filter((Feedback.sync_status == 'pending') | (Feedback.sync_status is None)).limit(BATCH_SIZE).all()
             for f in feedbacks:
                 payload["feedback"].append({
                     "user_id": f.user_id,
@@ -278,7 +299,7 @@ class DCSClient:
                 objects_to_update.append(f)
 
             # PlanRevision
-            plans = PlanRevision.query.filter((PlanRevision.sync_status == 'pending') | (PlanRevision.sync_status == None)).limit(BATCH_SIZE).all()
+            plans = PlanRevision.query.filter((PlanRevision.sync_status == 'pending') | (PlanRevision.sync_status is None)).limit(BATCH_SIZE).all()
             for pr in plans:
                 payload["plan_revisions"].append({
                     "topic_id": pr.topic_id,
@@ -295,7 +316,7 @@ class DCSClient:
                     add_topic_to_payload(pr.topic)
 
             # AIModelPerformance
-            perfs = AIModelPerformance.query.filter((AIModelPerformance.sync_status == 'pending') | (AIModelPerformance.sync_status == None)).limit(BATCH_SIZE).all()
+            perfs = AIModelPerformance.query.filter((AIModelPerformance.sync_status == 'pending') | (AIModelPerformance.sync_status is None)).limit(BATCH_SIZE).all()
             for p in perfs:
                 payload["ai_performances"].append({
                     "user_id": p.user_id,
@@ -315,16 +336,16 @@ class DCSClient:
             if total_items == 0:
                 return
 
-            logger.info(f"Syncing {total_items} items to DCS...")
-            
+            logger.debug(f"Syncing {total_items} items to DCS...")
+
             # Send to DCS
             resp = requests.post(f"{self.base_url}/api/sync", json=payload, timeout=30)
             resp.raise_for_status()
-            
+
             # Update status on success
             for obj in objects_to_update:
                 obj.sync_status = 'synced'
-            
+
             # Log success
             log_entry = SyncLog(
                 installation_id=self.installation_id,
@@ -333,7 +354,7 @@ class DCSClient:
             )
             db.session.add(log_entry)
             db.session.commit()
-            logger.info("Sync successful")
+            logger.debug("Sync successful")
 
         except Exception as e:
             logger.error(f"Sync failed: {e}")
@@ -346,40 +367,60 @@ class DCSClient:
                 )
                 db.session.add(log_entry)
                 db.session.commit()
-            except:
+            except Exception:
                 pass
 
+    def get_notifications(self):
+        """Fetch active system notifications from DCS."""
+        try:
+            resp = requests.get(f"{self.base_url}/api/notifications", timeout=5)
+            if resp.status_code == 200:
+                return resp.json()
+            return []
+        except Exception as e:
+            logger.warning(f"Failed to fetch notifications: {e}")
+            return []
+
 class SyncManager:
+    """Background manager that periodically syncs data with DCS."""
+
     def __init__(self, app):
+        """Initialize sync manager with Flask app context."""
         self.app = app
         self.client = DCSClient()
         self.stop_event = threading.Event()
         self.thread = None
 
     def start(self):
+        """Start the background sync thread."""
         # Initial check/register (blocking or non-blocking? User said "As soon as app starts... check")
         # We'll do it in the thread to not block startup UI, BUT required for valid functionality.
-        # Ideally, we block `run.py` to ensure registration? 
+        # Ideally, we block `run.py` to ensure registration?
         # The prompt says: "As soon as the app starts, it should check... If missing, register... If present, start normally."
         # This implies blocking logic in `create_app` or `run.py` is accepted or desired.
-        
+
         # However, for the sync loop:
         self.thread = threading.Thread(target=self._loop, daemon=True)
         self.thread.start()
 
     def _loop(self):
+        """Main sync loop that runs in background thread."""
         with self.app.app_context():
+            # DEBUG: Check DB Config
+            logger.info(f"SyncManager App Config DB: {self.app.config.get('SQLALCHEMY_DATABASE_URI')}")
+
             # Ensure registration first thing in the thread if not done
-            if not self.client.register_device():
-                logger.error("Could not register device. Sync will be disabled.")
-                return
+            while not self.client.register_device():
+                logger.warning("Could not register device yet. Retrying in 10 seconds...")
+                time.sleep(10)
+                if self.stop_event.is_set():
+                    return
 
             while not self.stop_event.is_set():
                 try:
                     self.client.sync_data()
                 except Exception as e:
                     logger.error(f"Error in sync loop: {e}")
-                
+
                 # Wait 1 minute
                 time.sleep(60)
-

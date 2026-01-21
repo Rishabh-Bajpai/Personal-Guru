@@ -10,11 +10,12 @@
 </div>
 <form method="post" onsubmit="showLoader()">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-    <input type="text" name="topic" size="50" placeholder="Enter a new topic..." required>
+    <input type="text" name="topic" size="50" placeholder="Enter a new topic..." required maxlength="255">
     {% if error %}
     <p class="error error-text">{{ error }}</p>
     {% endif %}
     <div id="suggestions-container" style="display: none; margin-top: 10px; margin-bottom: 20px;">
+        <h4 class="suggestions-heading">Suggested Topics:</h4>
         <div id="suggestions-list" class="suggestions-chips">
             <!-- Suggestions will be populated here -->
         </div>
@@ -39,8 +40,8 @@
         <label>
             <input type="radio" name="mode" value="flashcard"> Flash Card Mode
         </label>
-        <label>
-            <input type="radio" name="mode" value="reel"> Reel Mode
+        <label title="Experimental feature: usage may be unstable">
+            <input type="radio" name="mode" value="reel"> Reel Mode (Experimental)
         </label>
     </div>
     <input type="submit" value="Start Learning" class="button">
@@ -81,7 +82,8 @@
 
                 <!-- Reel Mode -->
                 <a href="{{ url_for('reel.mode', topic_name=topic.name) }}"
-                    class="button {% if not topic.has_reels %}secondary{% endif %}">
+                    class="button {% if not topic.has_reels %}secondary{% endif %}"
+                    title="Experimental feature: usage may be unstable">
                     Reel
                 </a>
             </div>

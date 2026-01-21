@@ -1,4 +1,5 @@
 def get_feedback_prompt(question_text, correct_answer_text, user_answer_text):
+    """Generate prompt for providing feedback on incorrect quiz answers."""
     return f"""
 You are an expert educator providing feedback on a quiz answer.
 The user was asked the following question:
@@ -13,11 +14,12 @@ The explanation should be friendly and encouraging. Limit it to 2-4 sentences.
 
 
 def get_study_plan_prompt(topic, user_background):
+    """Generate prompt for creating a personalized study plan."""
     return f"""
 You are an expert in creating personalized study plans. For the topic '{topic}', create a high-level learning plan with 2-7 manageable steps, depending on the complexity of the topic.
 The user's background is: '{user_background}'
 The output should be a JSON object with a single key "plan", which is an array of strings. Each string is a step in the learning plan.
-Do not generate the content for each step, only the plan itself.
+Do not generate the content for each step, only the plan itself. Each step should be like a chapter title with maximum 150 characters.
 
 Example of a good plan for the topic 'Flask':
 "Our Flask Learning Plan:
@@ -36,6 +38,7 @@ Now, generate a similar plan for the topic: '{topic}'.
 
 
 def get_plan_update_prompt(topic_name, user_background, current_plan, comment):
+    """Generate prompt for revising a study plan based on user feedback."""
     return f"""
 You are an expert curriculum designer. Your task is to revise a study plan based on user feedback. ***ONLY*** change the parts of the plan that the user has requested to change.
 
@@ -58,6 +61,7 @@ Based on the user's feedback, generate a revised study plan as a Python list of 
 
 
 def get_code_execution_prompt(code):
+    """Generate prompt for enhancing Python code for sandbox execution."""
     return f"""
 You are an expert Python coding assistant.
 Your goal is to enhance the provided code snippet to make it runnable, robust, and visually appealing if it involves plots.
@@ -73,7 +77,7 @@ INSTRUCTIONS:
 3. **Visualization**: If the code generates plots, ensure they are saved to a file or buffer if needed, or better yet, assume standard plt.show() works in the sandbox which captures stdout/images.
 4. **Dependencies List**: Identify all external pip packages required.
 5. **Least number of libraries**: Use the least number of libraries possible to achieve the same functionality.
-6. **Easy to install libraries**: Use libraries that are easy to install and use. Don't use tourch or libraries that require a lot of dependencies.
+6. **Easy to install libraries**: Use libraries that are easy to install and use. Don't use torch or libraries that require a lot of dependencies.
 OUTPUT FORMAT:
 Return a strictly valid JSON object with the following structure:
 {{
@@ -84,6 +88,7 @@ Return a strictly valid JSON object with the following structure:
 
 
 def get_topic_suggestions_prompt(user_profile, past_topics):
+    """Generate prompt for suggesting new study topics based on user profile."""
     return f"""
 You are an intelligent study companion. Based on the user's profile and their past study topics, suggest 3-5 new, interesting, and relevant topics they might like to learn next.
 

@@ -4,7 +4,9 @@ from .core.extensions import db, migrate
 from flask_wtf.csrf import CSRFProtect
 from flask_session import Session  # Server-side sessions for large chat histories
 from flask_login import LoginManager
+from flasgger import Swagger
 import logging
+import os
 
 csrf = CSRFProtect()
 sess = Session()
@@ -14,6 +16,15 @@ login_manager.login_view = 'main.login'
 
 
 def create_app(config_class=Config):
+    """
+    Application factory that creates and configures the Flask application.
+
+    Args:
+        config_class: Configuration class to use. Defaults to Config.
+
+    Returns:
+        Configured Flask application instance.
+    """
     app = Flask(__name__, template_folder='core/templates')
     app.config.from_object(config_class)
 
@@ -23,6 +34,23 @@ def create_app(config_class=Config):
     csrf.init_app(app)
     sess.init_app(app)  # Initialize server-side sessions
     login_manager.init_app(app)
+
+    # Initialize Swagger
+    swagger_config = {
+        "headers": [],
+        "specs": [
+            {
+                "endpoint": 'apispec_1',
+                "route": '/apispec_1.json',
+                "rule_filter": lambda rule: True,  # all in
+                "model_filter": lambda tag: True,  # all in
+            }
+        ],
+        "static_url_path": "/flasgger_static",
+        "swagger_ui": True,
+        "specs_route": "/apidocs/"
+    }
+    Swagger(app, config=swagger_config)
 
     # Initialize Telemetry Log Capture
     if app.config.get('ENABLE_TELEMETRY_LOGGING', True):
@@ -64,6 +92,7 @@ def create_app(config_class=Config):
             if request.endpoint and request.endpoint not in [
                 'main.login',
                 'main.signup',
+                'main.submit_feedback',
                     'static'] and not request.endpoint.startswith('static'):
                 return redirect(url_for('main.login'))
 
@@ -241,8 +270,14 @@ def create_app(config_class=Config):
             ), 500
 
     # Initialize Background Sync
-    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-        # Prevent double initialization in debug mode reloader
+    # In debug mode with reloader, the parent process spawns a child.
+    # WERKZEUG_RUN_MAIN is 'true' ONLY in the child process.
+    # We skip starting in the parent (where WERKZEUG_RUN_MAIN is not set but reloader is active)
+    # to avoid double initialization and incorrect config.
+    # In production (without reloader), WERKZEUG_RUN_MAIN won't be set, so we also start.
+    run_main_env = os.environ.get('WERKZEUG_RUN_MAIN')
+    if run_main_env == 'true':
+        # Child process of reloader - this is the main server process
         try:
             from app.common.dcs import SyncManager
             sync_manager = SyncManager(app)

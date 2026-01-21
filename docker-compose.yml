@@ -23,7 +23,7 @@ services:
       - LLM_BASE_URL=${LLM_BASE_URL:-http://localhost:11434/v1}
       - LLM_MODEL_NAME=${LLM_MODEL_NAME:-llama3}
       - LLM_API_KEY=${LLM_API_KEY:-}
-      - LLM_NUM_CTX=${LLM_NUM_CTX:-18000}
+      - LLM_NUM_CTX=${LLM_NUM_CTX:-4096}
       - TTS_BASE_URL=${TTS_BASE_URL:-http://localhost:8969/v1}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}

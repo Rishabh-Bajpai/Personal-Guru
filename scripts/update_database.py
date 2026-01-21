@@ -48,11 +48,11 @@ def update_database():
     app = create_app()
     with app.app_context():
         logger.info("Starting database update...")
-        
+
         # 0. Pre-check for table renames (Manual Migrations)
         inspector = inspect(db.engine)
         existing_tables = inspector.get_table_names()
-        
+
         if 'study_steps' in existing_tables and 'chapter_mode' not in existing_tables:
             logger.info("Detected legacy table 'study_steps'. Renaming to 'chapter_mode'...")
             try:
@@ -60,7 +60,7 @@ def update_database():
                 db.session.execute(text('ALTER TABLE study_steps RENAME TO chapter_mode'))
                 db.session.commit()
                 logger.info(" -> Table renamed successfully.")
-                
+
                 # Check consistency of ID sequence if necessary (usually auto-handled by serial)
             except Exception as e:
                 logger.error(f" -> Failed to rename table: {e}")
@@ -69,19 +69,19 @@ def update_database():
         # 1. Create missing tables (Standard SQLAlchemy)
         logger.info("Ensuring all tables exist...")
         db.create_all()
-        
+
         # 2. Inspect and Update existing tables
         logger.info("Checking for schema updates...")
         inspector = inspect(db.engine) # Re-inspect after create/rename
-        
+
         for model in TARGET_MODELS:
             table_name = model.__tablename__
             logger.info(f"Inspecting table: {table_name}")
-            
+
             # Get existing columns in DB
             existing_columns = inspector.get_columns(table_name)
             existing_col_map = {col['name']: col for col in existing_columns}
-            
+
             # Special check for Topic model migration
             if table_name == 'topics':
                 has_user_id = 'user_id' in existing_col_map
@@ -161,7 +161,7 @@ def update_database():
                          # Add as nullable first
                          sql = text('ALTER TABLE "telemetry_logs" ADD COLUMN "installation_id" VARCHAR(36)')
                          db.session.execute(sql)
-                         
+
                          # Backfill attempts from user_id joining logins
                          logger.info("      -> Backfilling installation_id from logins...")
                          sql_backfill = text("""
@@ -172,7 +172,7 @@ def update_database():
                             AND telemetry_logs.installation_id IS NULL
                          """)
                          db.session.execute(sql_backfill)
-                         
+
                          # Delete any rows that still have NULL installation_id (orphans) to allow NOT NULL constraint
                          sql_clean = text('DELETE FROM telemetry_logs WHERE installation_id IS NULL')
                          db.session.execute(sql_clean)
@@ -180,11 +180,11 @@ def update_database():
                          # Set NOT NULL
                          sql_const = text('ALTER TABLE "telemetry_logs" ALTER COLUMN "installation_id" SET NOT NULL')
                          db.session.execute(sql_const)
-                         
+
                          # Add FK Constraint
                          sql_fk = text('ALTER TABLE "telemetry_logs" ADD CONSTRAINT fk_telemetry_installation FOREIGN KEY (installation_id) REFERENCES installations(installation_id)')
                          db.session.execute(sql_fk)
-                         
+
                          db.session.commit()
                          logger.info("      -> Added and constrained successfully.")
                      except Exception as e:
@@ -193,7 +193,7 @@ def update_database():
 
                 # 2. Ensure user_id is nullable
                 if 'user_id' in existing_col_map:
-                    # We can't easily check if it's nullable via Inspector in this script style without detailed reflection, 
+                    # We can't easily check if it's nullable via Inspector in this script style without detailed reflection,
                     # but we can try to ALTER it to DROP NOT NULL blindly or check logic.
                     # For simplicity, we just run the ALTER. Postgres allows this even if already nullable.
                     try:
@@ -254,10 +254,10 @@ def update_database():
                  # Special check for User model change (username -> id/login_id)
                  has_username = 'username' in existing_col_map
                  has_id = 'id' in existing_col_map
-                 
+
                  if has_username and not has_id:
                      logger.warning(" !! Detected old 'users' table schema (username PK). Migrating data to new schema...")
-                     
+
                      try:
                          # 1. Backup old data
                          logger.info("    -> Backing up old user data...")
@@ -269,19 +269,19 @@ def update_database():
                              # Fallback
                              columns = old_users_result.keys()
                              users_data = [dict(zip(columns, row)) for row in old_users_result]
-                         
+
                          logger.info(f"    -> Found {len(users_data)} user(s) to migrate.")
-                         
+
                          # 2. Drop old table
                          sql = text('DROP TABLE "users" CASCADE')
                          db.session.execute(sql)
                          db.session.commit()
                          logger.info("    -> Old 'users' table dropped.")
-                         
+
                          # 3. Recreate tables (User, Login, etc.)
                          logger.info("    -> Re-creating tables...")
                          db.create_all()
-                         
+
                          # 4. Migrate data
                          if users_data:
                              logger.info("    -> Migrating data to new Login/User tables...")
@@ -291,7 +291,7 @@ def update_database():
                                      # Generate new UUID for Login
                                      new_userid = models.Login.generate_userid()
                                      old_username = u.get('username')
-                                     
+
                                      # Create Login (Auth)
                                      new_login = models.Login(
                                          userid=new_userid,
@@ -300,14 +300,14 @@ def update_database():
                                          # Map hash to password
                                          password_hash=u.get('password_hash')
                                      )
-                                     
+
                                      # Create User (Profile)
                                      langs = u.get('primary_language')
                                      if langs and isinstance(langs, str):
                                          langs = [langs] # Convert to list for JSON
                                      elif not langs:
                                          langs = []
-                                         
+
                                      new_user = models.User(
                                         login_id=new_userid,
                                         age=u.get('age'),
@@ -322,10 +322,10 @@ def update_database():
                                         time_commitment=u.get('time_commitment'),
                                         preferred_format=u.get('preferred_format')
                                      )
-                                     
+
                                      db.session.add(new_login)
                                      db.session.add(new_user)
-                                     
+
                                      # Update Topic links (restore ownership)
                                      if old_username:
                                          update_topics_sql = text('UPDATE topics SET user_id = :new_uid WHERE user_id = :old_uid')
@@ -334,10 +334,10 @@ def update_database():
                                      migrated_count += 1
                                  except Exception as migration_err:
                                      logger.error(f"    -> Error migrating user {u.get('username')}: {migration_err}")
-                             
+
                              db.session.commit()
                              logger.info(f"    -> Migration complete. {migrated_count} users migrated.")
-                             
+
                              # Attempt to restore FK constraint on topics if possible
                              try:
                                  # Best-effort restoration of FK
@@ -357,13 +357,13 @@ def update_database():
                      continue
             # Get model columns
             model_columns = model.__table__.columns
-            
+
             for column in model_columns:
                 col_name = column.name
                 col_type = column.type
-                
 
-                
+
+
                 # Check if column exists
                 if col_name not in existing_col_map:
                     logger.info(f"  [+] Adding missing column: {col_name} ({col_type})")
@@ -381,17 +381,17 @@ def update_database():
                     except Exception as e:
                         logger.error(f"      -> FAILED to add column: {e}")
                         db.session.rollback()
-                        
+
                 else:
                     # Column exists, check for specific type updates requested (JSONB -> JSON)
                     existing_col_info = existing_col_map[col_name]
                     existing_type_str = str(existing_col_info['type']).upper()
                     model_type_str = str(col_type).upper()
-                    
+
                     # Specific check for JSONB -> JSON
                     # Postgres generic JSON is often represented as 'JSON'
                     # Postgres JSONB is 'JSONB'
-                    
+
                     if 'JSON' in model_type_str and 'JSONB' in existing_type_str:
                          logger.info(f"  [~] Converting column {col_name} from JSONB to JSON")
                          try:
@@ -403,8 +403,8 @@ def update_database():
                          except Exception as e:
                              logger.error(f"      -> FAILED to convert column: {e}")
                              db.session.rollback()
-                    
-                    
+
+
                     # Special check for languages string -> json
                     if col_name == 'languages' and 'VARCHAR' in existing_type_str and 'JSON' in model_type_str:
                          logger.info(f"  [~] Converting column {col_name} from String to JSON")
@@ -413,7 +413,7 @@ def update_database():
                              # Postgres specific: using json_build_array or manual formatting
                              # Fallback logic: if empty, '[]', else '["' + val + '"]'
                              # Note: SQL injection risk minimal here as we use columns but content might need escaping if raw string concat.
-                             # Safer: USING json_build_array(languages) 
+                             # Safer: USING json_build_array(languages)
                              sql = text(f'ALTER TABLE "{table_name}" ALTER COLUMN "{col_name}" TYPE JSON USING json_build_array("{col_name}")')
                              db.session.execute(sql)
                              db.session.commit()
@@ -433,7 +433,7 @@ def update_database():
                          except Exception as e:
                              logger.error(f"      -> FAILED to expand column: {e}")
                              db.session.rollback()
-                    
+
         logger.info("✓ Database update complete!")
 
 if __name__ == '__main__':

@@ -62,6 +62,18 @@
 }
 
 /* Suggestions Area - default (Light Mode) */
+.suggestions-heading {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 8px;
+    margin-top: 0;
+}
+
+body.dark-mode .suggestions-heading {
+    color: #bbb;
+}
+
 .suggestions-chips {
     display: flex;
     flex-wrap: wrap;

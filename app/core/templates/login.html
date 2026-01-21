@@ -20,13 +20,14 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <label for="username">Username</label>
-            <input type="text" id="username" name="username" class="form-control" required placeholder="Enter username">
+            <input type="text" id="username" name="username" class="form-control" required placeholder="Enter username"
+                maxlength="100">
         </div>
 
         <div class="form-group">
             <label for="password">Password</label>
             <input type="password" id="password" name="password" class="form-control" required
-                placeholder="Enter password">
+                placeholder="Enter password" maxlength="100">
         </div>
 
         <button type="submit" class="btn-auth">Log In</button>
