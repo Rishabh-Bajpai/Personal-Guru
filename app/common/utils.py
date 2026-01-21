@@ -20,7 +20,7 @@ from app.core.exceptions import (
     STTError
 )
 
-load_dotenv()
+load_dotenv(override=True)
 
 LLM_BASE_URL = os.getenv("LLM_BASE_URL")
 LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME")
