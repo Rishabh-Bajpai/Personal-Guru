@@ -6,187 +6,580 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Personal Guru - Setup</title>
     <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-page: #f9fafb;
+            --bg-card: #ffffff;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --radius: 10px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
         body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background: #f0f2f5;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-main);
+            margin: 0;
+            padding: 2rem 1rem;
             display: flex;
             justify-content: center;
-            padding: 2rem 0;
-            margin: 0;
         }
 
         .container {
-            background: white;
-            padding: 2.5rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
             width: 100%;
-            max-width: 500px;
+            max-width: 600px;
         }
 
         h1 {
-            margin-top: 0;
-            color: #1a1a1a;
-            font-size: 1.8rem;
             text-align: center;
+            font-size: 1.75rem;
             margin-bottom: 2rem;
+            color: #1a202c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
         }
 
-        .form-group {
+        /* Card Styles */
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
             margin-bottom: 1.5rem;
-            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: #f8fafc;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+            font-size: 1.05rem;
+            color: #334155;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
         }
 
         label {
             display: block;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
             color: #374151;
-            font-weight: 600;
+            font-weight: 500;
             font-size: 0.95rem;
         }
 
-        input {
+        input,
+        select {
             width: 100%;
-            padding: 0.75rem;
+            padding: 0.65rem 0.85rem;
             border: 1px solid #d1d5db;
             border-radius: 6px;
+            font-size: 0.95rem;
             box-sizing: border-box;
-            font-size: 1rem;
-            transition: border 0.2s;
+            transition: border-color 0.15s, box-shadow 0.15s;
         }
 
-        input:focus {
-            border-color: #3b82f6;
+        input:focus,
+        select:focus {
+            border-color: var(--primary);
             outline: none;
-            ring: 2px solid rgba(59, 130, 246, 0.2);
-        }
-
-        button {
-            width: 100%;
-            padding: 1rem;
-            background: #2563eb;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 1rem;
-            transition: background 0.2s;
-        }
-
-        button:hover {
-            background: #1d4ed8;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
         .hint {
             font-size: 0.85rem;
-            color: #6b7280;
+            color: var(--text-muted);
             margin-top: 0.35rem;
             line-height: 1.4;
         }
 
-        .section-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #111827;
-            margin: 2rem 0 1rem;
-            border-bottom: 2px solid #e5e7eb;
-            padding-bottom: 0.5rem;
+        /* Groq Alert Box */
+        .groq-instructions {
+            background-color: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .groq-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            color: #0c4a6e;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .watch-demo-btn {
+            background-color: #ea580c;
+            color: white;
+            border: none;
+            padding: 0.35rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: background-color 0.2s;
+        }
+
+        .watch-demo-btn:hover {
+            background-color: #c2410c;
+        }
+
+        .groq-steps {
+            margin: 0;
+            padding-left: 1.25rem;
+            font-size: 0.9rem;
+            color: #334155;
+        }
+
+        .groq-steps li {
+            margin-bottom: 0.3rem;
+        }
+
+        .groq-steps a {
+            color: #0284c7;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .groq-steps a:hover {
+            text-decoration: underline;
+        }
+
+        /* Buttons */
+        .btn-primary {
+            width: 100%;
+            padding: 0.85rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        /* Advanced Toggle */
+        .advanced-toggle {
+            display: block;
+            width: 100%;
+            text-align: center;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            padding: 0.5rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-decoration: underline;
+            margin: 1rem 0;
+        }
+
+        .advanced-section {
+            display: none;
+        }
+
+        .advanced-section.visible {
+            display: block;
+        }
+
+        /* Messages */
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border: 1px solid transparent;
+        }
+
+        .alert-success {
+            background-color: #dcfce7;
+            color: #166534;
+            border-color: #bbf7d0;
+        }
+
+        .alert-error {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border-color: #fecaca;
+        }
+
+        /* Icons */
+        .icon {
+            font-size: 1.2rem;
+        }
+
+        /* Video Modal Styles */
+        .video-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .video-modal.active {
+            display: flex;
+        }
+
+        .video-modal-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .video-modal video {
+            display: block;
+            max-width: 100%;
+            max-height: 80vh;
+        }
+
+        .video-modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: #fff;
+            color: #1a1a1a;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 1.25rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .video-modal-close:hover {
+            transform: scale(1.1);
         }
     </style>
 </head>
 
 <body>
+    <!-- Video Modal -->
+    <div class="video-modal" id="groqVideoModal">
+        <div class="video-modal-content">
+            <button class="video-modal-close" onclick="closeVideoModal()">&times;</button>
+            <video id="groqDemoVideo" controls>
+                <source src="{{ url_for('static', filename='vid/samosa_PG_demo_llm_API_groq_2.mp4') }}"
+                    type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    </div>
+
     <div class="container">
         <h1>🛠️ Configure Personal Guru</h1>
 
         {% if success %}
-        <div
-            style="background:#d1fae5; color:#065f46; padding:1rem; border-radius:6px; margin-bottom:1rem; border:1px solid #a7f3d0;">
-            {{ success }}
-        </div>
+        <div class="alert alert-success">{{ success }}</div>
         {% endif %}
         {% if error %}
-        <div
-            style="background:#fee2e2; color:#991b1b; padding:1rem; border-radius:6px; margin-bottom:1rem; border:1px solid #fecaca;">
-            {{ error }}
-        </div>
+        <div class="alert alert-error">{{ error }}</div>
         {% endif %}
 
         <form method="POST">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="section-title">Database</div>
-            <div class="form-group">
-                <label for="database_url">Database URL</label>
-                <input type="text" id="database_url" name="database_url" required
-                    value="{{ defaults.get('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5433/personal_guru') }}">
-                <div class="hint">Connection string (e.g., postgresql://user:pass@host:port/db)</div>
-            </div>
 
-            <div class="section-title">LLM Settings</div>
-            <div class="form-group">
-                <label for="LLM_BASE_URL">LLM Endpoint</label>
-                <input type="url" id="LLM_BASE_URL" name="LLM_BASE_URL" required
-                    value="{{ defaults.get('LLM_BASE_URL', 'http://localhost:11434/v1') }}">
-                <div class="hint">
-                    Ollama: http://localhost:11434/v1<br>
-                    LMStudio: http://localhost:1234/v1<br>
-                    OpenAI: https://api.openai.com/v1<br>
-                    Gemini: https://generativelanguage.googleapis.com/v1beta/openai/
+            <!-- LLM Settings Card -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="icon">🤖</span> LLM AI Settings
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="llm_provider">AI Provider</label>
+                        <select id="llm_provider" onchange="updateProviderDefaults()">
+                            <option value="groq">Groq (Fast & Free Cloud Recommendation)</option>
+                            <option value="gemini">Google Gemini (Cloud)</option>
+                            <option value="openai">OpenAI (Cloud)</option>
+                            <option value="anthropic">Anthropic Claude (Cloud)</option>
+                            <option value="ollama">Ollama (Local Privacy Focused)</option>
+                            <option value="lmstudio">LMStudio (Local)</option>
+                            <option value="custom">Custom Configuration</option>
+                        </select>
+                    </div>
+
+                    <!-- Groq Instructions (Dynamic) -->
+                    <div id="groq_instructions" class="groq-instructions" style="display:none;">
+                        <div class="groq-header">
+                            <span>🚀 Get a FREE Groq API Key</span>
+                            <button type="button" class="watch-demo-btn" onclick="openVideoModal()">
+                                ▶ Watch Setup
+                            </button>
+                        </div>
+                        <ol class="groq-steps">
+                            <li>Visit <a href="https://groq.com/" target="_blank" rel="noopener">groq.com</a></li>
+                            <li>Sign in & Create API Key</li>
+                            <li>Copy and paste key below</li>
+                        </ol>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="LLM_BASE_URL">LLM Endpoint URL</label>
+                        <input type="url" id="LLM_BASE_URL" name="LLM_BASE_URL" required
+                            value="{{ defaults.get('LLM_BASE_URL', 'https://api.groq.com/openai/v1') }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="llm_model">Model Name</label>
+                        <input type="text" id="llm_model" name="llm_model" required
+                            value="{{ defaults.get('LLM_MODEL_NAME', 'moonshotai/kimi-k2-instruct-0905') }}">
+                        <div class="hint">Recommended for provider.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="llm_key">API Key</label>
+                        <input type="password" id="llm_key" name="llm_key" value="{{ defaults.get('LLM_API_KEY', '') }}"
+                            placeholder="sk-...">
+                        <div class="hint">Required for Cloud providers (Groq, OpenAI, etc).</div>
+                    </div>
+
+                    <button type="button" class="advanced-toggle" onclick="toggleAdvanced()">Show Advanced
+                        Settings</button>
+
+                    <div id="advanced" class="advanced-section">
+                        <div class="form-group">
+                            <label for="llm_ctx">Context Window Size</label>
+                            <input type="number" id="llm_ctx" name="llm_ctx"
+                                value="{{ defaults.get('LLM_NUM_CTX', '4096') }}">
+                            <div class="hint">Higher values allow more text memory but use more RAM.</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="tts_url">OpenAI-Compatible TTS Endpoint</label>
+                            <input type="url" id="tts_url" name="tts_url"
+                                value="{{ defaults.get('TTS_BASE_URL', 'http://localhost:8969/v1') }}">
+                            <div class="hint">Endpoint for Speaches/Kokoro or other OpenAI-compatible TTS. Default:
+                                http://localhost:8969/v1</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="stt_url">STT API Endpoint (Optional)</label>
+                            <input type="url" id="stt_url" name="stt_url" value="{{ defaults.get('STT_BASE_URL', '') }}"
+                                placeholder="http://localhost:9000/v1">
+                            <div class="hint">Endpoint for Speech-to-Text service.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="llm_model">Model Name</label>
-                <input type="text" id="llm_model" name="llm_model" required
-                    value="{{ defaults.get('LLM_MODEL_NAME', 'llama3') }}">
-                <div class="hint">e.g., llama3, gpt-4o, qwen:14b</div>
+            <!-- Database Card -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="icon">🗄️</span> Database Connection
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="database_url">PostgreSQL Connection String</label>
+                        <input type="text" id="database_url" name="database_url" required
+                            value="{{ defaults.get('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5433/personal_guru') }}">
+                        <div class="hint">Format: postgresql://user:pass@host:port/dbname</div>
+                    </div>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="llm_key">API Key</label>
-                <input type="password" id="llm_key" name="llm_key" value="{{ defaults.get('LLM_API_KEY', '') }}">
-                <div class="hint">Required for OpenAI/Gemini. Optional for local Ollama/LMStudio.</div>
+            <!-- Optional Services Card (Collapsible?) - Keeping it simple card for now -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="icon">🔌</span> Optional Services
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="youtube_key">YouTube API Key</label>
+                        <input type="password" id="youtube_key" name="youtube_key"
+                            value="{{ defaults.get('YOUTUBE_API_KEY', '') }}">
+                        <div class="hint">
+                            Required for Reel Mode & Video Search.
+                            <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Get Key</a>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="openai_key">OpenAI Key (Fallback/TTS)</label>
+                        <input type="password" id="openai_key" name="openai_key"
+                            value="{{ defaults.get('OPENAI_API_KEY', '') }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="port">Application Port</label>
+                        <input type="number" id="port" name="port" value="{{ defaults.get('PORT', '5011') }}">
+                    </div>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="llm_ctx">Context Window</label>
-                <input type="number" id="llm_ctx" name="llm_ctx" value="{{ defaults.get('LLM_NUM_CTX', '4096') }}">
-                <div class="hint">Recommended: 4096+ for best long-context performance.</div>
+            <div style="display: flex; gap: 1rem;">
+                {% if show_back_button %}
+                <a href="/" class="btn-primary"
+                    style="background-color: #6b7280; text-align: center; text-decoration: none;">Back to Home</a>
+                {% endif %}
+                <button type="submit" class="btn-primary">Save Configuration & Restart</button>
             </div>
-
-            <div class="section-title">Optional Services</div>
-            <div class="form-group">
-                <label for="tts_url">OpenAI-Compatible TTS Endpoint</label>
-                <input type="url" id="tts_url" name="tts_url"
-                    value="{{ defaults.get('TTS_BASE_URL', 'http://localhost:8969/v1') }}">
-                <div class="hint">Endpoint for Speaches/Kokoro or other OpenAI-compatible TTS. Default:
-                    http://localhost:8969/v1</div>
-            </div>
-
-            <div class="form-group">
-                <label for="openai_key">OpenAI API Key (for TTS/LLM)</label>
-                <input type="password" id="openai_key" name="openai_key"
-                    value="{{ defaults.get('OPENAI_API_KEY', '') }}">
-                <div class="hint">Required if using OpenAI models or authenticated TTS.</div>
-            </div>
-
-            <div class="form-group">
-                <label for="youtube_key">YouTube API Key</label>
-                <input type="password" id="youtube_key" name="youtube_key"
-                    value="{{ defaults.get('YOUTUBE_API_KEY', '') }}">
-                <div class="hint">Required for Reel Mode and Video Search features.</div>
-            </div>
-
-            <div class="form-group">
-                <label for="port">App Port</label>
-                <input type="number" id="port" name="port" value="{{ defaults.get('PORT', '5011') }}">
-            </div>
-
-            <button type="submit">Save Configuration</button>
         </form>
     </div>
+
+    <script>
+        const PROVIDER_DEFAULTS = {
+            'groq': {
+                url: 'https://api.groq.com/openai/v1',
+                model: 'moonshotai/kimi-k2-instruct-0905',
+                showGroq: true
+            },
+            'ollama': {
+                url: 'http://localhost:11434/v1',
+                model: 'qwen3:30b',
+                showGroq: false
+            },
+            'lmstudio': {
+                url: 'http://localhost:1234/v1',
+                model: 'qwen3:30b',
+                showGroq: false
+            },
+            'gemini': {
+                url: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+                model: 'gemini-3-flash-preview',
+                showGroq: false
+            },
+            'openai': {
+                url: 'https://api.openai.com/v1',
+                model: 'gpt-4o',
+                showGroq: false
+            },
+            'anthropic': {
+                url: 'https://api.anthropic.com/v1',
+                model: 'claude-sonnet-4-5-20250929',
+                showGroq: false
+            },
+            'custom': {
+                // No defaults, keep existing
+                showGroq: false
+            }
+        };
+
+        function updateProviderDefaults() {
+            const provider = document.getElementById('llm_provider').value;
+            const settings = PROVIDER_DEFAULTS[provider];
+
+            if (!settings) return;
+
+            const urlInput = document.getElementById('LLM_BASE_URL');
+            const modelInput = document.getElementById('llm_model');
+            const groqInstr = document.getElementById('groq_instructions');
+
+            // Only update values if not 'custom'
+            if (provider !== 'custom') {
+                urlInput.value = settings.url;
+                modelInput.value = settings.model;
+            }
+
+            // Toggle Groq Instructions
+            groqInstr.style.display = settings.showGroq ? 'block' : 'none';
+        }
+
+        function toggleAdvanced() {
+            const el = document.getElementById('advanced');
+            const btn = document.querySelector('.advanced-toggle');
+            if (el.classList.contains('visible')) {
+                el.classList.remove('visible');
+                btn.innerText = 'Show Advanced Settings';
+            } else {
+                el.classList.add('visible');
+                btn.innerText = 'Hide Advanced Settings';
+                // Also scroll to it
+                // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        // Initialize state on load based on current values
+        window.addEventListener('load', () => {
+            const currentUrl = document.getElementById('LLM_BASE_URL').value;
+            const selector = document.getElementById('llm_provider');
+
+            // Try to detect provider
+            if (currentUrl.includes('groq.com')) selector.value = 'groq';
+            else if (currentUrl.includes('localhost:11434')) selector.value = 'ollama';
+            else if (currentUrl.includes('localhost:1234')) selector.value = 'lmstudio';
+            else if (currentUrl.includes('googleapis')) selector.value = 'gemini';
+            else if (currentUrl.includes('openai.com')) selector.value = 'openai';
+            else if (currentUrl.includes('anthropic.com')) selector.value = 'anthropic'; // Added Anthropic detection
+            else selector.value = 'custom';
+
+            // Trigger UI update without overwriting values (unless it's a fresh load logic, but let's be safe)
+            // Actually, for first load, allow the selector to match but don't overwrite user's saved modified strings
+            // EXCEPT visibility logic needs to run.
+
+            const provider = selector.value;
+            const settings = PROVIDER_DEFAULTS[provider];
+            if (settings) {
+                document.getElementById('groq_instructions').style.display = settings.showGroq ? 'block' : 'none';
+            }
+        });
+
+        // Video Modal Logic
+        function openVideoModal() {
+            const modal = document.getElementById('groqVideoModal');
+            const video = document.getElementById('groqDemoVideo');
+            modal.classList.add('active');
+            video.currentTime = 0;
+            video.play();
+        }
+
+        function closeVideoModal() {
+            const modal = document.getElementById('groqVideoModal');
+            const video = document.getElementById('groqDemoVideo');
+            modal.classList.remove('active');
+            video.pause();
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeVideoModal();
+        });
+
+        document.getElementById('groqVideoModal').addEventListener('click', function (e) {
+            if (e.target === this) closeVideoModal();
+        });
+    </script>
 </body>
 
 </html>

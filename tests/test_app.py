@@ -309,7 +309,7 @@ def test_setup_success_mock_fs(setup_client, mocker):
     })
 
     assert rv.status_code == 200
-    assert b"Setup Complete" in rv.data
+    assert b"Configuration Saved!" in rv.data
 
     # Verify file write
     m.assert_called_with('.env', 'w')

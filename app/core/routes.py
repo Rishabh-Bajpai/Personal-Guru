@@ -107,6 +107,12 @@ def index():
     return render_template('index.html', topics=topics_data)
 
 
+@main_bp.route('/favicon.ico')
+def favicon():
+    from flask import current_app
+    return current_app.send_static_file('favicon.ico')
+
+
 @main_bp.context_processor
 def inject_notifications():
     """Make notifications available to all templates."""
@@ -358,7 +364,14 @@ def suggest_topics():
 
 @main_bp.route('/settings', methods=['GET', 'POST'])
 def settings():
-    """Display and update application settings stored in .env file."""
+    """
+    Display and update application settings stored in .env file.
+
+    POST:
+        - Updates .env configuration.
+        - Triggers application restart by touching run.py.
+        - Returns a client-side polling page to redirect user after restart.
+    """
     # Load defaults
     defaults = {}
 
@@ -398,16 +411,67 @@ def settings():
             for key, value in config.items():
                 f.write(f"{key}={value}\n")
 
-        # flash("Settings saved! Please restart the application to apply changes.") ?
-        # Flask flash needs secret key. Base template might not display it?
-        # Setup app returned "Setup Complete" string.
-        # Here we should probably redirect or render success.
-        return render_template(
-            'setup.html',
-            defaults=config,
-            success="Settings saved! Restart app to apply.")
+        # Trigger Flask Reload by touching run.py
+        try:
+            os.utime('run.py', None)
+        except Exception as e:
+            print(f"Error triggering reload: {e}")
 
-    return render_template('setup.html', defaults=defaults)
+        # Return a page that polls for the server to come back up
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Restarting...</title>
+            <style>
+                body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #f0f2f5; margin: 0; }
+                .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); text-align: center; max-width: 400px; }
+                h2 { color: #059669; margin-top: 0; }
+                p { color: #4b5563; }
+                .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 1rem auto; }
+                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <h2>Configuration Saved!</h2>
+                <div class="loader"></div>
+                <p>Restarting server and applying changes...</p>
+                <p style="font-size:0.9rem">You will be redirected automatically.</p>
+            </div>
+            <script>
+                // Poll the server every 2 seconds to see if it's back up
+                const checkServer = async () => {
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+                        // Try to fetch home page
+                        const response = await fetch('/', {
+                            method: 'HEAD',
+                            signal: controller.signal,
+                            cache: 'no-store'
+                        });
+
+                        if (response.ok) {
+                            window.location.href = '/';
+                        }
+                    } catch (e) {
+                        // Server still restarting, ignore error
+                        console.log('Waiting for server...');
+                    }
+                };
+
+                // Give it a moment to actually die first
+                setTimeout(() => {
+                    setInterval(checkServer, 2000);
+                }, 3000);
+            </script>
+        </body>
+        </html>
+        """
+
+    return render_template('setup.html', defaults=defaults, show_back_button=True)
 
 
 @main_bp.route('/api/transcribe', methods=['POST'])
