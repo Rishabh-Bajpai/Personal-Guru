@@ -332,5 +332,8 @@ body.dark-mode #chat-maximize-btn:hover {
 }
 
 .chat-popup.maximized .chat-window {
-    height: calc(100% - 53px);
+    height: auto;
+    flex: 1;
+    min-height: 0;
+    /* Important for nested scrolling in flex containers */
 }
