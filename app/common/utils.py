@@ -538,16 +538,16 @@ def generate_podcast_audio(transcript, output_filename):
     # Host is typically speaker 1, Guest is speaker 2 in many transcripts,
     # but we map based on unique speakers found.
     # We will try to map the first speaker found to Host if feasible, or just map them.
-    
+
     unique_speakers = sorted(list(set(s for s, t in lines)))
-    
+
     # Create valid voice list starting with our configured ones
     available_voices = [
-        TTS_VOICE_PODCAST_HOST, 
+        TTS_VOICE_PODCAST_HOST,
         TTS_VOICE_PODCAST_GUEST,
         'af_bella', 'am_puck', 'af_heart', 'af_sarah', 'am_adam' # Fallbacks
     ]
-    
+
     # Filter out duplicates if defaults are in fallback
     available_voices = list(dict.fromkeys(available_voices))
 
