@@ -23,11 +23,22 @@ if __name__ == '__main__':
     # Exclude sandbox directory from reloader monitoring to prevent restart loops
     # when creating temporary environments
     sandbox_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data', 'sandbox')
+    cert_path = os.path.join('certs', 'cert.pem')
+    key_path = os.path.join('certs', 'key.pem')
+    
+    ssl_context = None
+    if os.path.exists(cert_path) and os.path.exists(key_path):
+        print(f"SSL Certificates found. Enabling HTTPS on port {port}.")
+        ssl_context = (cert_path, key_path)
+    else:
+        print(f"No SSL Certificates found. Running on HTTP port {port}.")
+
     app.run(
         debug=True,
         host='0.0.0.0',
         port=port,
         use_reloader=True,
         reloader_type='stat',
-        exclude_patterns=[f'{sandbox_path}/*']
+        exclude_patterns=[f'{sandbox_path}/*'],
+        ssl_context=ssl_context
     )
