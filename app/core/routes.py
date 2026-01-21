@@ -395,6 +395,13 @@ def settings():
             'LLM_API_KEY': request.form.get('llm_key', ''),
             'LLM_NUM_CTX': request.form.get('llm_ctx', '4096'),
             'TTS_BASE_URL': request.form.get('tts_url', ''),
+            'TTS_MODEL': request.form.get('tts_model', 'tts-1'),
+            'STT_BASE_URL': request.form.get('stt_url', ''),
+            'STT_MODEL': request.form.get('stt_model', 'Systran/faster-whisper-medium.en'),
+            'TTS_LANGUAGE': request.form.get('tts_language', 'en'),
+            'TTS_VOICE_DEFAULT': request.form.get('tts_voice_default', 'af_bella'),
+            'TTS_VOICE_PODCAST_HOST': request.form.get('tts_voice_host', 'am_michael'),
+            'TTS_VOICE_PODCAST_GUEST': request.form.get('tts_voice_guest', 'af_nicole'),
             'OPENAI_API_KEY': request.form.get('openai_key', ''),
             'YOUTUBE_API_KEY': request.form.get('youtube_key', '')
         }

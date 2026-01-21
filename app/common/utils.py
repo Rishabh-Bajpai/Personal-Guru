@@ -27,7 +27,13 @@ LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME")
 LLM_NUM_CTX = int(os.getenv("LLM_NUM_CTX", 4096))
 LLM_API_KEY = os.getenv("LLM_API_KEY", "dummy")
 TTS_BASE_URL = os.getenv("TTS_BASE_URL", "http://localhost:8969/v1")
+TTS_MODEL = os.getenv("TTS_MODEL", "tts-1")
 STT_BASE_URL = os.getenv("STT_BASE_URL", "http://localhost:8969/v1")
+STT_MODEL = os.getenv("STT_MODEL", "Systran/faster-whisper-medium.en")
+TTS_LANGUAGE = os.getenv("TTS_LANGUAGE", "en")
+TTS_VOICE_DEFAULT = os.getenv("TTS_VOICE_DEFAULT", "af_bella")
+TTS_VOICE_PODCAST_HOST = os.getenv("TTS_VOICE_PODCAST_HOST", "am_michael")
+TTS_VOICE_PODCAST_GUEST = os.getenv("TTS_VOICE_PODCAST_GUEST", "af_nicole")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "not-required")
 
 
@@ -371,7 +377,7 @@ def generate_audio(text, step_index):
 
     try:
         tts_client = OpenAI(base_url=TTS_BASE_URL, api_key=OPENAI_API_KEY)
-        voice = "af_bella"
+        voice = TTS_VOICE_DEFAULT
 
         for i, chunk in enumerate(chunks):
             if not chunk.strip():
@@ -380,7 +386,7 @@ def generate_audio(text, step_index):
             print(
                 f"DEBUG: Generating chunk {i+1}/{len(chunks)}, len: {len(chunk)}")
             response = tts_client.audio.speech.create(
-                model="tts-1",
+                model=TTS_MODEL,
                 voice=voice,
                 input=chunk
             )
@@ -434,7 +440,7 @@ def generate_audio(text, step_index):
                 perf_log = AIModelPerformance(
                     user_id=current_user.userid,
                     model_type='TTS',
-                    model_name='tts-1', # Hardcoded as per implementation
+                    model_name=TTS_MODEL, # Hardcoded as per implementation
                     latency_ms=latency_ms,
                     input_tokens=input_len,
                     output_tokens=0 # Audio output doesn't measure in tokens easily
@@ -528,15 +534,22 @@ def generate_podcast_audio(transcript, output_filename):
         return False, f"Failed to initialize TTS client: {e}"
 
     # 3. Assign Voices
+    # Use configured podcast voices first
+    # Host is typically speaker 1, Guest is speaker 2 in many transcripts,
+    # but we map based on unique speakers found.
+    # We will try to map the first speaker found to Host if feasible, or just map them.
+    
     unique_speakers = sorted(list(set(s for s, t in lines)))
+    
+    # Create valid voice list starting with our configured ones
     available_voices = [
-        'af_bella',
-        'am_michael',
-        'am_puck',
-        'af_nicole',
-        'af_heart',
-        'af_sarah',
-        'am_adam']
+        TTS_VOICE_PODCAST_HOST, 
+        TTS_VOICE_PODCAST_GUEST,
+        'af_bella', 'am_puck', 'af_heart', 'af_sarah', 'am_adam' # Fallbacks
+    ]
+    
+    # Filter out duplicates if defaults are in fallback
+    available_voices = list(dict.fromkeys(available_voices))
 
     voice_map = {speaker: available_voices[i % len(
         available_voices)] for i, speaker in enumerate(unique_speakers)}
@@ -551,7 +564,7 @@ def generate_podcast_audio(transcript, output_filename):
             # Debug: Generating: {speaker} ({voice}) -> '{text[:20]}...'
 
             response = tts_client.audio.speech.create(
-                model="tts-1",
+                model=TTS_MODEL,
                 voice=voice,
                 input=text
             )
@@ -615,7 +628,7 @@ def generate_podcast_audio(transcript, output_filename):
                 perf_log = AIModelPerformance(
                     user_id=current_user.userid,
                     model_type='TTS',
-                    model_name='tts-1',
+                    model_name=TTS_MODEL,
                     latency_ms=latency_ms,
                     input_tokens=total_chars,
                     output_tokens=0
@@ -651,7 +664,7 @@ def transcribe_audio(audio_file_path):
 
         with open(audio_file_path, "rb") as audio_file:
             transcript = client.audio.transcriptions.create(
-                model="Systran/faster-whisper-medium.en",
+                model=STT_MODEL,
                 file=audio_file,
                 response_format="text"
             )
@@ -671,7 +684,7 @@ def transcribe_audio(audio_file_path):
                 perf_log = AIModelPerformance(
                     user_id=current_user.userid,
                     model_type='STT',
-                    model_name='Systran/faster-whisper-medium.en',
+                    model_name=STT_MODEL,
                     latency_ms=latency_ms,
                     input_tokens=0, # Audio input difficult to measure in tokens
                     output_tokens=output_len
