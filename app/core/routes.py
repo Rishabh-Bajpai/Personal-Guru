@@ -364,7 +364,14 @@ def suggest_topics():
 
 @main_bp.route('/settings', methods=['GET', 'POST'])
 def settings():
-    """Display and update application settings stored in .env file."""
+    """
+    Display and update application settings stored in .env file.
+
+    POST:
+        - Updates .env configuration.
+        - Triggers application restart by touching run.py.
+        - Returns a client-side polling page to redirect user after restart.
+    """
     # Load defaults
     defaults = {}
 

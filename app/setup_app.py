@@ -30,6 +30,16 @@ def create_setup_app():
 
     @app.route('/', methods=['GET', 'POST'])
     def setup():
+        """
+        Handle the setup wizard logic.
+
+        GET: Renders the setup form with current defaults.
+        POST:
+            - Validates input.
+            - Writes configuration to .env file.
+            - Triggers application restart by touching run.py.
+            - Returns a client-side polling page to redirect the user once the server restarts.
+        """
         if request.method == 'POST':
             # Gather form data
             config = {
