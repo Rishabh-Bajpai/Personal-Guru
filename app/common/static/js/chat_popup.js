@@ -288,6 +288,56 @@ function initChatPopup(config) {
         });
     }
 
+    // Load Chat History
+    async function loadChatHistory() {
+        try {
+            const response = await fetch(chatConfig.urls.chat, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.history && Array.isArray(data.history)) {
+                    // Clear existing history to avoid duplicates if re-initialized (though safeguards exist)
+                    chatHistory.innerHTML = '';
+
+                    data.history.forEach(msg => {
+                        const messageDiv = document.createElement('div');
+                        // Map 'assistant' to 'tutor-message', 'user' to 'user-message'
+                        const isUser = msg.role === 'user';
+                        const className = isUser ? 'chat-message user-message' : 'chat-message tutor-message';
+                        messageDiv.className = className;
+
+                        const prefix = isUser ? '<strong>You:</strong> ' : '<strong>Tutor:</strong> ';
+
+                        if (isUser) {
+                            messageDiv.innerHTML = prefix;
+                            messageDiv.appendChild(document.createTextNode(msg.content));
+                        } else {
+                            // Ensure markdownit is available
+                            const md = window.markdownit ? window.markdownit({ html: false }) : { render: (t) => t };
+                            const rendered = md.render(msg.content || '');
+                            const safe = window.DOMPurify
+                                ? window.DOMPurify.sanitize(rendered)
+                                : rendered;
+                            messageDiv.innerHTML = prefix + safe;
+                        }
+                        chatHistory.appendChild(messageDiv);
+                    });
+                    chatHistory.scrollTop = chatHistory.scrollHeight;
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load chat history", e);
+        }
+    }
+
+    // Trigger history load
+    loadChatHistory();
+
     // Mark as initialized to prevent duplicate event listeners
     isInitialized = true;
 }
