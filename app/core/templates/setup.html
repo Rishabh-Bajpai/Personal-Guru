@@ -449,7 +449,13 @@
                 </div>
             </div>
 
-            <button type="submit" class="btn-primary">Save Configuration & Restart</button>
+            <div style="display: flex; gap: 1rem;">
+                {% if show_back_button %}
+                <a href="/" class="btn-primary"
+                    style="background-color: #6b7280; text-align: center; text-decoration: none;">Back to Home</a>
+                {% endif %}
+                <button type="submit" class="btn-primary">Save Configuration & Restart</button>
+            </div>
         </form>
     </div>
 

@@ -471,7 +471,7 @@ def settings():
         </html>
         """
 
-    return render_template('setup.html', defaults=defaults)
+    return render_template('setup.html', defaults=defaults, show_back_button=True)
 
 
 @main_bp.route('/api/transcribe', methods=['POST'])
