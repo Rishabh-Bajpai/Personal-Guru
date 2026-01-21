@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 from app.common.config_validator import validate_config
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Check configuration
 missing_vars = validate_config()

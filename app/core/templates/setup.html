@@ -380,26 +380,89 @@
                         Settings</button>
 
                     <div id="advanced" class="advanced-section">
-                        <div class="form-group">
-                            <label for="llm_ctx">Context Window Size</label>
-                            <input type="number" id="llm_ctx" name="llm_ctx"
-                                value="{{ defaults.get('LLM_NUM_CTX', '4096') }}">
-                            <div class="hint">Higher values allow more text memory but use more RAM.</div>
+                        <!-- Section: Advanced LLM -->
+                        <div class="settings-group">
+                            <h4
+                                style="margin: 0.5rem 0; color: #4b5563; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.25rem;">
+                                Advanced LLM</h4>
+                            <div class="form-group">
+                                <label for="llm_ctx">Context Window Size</label>
+                                <input type="number" id="llm_ctx" name="llm_ctx"
+                                    value="{{ defaults.get('LLM_NUM_CTX', '4096') }}">
+                                <div class="hint">Higher values allow more text memory but use more RAM.</div>
+                            </div>
                         </div>
 
-                        <div class="form-group">
-                            <label for="tts_url">OpenAI-Compatible TTS Endpoint</label>
-                            <input type="url" id="tts_url" name="tts_url"
-                                value="{{ defaults.get('TTS_BASE_URL', 'http://localhost:8969/v1') }}">
-                            <div class="hint">Endpoint for Speaches/Kokoro or other OpenAI-compatible TTS. Default:
-                                http://localhost:8969/v1</div>
+                        <!-- Section: TTS Configuration -->
+                        <div class="settings-group" style="margin-top: 1.5rem;">
+                            <h4
+                                style="margin: 0.5rem 0; color: #4b5563; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.25rem;">
+                                Text-to-Speech (TTS)</h4>
+
+                            <div class="form-group">
+                                <label for="tts_url">API Endpoint</label>
+                                <input type="url" id="tts_url" name="tts_url"
+                                    value="{{ defaults.get('TTS_BASE_URL', 'http://localhost:8969/v1') }}">
+                                <div class="hint">Endpoint for OpenAI-compatible TTS (e.g. Speaches/Kokoro).</div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label for="tts_model">Model Name</label>
+                                    <input type="text" id="tts_model" name="tts_model"
+                                        value="{{ defaults.get('TTS_MODEL', 'tts-1') }}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="tts_language">Language</label>
+                                    <input type="text" id="tts_language" name="tts_language"
+                                        value="{{ defaults.get('TTS_LANGUAGE', 'en') }}">
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="form-group">
-                            <label for="stt_url">STT API Endpoint (Optional)</label>
-                            <input type="url" id="stt_url" name="stt_url" value="{{ defaults.get('STT_BASE_URL', '') }}"
-                                placeholder="http://localhost:9000/v1">
-                            <div class="hint">Endpoint for Speech-to-Text service.</div>
+                        <!-- Subsection: Voices -->
+                        <div class="settings-group"
+                            style="margin-top: 1rem; background-color: #f9fafb; padding: 1rem; border-radius: 6px;">
+                            <h5 style="margin-top: 0; margin-bottom: 1rem; color: #374151;">🔊 Voice Configuration</h5>
+
+                            <div class="form-group">
+                                <label for="tts_voice_default">Default Voice</label>
+                                <input type="text" id="tts_voice_default" name="tts_voice_default"
+                                    value="{{ defaults.get('TTS_VOICE_DEFAULT', 'af_bella') }}">
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                                <div class="form-group">
+                                    <label for="tts_voice_host">Podcast Host</label>
+                                    <input type="text" id="tts_voice_host" name="tts_voice_host"
+                                        value="{{ defaults.get('TTS_VOICE_PODCAST_HOST', 'am_michael') }}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="tts_voice_guest">Podcast Guest</label>
+                                    <input type="text" id="tts_voice_guest" name="tts_voice_guest"
+                                        value="{{ defaults.get('TTS_VOICE_PODCAST_GUEST', 'af_nicole') }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section: STT Configuration -->
+                        <div class="settings-group" style="margin-top: 1.5rem;">
+                            <h4
+                                style="margin: 0.5rem 0; color: #4b5563; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.25rem;">
+                                Speech-to-Text (STT)</h4>
+
+                            <div class="form-group">
+                                <label for="stt_url">API Endpoint</label>
+                                <input type="url" id="stt_url" name="stt_url"
+                                    value="{{ defaults.get('STT_BASE_URL', 'http://localhost:8969/v1') }}"
+                                    placeholder="http://localhost:8969/v1">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="stt_model">Model Name</label>
+                                <input type="text" id="stt_model" name="stt_model"
+                                    value="{{ defaults.get('STT_MODEL', 'Systran/faster-whisper-medium.en') }}">
+                            </div>
                         </div>
                     </div>
                 </div>
