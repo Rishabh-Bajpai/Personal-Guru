@@ -94,10 +94,146 @@
             border-bottom: 2px solid #e5e7eb;
             padding-bottom: 0.5rem;
         }
+
+        /* Groq Instructions Styles */
+        .groq-instructions {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 1px solid #7dd3fc;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 0.75rem;
+        }
+
+        .groq-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .groq-header img {
+            width: 24px;
+            height: 24px;
+        }
+
+        .groq-header strong {
+            color: #0369a1;
+            font-size: 0.95rem;
+        }
+
+        .watch-demo-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: #f97316;
+            color: white;
+            padding: 0.4rem 0.75rem;
+            border-radius: 5px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: background 0.2s;
+            margin-left: auto;
+        }
+
+        .watch-demo-btn:hover {
+            background: #ea580c;
+        }
+
+        .groq-steps {
+            font-size: 0.85rem;
+            color: #374151;
+            margin: 0;
+            padding-left: 1.25rem;
+        }
+
+        .groq-steps li {
+            margin-bottom: 0.4rem;
+            line-height: 1.4;
+        }
+
+        .groq-steps a {
+            color: #0369a1;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .groq-steps a:hover {
+            text-decoration: underline;
+        }
+
+        /* Video Modal Styles */
+        .video-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .video-modal.active {
+            display: flex;
+        }
+
+        .video-modal-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .video-modal video {
+            display: block;
+            max-width: 100%;
+            max-height: 80vh;
+        }
+
+        .video-modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: #fff;
+            color: #1a1a1a;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 1.25rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .video-modal-close:hover {
+            transform: scale(1.1);
+        }
     </style>
 </head>
 
 <body>
+    <!-- Video Modal -->
+    <div class="video-modal" id="groqVideoModal">
+        <div class="video-modal-content">
+            <button class="video-modal-close" onclick="closeVideoModal()">&times;</button>
+            <video id="groqDemoVideo" controls>
+                <source src="{{ url_for('static', filename='vid/samosa_PG_demo_llm_API_groq_2.mp4') }}"
+                    type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    </div>
+
     <div class="container">
         <h1>🛠️ Configure Personal Guru</h1>
 
@@ -133,14 +269,37 @@
                     Ollama: http://localhost:11434/v1<br>
                     LMStudio: http://localhost:1234/v1<br>
                     OpenAI: https://api.openai.com/v1<br>
-                    Gemini: https://generativelanguage.googleapis.com/v1beta/openai/
+                    Gemini: https://generativelanguage.googleapis.com/v1beta/openai/<br>
+                    <strong>Groq: https://api.groq.com/openai/v1</strong>
+                </div>
+
+                <!-- Groq Free API Instructions -->
+                <div class="groq-instructions">
+                    <div class="groq-header">
+                        <span style="font-size: 1.1rem;">🚀</span>
+                        <strong>Get a FREE Groq API Key</strong>
+                        <button type="button" class="watch-demo-btn" onclick="openVideoModal()">
+                            ▶ Watch Demo
+                        </button>
+                    </div>
+                    <ol class="groq-steps">
+                        <li>Visit <a href="https://groq.com/" target="_blank" rel="noopener">groq.com</a> and click
+                            <strong>Login</strong> or <strong>Console</strong>
+                        </li>
+                        <li>Sign in with your Google account (or create a new Groq account)</li>
+                        <li>In the dashboard, click <strong>API Keys</strong> in the left sidebar</li>
+                        <li>Click <strong>+ Create API Key</strong></li>
+                        <li>Name your key (e.g., "Personal-Guru") and click <strong>Submit</strong></li>
+                        <li>Click <strong>Copy</strong> to copy your API key (save it securely!)</li>
+                        <li>Paste the API key in the <strong>API Key</strong> field below</li>
+                    </ol>
                 </div>
             </div>
 
             <div class="form-group">
                 <label for="llm_model">Model Name</label>
                 <input type="text" id="llm_model" name="llm_model" required
-                    value="{{ defaults.get('LLM_MODEL_NAME', 'llama3') }}">
+                    value="{{ defaults.get('LLM_MODEL_NAME', 'moonshotai/kimi-k2-instruct-0905') }}">
                 <div class="hint">e.g., llama3, gpt-4o, qwen:14b</div>
             </div>
 
@@ -187,6 +346,37 @@
             <button type="submit">Save Configuration</button>
         </form>
     </div>
+
+    <script>
+        function openVideoModal() {
+            const modal = document.getElementById('groqVideoModal');
+            const video = document.getElementById('groqDemoVideo');
+            modal.classList.add('active');
+            video.currentTime = 0;
+            video.play();
+        }
+
+        function closeVideoModal() {
+            const modal = document.getElementById('groqVideoModal');
+            const video = document.getElementById('groqDemoVideo');
+            modal.classList.remove('active');
+            video.pause();
+        }
+
+        // Close modal on escape key
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeVideoModal();
+            }
+        });
+
+        // Close modal when clicking outside the video
+        document.getElementById('groqVideoModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeVideoModal();
+            }
+        });
+    </script>
 </body>
 
 </html>

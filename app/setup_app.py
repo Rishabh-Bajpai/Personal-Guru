@@ -57,4 +57,8 @@ def create_setup_app():
 
         return render_template('setup.html', defaults=defaults)
 
+    @app.route('/favicon.ico')
+    def favicon():
+        return app.send_static_file('favicon.ico')
+
     return app

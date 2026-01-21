@@ -107,6 +107,12 @@ def index():
     return render_template('index.html', topics=topics_data)
 
 
+@main_bp.route('/favicon.ico')
+def favicon():
+    from flask import current_app
+    return current_app.send_static_file('favicon.ico')
+
+
 @main_bp.context_processor
 def inject_notifications():
     """Make notifications available to all templates."""
