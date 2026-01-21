@@ -32,8 +32,8 @@ STT_BASE_URL = os.getenv("STT_BASE_URL", "http://localhost:8969/v1")
 STT_MODEL = os.getenv("STT_MODEL", "Systran/faster-whisper-medium.en")
 TTS_LANGUAGE = os.getenv("TTS_LANGUAGE", "en")
 TTS_VOICE_DEFAULT = os.getenv("TTS_VOICE_DEFAULT", "af_bella")
-TTS_VOICE_PODCAST_HOST = os.getenv("TTS_VOICE_PODCAST_HOST", "am_michael")
-TTS_VOICE_PODCAST_GUEST = os.getenv("TTS_VOICE_PODCAST_GUEST", "af_nicole")
+TTS_VOICE_PODCAST_HOST = os.getenv("TTS_VOICE_PODCAST_HOST", "af_bella")
+TTS_VOICE_PODCAST_GUEST = os.getenv("TTS_VOICE_PODCAST_GUEST", "am_puck")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "not-required")
 
 
@@ -545,7 +545,10 @@ def generate_podcast_audio(transcript, output_filename):
     available_voices = [
         TTS_VOICE_PODCAST_HOST,
         TTS_VOICE_PODCAST_GUEST,
-        'af_bella', 'am_puck', 'af_heart', 'af_sarah', 'am_adam' # Fallbacks
+        'af_bella', 'af_sarah', 'af_nicole', 'af_sky',
+        'am_adam', 'am_michael', 'am_puck',
+        'bf_emma', 'bf_isabella', 
+        'bm_george', 'bm_lewis'
     ]
 
     # Filter out duplicates if defaults are in fallback
