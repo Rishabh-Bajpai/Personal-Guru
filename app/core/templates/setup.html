@@ -386,6 +386,21 @@
                                 value="{{ defaults.get('LLM_NUM_CTX', '4096') }}">
                             <div class="hint">Higher values allow more text memory but use more RAM.</div>
                         </div>
+
+                        <div class="form-group">
+                            <label for="tts_url">OpenAI-Compatible TTS Endpoint</label>
+                            <input type="url" id="tts_url" name="tts_url"
+                                value="{{ defaults.get('TTS_BASE_URL', 'http://localhost:8969/v1') }}">
+                            <div class="hint">Endpoint for Speaches/Kokoro or other OpenAI-compatible TTS. Default:
+                                http://localhost:8969/v1</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="stt_url">STT API Endpoint (Optional)</label>
+                            <input type="url" id="stt_url" name="stt_url" value="{{ defaults.get('STT_BASE_URL', '') }}"
+                                placeholder="http://localhost:9000/v1">
+                            <div class="hint">Endpoint for Speech-to-Text service.</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -415,13 +430,10 @@
                         <label for="youtube_key">YouTube API Key</label>
                         <input type="password" id="youtube_key" name="youtube_key"
                             value="{{ defaults.get('YOUTUBE_API_KEY', '') }}">
-                        <div class="hint">Enables Video Search & Reel Mode.</div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="tts_url">Text-to-Speech Endpoint</label>
-                        <input type="url" id="tts_url" name="tts_url"
-                            value="{{ defaults.get('TTS_BASE_URL', 'http://localhost:8969/v1') }}">
+                        <div class="hint">
+                            Required for Reel Mode & Video Search.
+                            <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Get Key</a>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -445,22 +457,22 @@
         const PROVIDER_DEFAULTS = {
             'groq': {
                 url: 'https://api.groq.com/openai/v1',
-                model: 'llama3-8b-8192', // Updated default model for Groq
+                model: 'moonshotai/kimi-k2-instruct-0905',
                 showGroq: true
             },
             'ollama': {
                 url: 'http://localhost:11434/v1',
-                model: 'qwen3:30b', // User requested local default
+                model: 'qwen3:30b',
                 showGroq: false
             },
             'lmstudio': {
                 url: 'http://localhost:1234/v1',
-                model: 'qwen3:30b', // User requested local default
+                model: 'qwen3:30b',
                 showGroq: false
             },
             'gemini': {
                 url: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-                model: 'gemini-2.0-flash-exp',
+                model: 'gemini-3-flash-preview',
                 showGroq: false
             },
             'openai': {
@@ -469,8 +481,8 @@
                 showGroq: false
             },
             'anthropic': {
-                url: 'https://api.anthropic.com/v1', // Usually proxied or requires specific setup, keeping standard placeholder
-                model: 'claude-3-5-sonnet-20240620',
+                url: 'https://api.anthropic.com/v1',
+                model: 'claude-sonnet-4-5-20250929',
                 showGroq: false
             },
             'custom': {
