@@ -32,8 +32,8 @@ STT_BASE_URL = os.getenv("STT_BASE_URL", "http://localhost:8969/v1")
 STT_MODEL = os.getenv("STT_MODEL", "Systran/faster-whisper-medium.en")
 TTS_LANGUAGE = os.getenv("TTS_LANGUAGE", "en")
 TTS_VOICE_DEFAULT = os.getenv("TTS_VOICE_DEFAULT", "af_bella")
-TTS_VOICE_PODCAST_HOST = os.getenv("TTS_VOICE_PODCAST_HOST", "am_michael")
-TTS_VOICE_PODCAST_GUEST = os.getenv("TTS_VOICE_PODCAST_GUEST", "af_nicole")
+TTS_VOICE_PODCAST_HOST = os.getenv("TTS_VOICE_PODCAST_HOST", "af_bella")
+TTS_VOICE_PODCAST_GUEST = os.getenv("TTS_VOICE_PODCAST_GUEST", "am_puck")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "not-required")
 
 
@@ -465,8 +465,19 @@ def generate_audio(text, step_index):
 def reconcile_plan_steps(current_steps, current_plan, new_plan):
     """
     Reconciles the list of dict-based steps with a new list of plan strings.
-    Preserves content for steps that still exist (matching title/text),
-    initializes new steps, and updates step_index.
+
+    Preserves existing step content (title, material, questions) when strict matches are found.
+    - If a preserved step is missing its title (e.g. from a placeholder), it defaults to the plan text.
+    - Initializes new steps for plan items that don't match existing content.
+    - Updates 'step_index' for all steps to match the new plan order.
+
+    Args:
+        current_steps (list): List of existing step dictionaries.
+        current_plan (list): List of existing plan strings (titles).
+        new_plan (list): List of new plan strings.
+
+    Returns:
+        list: A new list of step dictionaries aligned with the new plan.
     """
     step_content_map = {}
     for i, plan_text in enumerate(current_plan):
@@ -478,6 +489,11 @@ def reconcile_plan_steps(current_steps, current_plan, new_plan):
         if step_text in step_content_map:
             # Preserve existing content
             step_data = step_content_map[step_text]
+
+            # Ensure title is populated from plan if missing in data (e.g. placeholder)
+            if not step_data.get('title'):
+                 step_data['title'] = step_text
+
             # Update step_index to match new position
             step_data['step_index'] = i
             new_steps.append(step_data)
@@ -545,7 +561,10 @@ def generate_podcast_audio(transcript, output_filename):
     available_voices = [
         TTS_VOICE_PODCAST_HOST,
         TTS_VOICE_PODCAST_GUEST,
-        'af_bella', 'am_puck', 'af_heart', 'af_sarah', 'am_adam' # Fallbacks
+        'af_bella', 'af_sarah', 'af_nicole', 'af_sky',
+        'am_adam', 'am_michael', 'am_puck',
+        'bf_emma', 'bf_isabella',
+        'bm_george', 'bm_lewis'
     ]
 
     # Filter out duplicates if defaults are in fallback
