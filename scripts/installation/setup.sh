@@ -73,7 +73,46 @@ env_opts="python=3.11"
 
 
 echo ""
-read -p "Install Speech Services (TTS/STT) dependencies? (Large download) [y/N]: " install_tts
+echo "Select Installation Mode:"
+echo "1) Standard Mode (Docker Required - Best Quality/Features)"
+echo "2) Local Lite Mode (No Docker - Easiest Setup)"
+
+while true; do
+    read -p "Enter choice [1/2]: " mode_choice
+    if [[ "$mode_choice" == "1" || "$mode_choice" == "2" ]]; then
+        break
+    else
+        echo "❌ Invalid choice. Please enter '1' or '2'."
+    fi
+done
+
+if [[ "$mode_choice" == "2" ]]; then
+    local_mode="y"
+    echo "✅ Local Mode selected. Using SQLite and Local Audio providers."
+    install_tts="n"
+    start_db="n"
+
+    # Configure .env for Local Mode
+    if [ ! -f .env ]; then
+        cp .env.example .env
+        echo "📝 Created .env from example."
+    fi
+    # Update providers to local
+    # Note: simple sed might vary by OS, handling simplified for now or appending
+    # Better to just append updates if they don't impact
+    # OR rely on user to check settings. But user said "easiest setup".
+    # Let's append overrides to the end of .env
+    echo "" >> .env
+    echo "# Local Mode Overrides" >> .env
+    echo "TTS_PROVIDER=kokoro" >> .env
+    echo "STT_PROVIDER=local" >> .env
+    echo "✅ Updated .env for Local Mode (Default: Kokoro + Faster Whisper)."
+elif [[ "$mode_choice" == "1" ]]; then
+    local_mode="n"
+    echo "✅ Standard Mode selected."
+    echo ""
+    read -p "Install Speech Services (TTS/STT) via Docker? (Large download) [y/N]: " install_tts
+fi
 
 # Environment Creation
 if check_env_exists; then
@@ -114,7 +153,15 @@ fi
 
 # Database Setup
 echo ""
-read -p "Start Database via Docker now? [Y/n]: " start_db
+if [[ "$local_mode" =~ ^[Yy]$ ]]; then
+    echo "✅ Using Local SQLite Database."
+    # Initialize SQLite DB
+    echo "🗄️  Initializing SQLite Database..."
+    $ENV_PYTHON scripts/update_database.py
+    start_db="n"
+else
+    read -p "Start Database via Docker now? [Y/n]: " start_db
+fi
 if [[ "$start_db" =~ ^[Nn]$ ]]; then
     echo "Using existing DB or manual setup..."
 else

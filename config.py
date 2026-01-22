@@ -21,6 +21,8 @@ class Config:
     TTS_BASE_URL = os.environ.get('TTS_BASE_URL')
     STT_BASE_URL = os.environ.get('STT_BASE_URL')
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+    TTS_PROVIDER = os.environ.get('TTS_PROVIDER', 'openai')  # Defaults to OpenAI
+    STT_PROVIDER = os.environ.get('STT_PROVIDER', 'openai')  # Defaults to OpenAI
 
     # App Settings
     USER_BACKGROUND = os.environ.get('USER_BACKGROUND', 'a beginner')

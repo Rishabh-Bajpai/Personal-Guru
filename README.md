@@ -58,7 +58,9 @@ cd Personal-Guru
 
 ### Method 1: Automatic Setup (Recommended)
 
-Best for most users. An interactive script guides you through the process, setting up the environment and dependencies for you.
+Best for most users. An interactive script guides you through the process, allowing you to choose between:
+- **Standard Mode**: Runs Database and Audio services in Docker (Best performance/features).
+- **Local Lite Mode**: Runs entirely without Docker using SQLite and local audio libraries (Easiest setup).
 
 - **Linux/Mac**: `bash scripts/installation/setup.sh`
 - **Windows**: `scripts\installation\setup.bat`

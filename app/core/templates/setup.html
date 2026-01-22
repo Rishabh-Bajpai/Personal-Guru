@@ -400,6 +400,19 @@
                                 Text-to-Speech (TTS)</h4>
 
                             <div class="form-group">
+                                <label for="tts_provider">TTS Provider</label>
+                                <select id="tts_provider" name="tts_provider" onchange="toggleAudioSettings()">
+                                    <option value="openai" {{ 'selected' if defaults.get('TTS_PROVIDER', 'openai'
+                                        )=='openai' else '' }}>OpenAI API / Docker (Standard)</option>
+                                    <option value="kokoro" {{ 'selected' if defaults.get('TTS_PROVIDER', 'openai'
+                                        )=='kokoro' else '' }}>Local (Kokoro)</option>
+                                    <option value="local" {{ 'selected' if defaults.get('TTS_PROVIDER', 'openai'
+                                        )=='local' else '' }}>Local (Robotic - Fallback)</option>
+                                </select>
+                                <div class="hint">Kokoro (Local) downloads ~300MB model on first run.</div>
+                            </div>
+
+                            <div class="form-group" id="tts_url_container">
                                 <label for="tts_url">API Endpoint</label>
                                 <input type="url" id="tts_url" name="tts_url"
                                     value="{{ defaults.get('TTS_BASE_URL', 'http://localhost:8969/v1') }}">
@@ -452,6 +465,19 @@
                                 Speech-to-Text (STT)</h4>
 
                             <div class="form-group">
+                                <label for="stt_provider">STT Provider</label>
+                                <select id="stt_provider" name="stt_provider" onchange="toggleAudioSettings()">
+                                    <option value="openai" {{ 'selected' if defaults.get('STT_PROVIDER', 'openai'
+                                        )=='openai' else '' }}>OpenAI API / Docker (Standard)</option>
+                                    <option value="local" {{ 'selected' if defaults.get('STT_PROVIDER', 'openai'
+                                        )=='local' else '' }}>Local (Faster Whisper - Auto GPU/CPU)</option>
+                                </select>
+                                <div class="hint">Choose your Speech-to-Text engine. Local uses faster-whisper (high
+                                    quality).
+                                </div>
+                            </div>
+
+                            <div class="form-group" id="stt_url_container">
                                 <label for="stt_url">API Endpoint</label>
                                 <input type="url" id="stt_url" name="stt_url"
                                     value="{{ defaults.get('STT_BASE_URL', 'http://localhost:8969/v1') }}"
@@ -461,7 +487,7 @@
                             <div class="form-group">
                                 <label for="stt_model">Model Name</label>
                                 <input type="text" id="stt_model" name="stt_model"
-                                    value="{{ defaults.get('STT_MODEL', 'Systran/faster-whisper-medium.en') }}">
+                                    value="{{ defaults.get('STT_MODEL', 'Systran/faster-whisper-small.en') }}">
                             </div>
                         </div>
                     </div>
@@ -523,6 +549,35 @@
     </div>
 
     <script>
+        // --- Core Audio Toggle Logic (Moved to Top) ---
+        function toggleAudioSettings() {
+            try {
+                // TTS Logic
+                const ttsProvider = document.getElementById('tts_provider');
+                const ttsUrlContainer = document.getElementById('tts_url_container');
+                if (ttsProvider && ttsUrlContainer) {
+                    // Hide if NOT openai
+                    ttsUrlContainer.style.display = (ttsProvider.value === 'openai') ? 'block' : 'none';
+                }
+
+                // STT Logic
+                const sttProvider = document.getElementById('stt_provider');
+                const sttUrlContainer = document.getElementById('stt_url_container');
+                if (sttProvider && sttUrlContainer) {
+                    // Hide if NOT openai
+                    sttUrlContainer.style.display = (sttProvider.value === 'openai') ? 'block' : 'none';
+                }
+            } catch (e) {
+                console.error("Audio Toggle Error:", e);
+            }
+        }
+
+        // Trigger immediately, on DOMReady, and on Load
+        toggleAudioSettings();
+        document.addEventListener('DOMContentLoaded', toggleAudioSettings);
+        window.addEventListener('load', toggleAudioSettings);
+
+        // --- Existing Logic ---
         const PROVIDER_DEFAULTS = {
             'groq': {
                 url: 'https://api.groq.com/openai/v1',
@@ -642,6 +697,40 @@
         document.getElementById('groqVideoModal').addEventListener('click', function (e) {
             if (e.target === this) closeVideoModal();
         });
+
+        // Audio Settings Visibility
+        function toggleAudioSettings() {
+            try {
+                const ttsProvider = document.getElementById('tts_provider');
+                const ttsUrlContainer = document.getElementById('tts_url_container');
+
+                if (ttsProvider && ttsUrlContainer) {
+                    // Show URL only if provider is 'openai'
+                    if (ttsProvider.value === 'openai') {
+                        ttsUrlContainer.style.display = 'block';
+                    } else {
+                        ttsUrlContainer.style.display = 'none';
+                    }
+                }
+
+                const sttProvider = document.getElementById('stt_provider');
+                const sttUrlContainer = document.getElementById('stt_url_container');
+
+                if (sttProvider && sttUrlContainer) {
+                    // Show URL only if provider is 'openai'
+                    if (sttProvider.value === 'openai') {
+                        sttUrlContainer.style.display = 'block';
+                    } else {
+                        sttUrlContainer.style.display = 'none';
+                    }
+                }
+            } catch (e) {
+                console.error("Audio Toggle Error:", e);
+            }
+        }
+
+        // Init Audio Settings on Load
+        window.addEventListener('load', toggleAudioSettings);
     </script>
 </body>
 

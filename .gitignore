@@ -154,3 +154,6 @@ Thumbs.db
 *.mo
 *.potflask_session/
 ollama-data/
+app/static/models/
+app/static/step_*.wav
+app/static/step_*.mp3
