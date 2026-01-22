@@ -23,7 +23,7 @@ def save_topic(topic_name, data):
     Handles creation and updates of:
     - Topic metadata (plan, name)
     - Chapter, Quiz, Flashcard, and Chat modes
-    
+
     Special Logic:
     - Detects step reordering in Chapter Mode. To prevent 'UniqueViolation' errors on the 'step_index' constraint,
       it temporarily shifts existing steps to negative indices before assigning their new correct positions.
