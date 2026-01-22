@@ -33,25 +33,12 @@ if __name__ == '__main__':
     else:
         print(f"No SSL Certificates found. Running on HTTP port {port}.")
 
-    # Exclude sandbox directory from reloader monitoring
-    # Using simple, aggressive wildcards for Windows watchdog compatibility
-    sandbox_patterns = [
-        f'{sandbox_path}\\*',
-        str(sandbox_path),
-        '**/data/sandbox/**',
-        '*\\data\\sandbox\\*',
-        '**/venv/**',
-        '*\\venv\\*'
-    ]
-
-    print(f"DEBUG: Excluding patterns: {sandbox_patterns}")
-
     app.run(
         debug=True,
         host='0.0.0.0',
         port=port,
         use_reloader=True,
         reloader_type='stat',
-        exclude_patterns=sandbox_patterns,
+        exclude_patterns=[f'{sandbox_path}/*'],
         ssl_context=ssl_context
     )
