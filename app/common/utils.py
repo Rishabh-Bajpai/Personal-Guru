@@ -478,6 +478,11 @@ def reconcile_plan_steps(current_steps, current_plan, new_plan):
         if step_text in step_content_map:
             # Preserve existing content
             step_data = step_content_map[step_text]
+            
+            # Ensure title is populated from plan if missing in data (e.g. placeholder)
+            if not step_data.get('title'):
+                 step_data['title'] = step_text
+
             # Update step_index to match new position
             step_data['step_index'] = i
             new_steps.append(step_data)
