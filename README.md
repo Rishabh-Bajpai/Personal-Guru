@@ -4,7 +4,7 @@ This is a Flask-based web application that serves as a proof-of-concept for a pe
 
 # For live demo:
  [https://pg-demo.samosa-ai.com/](https://pg-demo.samosa-ai.com)
-Use desktop computer for the best experience. 
+Use desktop computer for the best experience.
 
 ## Features
 
