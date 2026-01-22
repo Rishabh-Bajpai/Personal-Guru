@@ -287,13 +287,13 @@ def chat(topic_name, step_index):
             # Chat Mode Popup History
             history = topic_data.get('popup_chat_history', [])
             return {"history": history}
-        
+
         if 'chapter_mode' not in topic_data:
              return {"history": []}
-             
+
         if step_index < 0 or step_index >= len(topic_data['chapter_mode']):
              return {"error": "Step index out of range"}, 400
-             
+
         step_history = topic_data['chapter_mode'][step_index].get('popup_chat_history', [])
         return {"history": step_history}
 
@@ -303,7 +303,7 @@ def chat(topic_name, step_index):
         time_spent = int(request.json.get('time_spent', 0))
     except (ValueError, TypeError):
         time_spent = 0
-    
+
     if not user_question:
         return {"error": "Missing or empty question"}, 400
 

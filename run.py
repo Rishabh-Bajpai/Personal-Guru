@@ -25,7 +25,7 @@ if __name__ == '__main__':
     sandbox_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data', 'sandbox')
     cert_path = os.path.join('certs', 'cert.pem')
     key_path = os.path.join('certs', 'key.pem')
-    
+
     ssl_context = None
     if os.path.exists(cert_path) and os.path.exists(key_path):
         print(f"SSL Certificates found. Enabling HTTPS on port {port}.")

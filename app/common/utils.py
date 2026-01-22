@@ -478,7 +478,7 @@ def reconcile_plan_steps(current_steps, current_plan, new_plan):
         if step_text in step_content_map:
             # Preserve existing content
             step_data = step_content_map[step_text]
-            
+
             # Ensure title is populated from plan if missing in data (e.g. placeholder)
             if not step_data.get('title'):
                  step_data['title'] = step_text
@@ -552,7 +552,7 @@ def generate_podcast_audio(transcript, output_filename):
         TTS_VOICE_PODCAST_GUEST,
         'af_bella', 'af_sarah', 'af_nicole', 'af_sky',
         'am_adam', 'am_michael', 'am_puck',
-        'bf_emma', 'bf_isabella', 
+        'bf_emma', 'bf_isabella',
         'bm_george', 'bm_lewis'
     ]
 

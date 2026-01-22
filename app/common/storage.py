@@ -64,13 +64,13 @@ def save_topic(topic_name, data):
         for step_data in incoming_msg_data:
             s_idx = step_data.get('step_index')
             s_id = step_data.get('id')
-            
+
             if s_idx is not None and s_id and s_id in existing_steps_by_id:
                 # If an existing step is moving to a different index
                 if existing_steps_by_id[s_id].step_index != s_idx:
                     reorder_needed = True
                     break
-        
+
         if reorder_needed:
             logging.info(f"Topic {topic_name}: Reordering detected. Shifting indices to temporary safe space.")
             for s in topic.chapter_mode:
