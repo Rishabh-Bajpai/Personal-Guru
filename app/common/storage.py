@@ -19,6 +19,14 @@ from app.core.exceptions import (
 def save_topic(topic_name, data):
     """
     Save topic data to PostgreSQL database.
+
+    Handles creation and updates of:
+    - Topic metadata (plan, name)
+    - Chapter, Quiz, Flashcard, and Chat modes
+    
+    Special Logic:
+    - Detects step reordering in Chapter Mode. To prevent 'UniqueViolation' errors on the 'step_index' constraint,
+      it temporarily shifts existing steps to negative indices before assigning their new correct positions.
     """
     logger = logging.getLogger(__name__)
 

@@ -465,8 +465,19 @@ def generate_audio(text, step_index):
 def reconcile_plan_steps(current_steps, current_plan, new_plan):
     """
     Reconciles the list of dict-based steps with a new list of plan strings.
-    Preserves content for steps that still exist (matching title/text),
-    initializes new steps, and updates step_index.
+    
+    Preserves existing step content (title, material, questions) when strict matches are found.
+    - If a preserved step is missing its title (e.g. from a placeholder), it defaults to the plan text.
+    - Initializes new steps for plan items that don't match existing content.
+    - Updates 'step_index' for all steps to match the new plan order.
+
+    Args:
+        current_steps (list): List of existing step dictionaries.
+        current_plan (list): List of existing plan strings (titles).
+        new_plan (list): List of new plan strings.
+
+    Returns:
+        list: A new list of step dictionaries aligned with the new plan.
     """
     step_content_map = {}
     for i, plan_text in enumerate(current_plan):
