@@ -10,7 +10,6 @@ import platform
 import psutil
 from datetime import datetime
 from dotenv import load_dotenv
-from openai import OpenAI
 from app.core.exceptions import (
     MissingConfigError,
     LLMConnectionError,
@@ -29,11 +28,11 @@ LLM_API_KEY = os.getenv("LLM_API_KEY", "dummy")
 TTS_BASE_URL = os.getenv("TTS_BASE_URL", "http://localhost:8969/v1")
 TTS_MODEL = os.getenv("TTS_MODEL", "tts-1")
 STT_BASE_URL = os.getenv("STT_BASE_URL", "http://localhost:8969/v1")
-STT_MODEL = os.getenv("STT_MODEL", "Systran/faster-whisper-small.en")
+STT_MODEL = os.getenv("STT_MODEL", "Systran/faster-whisper-medium.en")
 TTS_LANGUAGE = os.getenv("TTS_LANGUAGE", "en")
 TTS_VOICE_DEFAULT = os.getenv("TTS_VOICE_DEFAULT", "af_bella")
-TTS_VOICE_PODCAST_HOST = os.getenv("TTS_VOICE_PODCAST_HOST", "am_michael")
-TTS_VOICE_PODCAST_GUEST = os.getenv("TTS_VOICE_PODCAST_GUEST", "af_nicole")
+TTS_VOICE_PODCAST_HOST = os.getenv("TTS_VOICE_PODCAST_HOST", "af_bella")
+TTS_VOICE_PODCAST_GUEST = os.getenv("TTS_VOICE_PODCAST_GUEST", "am_puck")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "not-required")
 
 
@@ -118,18 +117,18 @@ def call_llm(prompt_or_messages, is_json=False):
 
         # Check specifically for model not found (404 from Ollama often means this)
         if response.status_code == 404:
-             try:
-                 err_body = response.json()
-                 if "model" in err_body.get('error', {}).get('message', '').lower():
-                     logger.error(f"Model not found: {LLM_MODEL_NAME}")
-                     raise LLMConnectionError(
+            try:
+                err_body = response.json()
+                if "model" in err_body.get('error', {}).get('message', '').lower():
+                    logger.error(f"Model not found: {LLM_MODEL_NAME}")
+                    raise LLMConnectionError(
                         f"Model '{LLM_MODEL_NAME}' not found. Please pull it first.",
                         endpoint=api_url,
-                        error_code="LLM015", # New code for Model Not Found
+                        error_code="LLM015",
                         debug_info={"model": LLM_MODEL_NAME}
-                     )
-             except (json.JSONDecodeError, AttributeError):
-                 pass
+                    )
+            except (json.JSONDecodeError, AttributeError):
+                pass
 
         response.raise_for_status()
 
@@ -157,7 +156,7 @@ def call_llm(prompt_or_messages, is_json=False):
             # Only log if user is authenticated and we are in a request context
             if current_user and current_user.is_authenticated:
                 perf_log = AIModelPerformance(
-                    user_id=current_user.userid, # Use userid from Login
+                    user_id=current_user.userid,
                     model_type='LLM',
                     model_name=LLM_MODEL_NAME,
                     latency_ms=latency_ms,
@@ -324,126 +323,37 @@ def validate_quiz_structure(quiz_data):
 
 def generate_audio(text, step_index):
     """
-    Generates audio from text using the configured TTS provider.
-    Providers: 'openai' (default), 'local' (pyttsx3/robotic)
+    Generates audio from text using the configured TTS service.
+    Supports both Docker/OpenAI and local Kokoro modes via audio_service.
     """
-    # Force reload config to ensure we pick up latest changes without restart
-    load_dotenv(override=True)
-    provider = os.environ.get('TTS_PROVIDER', 'openai').lower()
-    print(f"DEBUG: generate_audio called. Provider: '{provider}'")
+    from app.common.audio_service import get_tts
+    import soundfile as sf
 
-    if provider == 'openai':
-        return _generate_audio_openai(text, step_index)
-    elif provider == 'kokoro':
-        return _generate_audio_kokoro(text, step_index)
-    elif provider == 'local':
-        return _generate_audio_local(text, step_index)
-    else:
-        # Fallback
-        return _generate_audio_local(text, step_index)
-
-def _generate_audio_openai(text, step_index):
-    """Original OpenAI/Kokoro Implementation"""
     start_time = time.time()
     static_dir = os.path.join(os.getcwd(), 'app', 'static')
     if not os.path.exists(static_dir):
         os.makedirs(static_dir)
 
+    output_filename = os.path.join(static_dir, f"step_{step_index}.wav")
+
     # Clean up old audio
     for filename in os.listdir(static_dir):
-        if filename.endswith('.wav') and f"step_{step_index}.wav" == filename:
+        if f"step_{step_index}" in filename:
             try:
                 os.remove(os.path.join(static_dir, filename))
             except OSError:
                 pass
 
-    # 1. Chunk Text
-    # Split by simple sentence delimiters to be safe
-    # Kokoro has a limit around 500 tokens (approx 2000 chars maybe, but 510 phonemes is small)
-    # Let's target ~300 chars to be safe.
-    chunks = []
-
-    # Helper to split text
-    sentences = re.split(r'([.!?]+)', text)
-    current_chunk = ""
-
-    for i in range(0, len(sentences) - 1, 2):
-        sentence = sentences[i] + sentences[i + 1]
-        if len(current_chunk) + len(sentence) < 300:
-            current_chunk += sentence
-        else:
-            if current_chunk:
-                chunks.append(current_chunk)
-            current_chunk = sentence
-
-    # Add trailing sentence/text
-    if len(sentences) % 2 == 1:
-        current_chunk += sentences[-1]
-
-    if current_chunk:
-        chunks.append(current_chunk)
-
-    if not chunks:
-        chunks = [text]  # Fallback if split failed or empty
-
-    # 2. Generate Segments
-    temp_files = []
-    output_filename = os.path.join(static_dir, f"step_{step_index}.wav")
-
-    print(f"Connecting to TTS at: {os.getenv('TTS_BASE_URL')} for {len(chunks)} chunks")
-
     try:
-        # Use dynamic env var for URL to ensure fresh config
-        tts_base_url = os.getenv("TTS_BASE_URL", "http://localhost:8969/v1")
-        tts_client = OpenAI(base_url=tts_base_url, api_key=OPENAI_API_KEY)
-        voice = TTS_VOICE_DEFAULT
+        tts = get_tts()
+        result, sample_rate = tts.generate(text)
 
-        for i, chunk in enumerate(chunks):
-            if not chunk.strip():
-                continue
-
-            print(
-                f"DEBUG: Generating chunk {i+1}/{len(chunks)}, len: {len(chunk)}")
-            response = tts_client.audio.speech.create(
-                model=TTS_MODEL,
-                voice=voice,
-                input=chunk
-            )
-
-            # Save segment to temp file
-            fd, temp_path = tempfile.mkstemp(suffix=".mp3")
-            os.close(fd)
-            response.stream_to_file(temp_path)
-            temp_files.append(temp_path)
-
-        if not temp_files:
-            return None, "Failed to generate any audio content"
-
-        # 3. Merge Audio using ffmpeg
-        list_file_fd, list_file_path = tempfile.mkstemp(suffix=".txt")
-        with os.fdopen(list_file_fd, 'w') as f:
-            for tf in temp_files:
-                f.write(f"file '{tf}'\n")
-
-        print("Merging audio files...")
-        cmd = [
-            "ffmpeg",
-            "-f", "concat",
-            "-safe", "0",
-            "-i", list_file_path,
-            "-c", "copy",
-            "-y",
-            output_filename
-        ]
-
-        result = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-        os.remove(list_file_path)
-
-        if result.returncode != 0:
-            return None, f"ffmpeg merge failed: {result.stderr.decode()}"
+        # Handle both formats: bytes (Docker/OpenAI) or samples (local/Kokoro)
+        if isinstance(result, bytes):
+            with open(output_filename, 'wb') as f:
+                f.write(result)
+        else:
+            sf.write(output_filename, result, sample_rate)
 
         # --- Logging Hook for TTS ---
         try:
@@ -454,195 +364,42 @@ def _generate_audio_openai(text, step_index):
             from flask_login import current_user
 
             if current_user and current_user.is_authenticated:
-                # Use total text length as proxy for input tokens
-                input_len = len(text)
                 perf_log = AIModelPerformance(
                     user_id=current_user.userid,
                     model_type='TTS',
-                    model_name=TTS_MODEL, # Hardcoded as per implementation
+                    model_name=TTS_MODEL,
                     latency_ms=latency_ms,
-                input_tokens=input_len,
-                    output_tokens=0 # Audio output doesn't measure in tokens easily
+                    input_tokens=len(text),
+                    output_tokens=0
                 )
                 db.session.add(perf_log)
                 db.session.commit()
         except Exception as e:
-             logging.warning(f"Failed to log TTS performance: {e}")
+            logging.warning(f"Failed to log TTS performance: {e}")
 
         return f"step_{step_index}.wav", None
 
     except Exception as e:
         print(f"Error calling TTS: {e}")
         return None, f"Error calling TTS: {e}"
-    finally:
-        # Cleanup temp segments
-        for tf in temp_files:
-            if os.path.exists(tf):
-                os.remove(tf)
 
-
-# Global cache for Kokoro to avoid reloading
-_local_kokoro_model = None
-
-def _generate_audio_kokoro(text, step_index):
-    """
-    Generate audio using Kokoro ONNX (Local, High Quality).
-    Downloads model (approx 300MB) on first run.
-    """
-    global _local_kokoro_model
-    from kokoro_onnx import Kokoro
-    import soundfile as sf
-    from huggingface_hub import hf_hub_download
-
-    static_dir = os.path.join(os.getcwd(), 'app', 'static')
-    models_dir = os.path.join(os.getcwd(), 'app', 'static', 'models')
-
-    if not os.path.exists(static_dir):
-        os.makedirs(static_dir)
-    if not os.path.exists(models_dir):
-        os.makedirs(models_dir)
-
-    output_filename = os.path.join(static_dir, f"step_{step_index}.wav")
-
-    # Clean old
-    for filename in os.listdir(static_dir):
-        if f"step_{step_index}" in filename:
-             try:
-                 os.remove(os.path.join(static_dir, filename))
-             except OSError:
-                 pass
-
-    try:
-        if _local_kokoro_model is None:
-            print("Loading Local Kokoro TTS Model...")
-
-            # 1. Ensure Model Exists
-            onnx_path = os.path.join(models_dir, "kokoro-v0_19.onnx")
-            voices_path = os.path.join(models_dir, "voices.json")
-
-            if not os.path.exists(onnx_path) or not os.path.exists(voices_path):
-                print(f"Downloading Kokoro model to {models_dir} (this may take a moment)...")
-                try:
-                    # Download ONNX (hexgrad v0.19 version required for current kokoro-onnx lib)
-                    # Community v1.0 expects 'input_ids', but lib sends 'tokens'.
-                    # Direct download fallback for v0.19 as HF repo file might be elusive or renamed.
-
-                    onnx_filename = "kokoro-v0_19.onnx"
-                    if not os.path.exists(onnx_path):
-                         print(f"Downloading {onnx_filename} (v0.19) for compatibility...")
-                         # Try hexgrad repo first
-                         try:
-                             hf_hub_download(repo_id="hexgrad/Kokoro-82M", filename=onnx_filename, local_dir=models_dir)
-                         except Exception as e_hf_onnx:
-                             # Fallback: Raw Download of v0.19 from known mirror/source or original location
-                             print(f"HF Download of v0.19 failed ({e_hf_onnx}). Trying raw HTTP...")
-                             url = "https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/kokoro-v0_19.onnx?download=true"
-                             import requests
-                             r = requests.get(url, timeout=300)
-                             if r.status_code == 200 and len(r.content) > 1000000:  # At least 1MB
-                                 with open(onnx_path, 'wb') as f:
-                                     f.write(r.content)
-                             else:
-                                 raise Exception(f"Invalid ONNX download: status={r.status_code}, size={len(r.content)}")
-
-                    # Download voices.json (Assuming it is at root of onnx-community repo?)
-                    # Checking repo structure... usually it provides voices.json.
-                    # If 404, we might need another source.
-                    if not os.path.exists(voices_path):
-                         print("Downloading voices.json...")
-                         # Try direct fallback to ecyht2 (dataset)
-                         try:
-                            hf_hub_download(repo_id="ecyht2/kokoro-82M-voices", filename="voices.json", local_dir=models_dir, repo_type="dataset")
-                         except Exception as e_hf:
-                            # LAST RESORT: Raw HTTP Download
-                            print(f"HF Download failed ({e_hf}). Trying raw HTTP download...")
-                            url = "https://huggingface.co/datasets/ecyht2/kokoro-82M-voices/resolve/main/voices.json?download=true"
-                            import requests
-                            r = requests.get(url)
-                            if r.status_code == 200:
-                                with open(voices_path, 'wb') as f:
-                                    f.write(r.content)
-                                print("Downloaded voices.json via raw HTTP.")
-                            else:
-                                raise Exception(f"Raw download failed: {r.status_code}")
-
-                except Exception as dl_err:
-                     return None, f"Failed to download Kokoro model: {dl_err}"
-
-            # 2. Init Kokoro
-            # Ensure we use exactly the path we downloaded to
-            _local_kokoro_model = Kokoro(onnx_path, voices_path)
-
-        # 3. Generate
-        # Kokoro expects single string. It handles splitting internally usually, but let's pass text.
-        # voice default is 'af_bella' usually, but 'af' is a good default key in voices.json
-        # We can map TTS_VOICE_DEFAULT if we want, but keeping it simple for now.
-        # 'af' is American Female. 'am' is American Male.
-        target_voice = "af_sarah" # Default high quality voice
-
-        # Determine duration logic? Kokoro returns audio samples and sample rate
-        samples, sample_rate = _local_kokoro_model.create(
-            text,
-            voice=target_voice,
-            speed=1.0,
-            lang="en-us"
-        )
-
-        # 4. Save
-        sf.write(output_filename, samples, sample_rate)
-
-        # TTS performance logging removed - function doesn't exist yet
-        return f"step_{step_index}.wav", None
-
-    except Exception as e:
-        print(f"Error calling Local Kokoro TTS: {e}")
-        return None, f"Local Kokoro Error: {e}"
-
-
-def _generate_audio_local(text, step_index):
-    """
-    Generate audio using local pyttsx3 library (Offline / Robotic).
-    Fallback if Kokoro is not used.
-    """
-    try:
-        import pyttsx3
-        # threading issue fix for pyttsx3? It blocks.
-        # For now, simple implementation.
-        engine = pyttsx3.init()
-
-        static_dir = os.path.join(os.getcwd(), 'app', 'static')
-        if not os.path.exists(static_dir):
-            os.makedirs(static_dir)
-
-        output_filename = os.path.join(static_dir, f"step_{step_index}.wav")
-        # pyttsx3 saves as wav mainly
-
-        # Clean old
-        for filename in os.listdir(static_dir):
-            if f"step_{step_index}" in filename:
-                 try:
-                     os.remove(os.path.join(static_dir, filename))
-                 except OSError:
-                     pass
-
-        engine.save_to_file(text, output_filename)
-        engine.runAndWait()
-
-        return f"step_{step_index}.wav", None
-
-    except ImportError:
-        error_msg = "Error: pyttsx3 not installed. Please install it or use Kokoro TTS (Recommended)."
-        print(error_msg)
-        return None, error_msg
-    except Exception as e:
-        print(f"Error calling pyttsx3: {e}")
-        return None, f"pyttsx3 Error: {e}"
 
 def reconcile_plan_steps(current_steps, current_plan, new_plan):
     """
     Reconciles the list of dict-based steps with a new list of plan strings.
-    Preserves content for steps that still exist (matching title/text),
-    initializes new steps, and updates step_index.
+
+    Preserves existing step content (title, material, questions) when strict matches are found.
+    - If a preserved step is missing its title (e.g. from a placeholder), it defaults to the plan text.
+    - Initializes new steps for plan items that don't match existing content.
+    - Updates 'step_index' for all steps to match the new plan order.
+
+    Args:
+        current_steps (list): List of existing step dictionaries.
+        current_plan (list): List of existing plan strings (titles).
+        new_plan (list): List of new plan strings.
+
+    Returns:
+        list: A new list of step dictionaries aligned with the new plan.
     """
     step_content_map = {}
     for i, plan_text in enumerate(current_plan):
@@ -654,6 +411,11 @@ def reconcile_plan_steps(current_steps, current_plan, new_plan):
         if step_text in step_content_map:
             # Preserve existing content
             step_data = step_content_map[step_text]
+
+            # Ensure title is populated from plan if missing in data (e.g. placeholder)
+            if not step_data.get('title'):
+                step_data['title'] = step_text
+
             # Update step_index to match new position
             step_data['step_index'] = i
             new_steps.append(step_data)
@@ -685,9 +447,15 @@ def get_user_context():
 
 def generate_podcast_audio(transcript, output_filename):
     """
-    Generates a full podcast audio file from a transcript using OpenAI-compatible TTS.
+    Generates a full podcast audio file from a transcript using the configured TTS service.
+    Supports both Docker/OpenAI and local Kokoro modes via audio_service.
     """
+    from app.common.audio_service import get_tts
+    import soundfile as sf
+    import numpy as np
+
     start_time = time.time()
+
     # 1. Parse Transcript
     lines = []
     print("Parsing transcript...")
@@ -702,101 +470,88 @@ def generate_podcast_audio(transcript, output_filename):
     if not lines:
         return False, "No dialogue lines found in transcript"
 
-    # 2. Setup TTS
-    # 2. Setup TTS & Check Provider
-    load_dotenv(override=True)
-    provider = os.environ.get('TTS_PROVIDER', 'openai').lower()
-
-    if provider == 'kokoro':
-         return _generate_podcast_audio_kokoro(lines, output_filename)
-
-    # Fallback to OpenAI API logic
-    print(f"Connecting to TTS at: {os.getenv('TTS_BASE_URL')}")
+    # 2. Get TTS Service
     try:
-        tts_base_url = os.getenv("TTS_BASE_URL", "http://localhost:8969/v1")
-        tts_client = OpenAI(base_url=tts_base_url, api_key=OPENAI_API_KEY)
+        tts = get_tts()
     except Exception as e:
-        return False, f"Failed to initialize TTS client: {e}"
+        return False, f"Failed to get TTS service: {e}"
 
     # 3. Assign Voices
-    # Use configured podcast voices first
-    # Host is typically speaker 1, Guest is speaker 2 in many transcripts,
-    # but we map based on unique speakers found.
-    # We will try to map the first speaker found to Host if feasible, or just map them.
-
     unique_speakers = sorted(list(set(s for s, t in lines)))
-
-    # Create valid voice list starting with our configured ones
     available_voices = [
         TTS_VOICE_PODCAST_HOST,
         TTS_VOICE_PODCAST_GUEST,
-        'af_bella', 'am_puck', 'af_heart', 'af_sarah', 'am_adam' # Fallbacks
+        'af_bella', 'af_sarah', 'af_nicole', 'af_sky',
+        'am_adam', 'am_michael', 'am_puck',
+        'bf_emma', 'bf_isabella',
+        'bm_george', 'bm_lewis'
     ]
-
-    # Filter out duplicates if defaults are in fallback
     available_voices = list(dict.fromkeys(available_voices))
-
-    voice_map = {speaker: available_voices[i % len(
-        available_voices)] for i, speaker in enumerate(unique_speakers)}
+    voice_map = {speaker: available_voices[i % len(available_voices)]
+                 for i, speaker in enumerate(unique_speakers)}
 
     # 4. Generate Audio Segments
     temp_files = []
+    all_samples = []
+    sample_rate = None
+    is_local_mode = False
+
     print("--- Synthesizing Audio Segments ---")
 
     try:
         for i, (speaker, text) in enumerate(lines):
-            voice = voice_map.get(speaker, 'alloy')
-            # Debug: Generating: {speaker} ({voice}) -> '{text[:20]}...'
+            voice = voice_map.get(speaker, TTS_VOICE_DEFAULT)
+            result, sr = tts.generate(text, voice=voice)
 
-            response = tts_client.audio.speech.create(
-                model=TTS_MODEL,
-                voice=voice,
-                input=text
-            )
+            if isinstance(result, bytes):
+                # Docker/OpenAI mode - save to temp file for ffmpeg merge
+                fd, temp_path = tempfile.mkstemp(suffix=".mp3")
+                os.close(fd)
+                with open(temp_path, 'wb') as f:
+                    f.write(result)
+                temp_files.append(temp_path)
+            else:
+                # Local mode - concatenate samples directly
+                is_local_mode = True
+                if sample_rate is None:
+                    sample_rate = sr
+                all_samples.append(result)
 
-            # Save segment to temp file
-            # Use .wav extension to ensure ffmpeg treats it correctly if
-            # headers are weird, though usually .mp3 from OpenAI
-            fd, temp_path = tempfile.mkstemp(suffix=".mp3")
-            os.close(fd)
-            response.stream_to_file(temp_path)
-            temp_files.append(temp_path)
+        if is_local_mode:
+            # Local mode - concatenate samples and save directly
+            if all_samples:
+                combined = np.concatenate(all_samples)
+                sf.write(output_filename, combined, sample_rate)
+                print(f"Saved podcast audio to: {output_filename}")
+            else:
+                return False, "Failed to generate any audio content"
+        else:
+            # Docker/OpenAI mode - merge using ffmpeg
+            if not temp_files:
+                return False, "Failed to generate any audio content"
 
-        if not temp_files:
-            return False, "Failed to generate any audio content"
+            list_file_fd, list_file_path = tempfile.mkstemp(suffix=".txt")
+            with os.fdopen(list_file_fd, 'w') as f:
+                for tf in temp_files:
+                    f.write(f"file '{tf}'\n")
 
-        # 5. Merge Audio using ffmpeg
-        # ffmpeg -i "concat:file1.mp3|file2.mp3" -c copy output.mp3 (concatenation protocol)
-        # OR using a list file for safer handling of many files
+            print("Merging audio files using ffmpeg...")
+            cmd = [
+                "ffmpeg",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", list_file_path,
+                "-c", "copy",
+                "-y",
+                output_filename
+            ]
 
-        list_file_fd, list_file_path = tempfile.mkstemp(suffix=".txt")
-        with os.fdopen(list_file_fd, 'w') as f:
-            for tf in temp_files:
-                f.write(f"file '{tf}'\n")
+            merge_result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            os.remove(list_file_path)
 
-        print("Merging audio files using ffmpeg...")
-        # ffmpeg -f concat -safe 0 -i list.txt -c copy output.mp3
-        cmd = [
-            "ffmpeg",
-            "-f", "concat",
-            "-safe", "0",
-            "-i", list_file_path,
-            "-c", "copy",
-            "-y",  # Overwrite output
-            output_filename
-        ]
-
-        result = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-
-        # Clean up list file
-        os.remove(list_file_path)
-
-        if result.returncode != 0:
-            print(f"ffmpeg error: {result.stderr.decode()}")
-            return False, f"ffmpeg merge failed: {result.stderr.decode()}"
+            if merge_result.returncode != 0:
+                print(f"ffmpeg error: {merge_result.stderr.decode()}")
+                return False, f"ffmpeg merge failed: {merge_result.stderr.decode()}"
 
         # --- Logging Hook for Podcast TTS ---
         try:
@@ -821,7 +576,7 @@ def generate_podcast_audio(transcript, output_filename):
                 db.session.add(perf_log)
                 db.session.commit()
         except Exception as e:
-             logging.warning(f"Failed to log Podcast TTS performance: {e}")
+            logging.warning(f"Failed to log Podcast TTS performance: {e}")
 
         return True, None
 
@@ -829,244 +584,56 @@ def generate_podcast_audio(transcript, output_filename):
         print(f"Error in podcast generation: {e}")
         return False, f"Error: {str(e)}"
     finally:
-                os.remove(tf)
-
-
-def _generate_podcast_audio_kokoro(lines, output_filename):
-    """
-    Experimental local podcast generation using Kokoro ONNX.
-    Does not support true multi-speaker yet (uses default voice for now or simple mapping if we expand).
-    """
-    print("--- Synthesizing Podcast (local/kokoro) ---")
-
-    # Simple mapping for now - Kokoro typically single voice per session unless we reload/mess with voice pack
-    # We will try to map distinct speakers to distinct voices if available in voices.json
-
-    # 1. Init Koko
-    # static_dir unused - keeping models_dir only
-    models_dir = os.path.join(os.getcwd(), 'app', 'static', 'models')
-    onnx_path = os.path.join(models_dir, "kokoro-v0_19.onnx")
-    voices_path = os.path.join(models_dir, "voices.json")
-
-    try:
-        from kokoro_onnx import Kokoro
-        import soundfile as sf
-
-        if not os.path.exists(onnx_path) or not os.path.exists(voices_path):
-             print(f"Downloading Kokoro model to {models_dir} (this may take a moment)...")
-             try:
-                 from huggingface_hub import hf_hub_download
-                 # Download ONNX (hexgrad v0.19)
-                 # Reverting to v0.19 because v1.0 causes input mismatches with kokoro-onnx lib
-                 if not os.path.exists(onnx_path):
-                     print("Downloading kokoro-v0_19.onnx...")
-                     try:
-                        hf_hub_download(repo_id="hexgrad/Kokoro-82M", filename="kokoro-v0_19.onnx", local_dir=models_dir)
-                     except Exception as e_hf_onnx:
-                        # Raw HTTP fallback
-                        print(f"HF Download failed for ONNX ({e_hf_onnx}). Trying raw HTTP...")
-                        url = "https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/kokoro-v0_19.onnx?download=true"
-                        import requests
-                        r = requests.get(url, timeout=300)
-                        if r.status_code == 200 and len(r.content) > 1000000:  # At least 1MB
-                            with open(onnx_path, 'wb') as f:
-                                f.write(r.content)
-                        else:
-                            raise Exception(f"Invalid ONNX download: status={r.status_code}, size={len(r.content)}")
-
-                 # Download voices.json
-                 if not os.path.exists(voices_path):
-                      print("Downloading voices.json...")
-                      try:
-                        hf_hub_download(repo_id="ecyht2/kokoro-82M-voices", filename="voices.json", local_dir=models_dir, repo_type="dataset")
-                      except Exception:
-                        try:
-                            print("Fallback to ecyht2 (dataset) for voices.json")
-                            hf_hub_download(repo_id="ecyht2/kokoro-82M-voices", filename="voices.json", local_dir=models_dir, repo_type="dataset")
-                        except Exception as e_hf:
-                             # LAST RESORT: Raw HTTP Download
-                            print(f"HF Download failed ({e_hf}). Trying raw HTTP download...")
-                            url = "https://huggingface.co/datasets/ecyht2/kokoro-82M-voices/resolve/main/voices.json?download=true"
-                            import requests
-                            r = requests.get(url)
-                            if r.status_code == 200:
-                                with open(voices_path, 'wb') as f:
-                                    f.write(r.content)
-                                print("Downloaded voices.json via raw HTTP.")
-                            else:
-                                raise Exception(f"Raw download failed: {r.status_code}")
-
-             except Exception as dl_err:
-                  print(f"DEBUG: Download failed. Error: {dl_err}")
-                  return False, f"Failed to download Kokoro model: {dl_err}"
-
-        kokoro = Kokoro(onnx_path, voices_path)
-
-        # 2. Assign Voices
-        unique_speakers = sorted(list(set(s for s, t in lines)))
-        # Kokoro voices: af_bella, af_sarah, am_michael, am_adam, etc.
-        available_k_voices = ['af_bella', 'am_michael', 'af_sarah', 'am_adam', 'af_nicole', 'am_puck']
-
-        voice_map = {speaker: available_k_voices[i % len(available_k_voices)]
-                     for i, speaker in enumerate(unique_speakers)}
-
-        temp_files = []
-
-        for i, (speaker, text) in enumerate(lines):
-             voice = voice_map.get(speaker, 'af_bella')
-             print(f"Generating segment {i+1}/{len(lines)}: {speaker} ({voice})")
-
-             # Generate
-             samples, sample_rate = kokoro.create(
-                text,
-                voice=voice,
-                speed=1.0,
-                lang="en-us"
-             )
-
-             # Save temp
-             fd, temp_path = tempfile.mkstemp(suffix=".wav")
-             os.close(fd)
-             sf.write(temp_path, samples, sample_rate)
-             temp_files.append(temp_path)
-
-        # 3. Merge
-        if not temp_files:
-             return False, "No audio generated"
-
-        list_file_fd, list_file_path = tempfile.mkstemp(suffix=".txt")
-        with os.fdopen(list_file_fd, 'w') as f:
-            for tf in temp_files:
-                f.write(f"file '{tf}'\n")
-
-        print("Merging podcast files...")
-        cmd = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", list_file_path, "-c", "copy", "-y", output_filename]
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        # Cleanup
-        os.remove(list_file_path)
+        # Cleanup temp audio files
         for tf in temp_files:
             if os.path.exists(tf):
                 os.remove(tf)
 
-        if result.returncode != 0:
-            return False, f"ffmpeg merge failed: {result.stderr.decode()}"
-
-        return True, None
-
-    except Exception as e:
-        print(f"Local Podcast Error: {e}")
-        return False, f"Local Podcast Error: {e}"
-
 
 def transcribe_audio(audio_file_path):
     """
-    Transcribes audio using the configured STT provider.
-    Providers: 'openai' (default), 'local' (sphinx/offline)
+    Transcribes audio using the configured STT service.
+    Supports both Docker/OpenAI and local faster-whisper modes via audio_service.
     """
+    from app.common.audio_service import get_stt
 
-    # Force reload config
-    load_dotenv(override=True)
-    provider = os.environ.get('STT_PROVIDER', 'openai').lower()
-
-    if provider == 'openai':
-        return _transcribe_openai(audio_file_path)
-    elif provider == 'local':
-        return _transcribe_local(audio_file_path)
-
-
-def _transcribe_openai(audio_file_path):
-    """Original OpenAI/Whisper Implementation"""
     start_time = time.time()
-    stt_base_url = os.getenv("STT_BASE_URL", "http://localhost:8969/v1")
 
-    if not stt_base_url:
-        return None, "STT service not configured"
+    if not os.path.exists(audio_file_path):
+        raise STTError(f"Audio file not found: {audio_file_path}")
 
     try:
-        print(f"Connecting to OpenAI STT at: {stt_base_url}")
-        client = OpenAI(base_url=stt_base_url, api_key=OPENAI_API_KEY)
+        stt = get_stt()
+        transcript = stt.transcribe(audio_file_path)
 
-        with open(audio_file_path, "rb") as audio_file:
-            transcript = client.audio.transcriptions.create(
-                model=STT_MODEL,
-                file=audio_file,
-                response_format="text"
-            )
+        # --- Logging Hook for STT ---
+        try:
+            end_time = time.time()
+            latency_ms = int((end_time - start_time) * 1000)
+            from app.core.extensions import db
+            from app.core.models import AIModelPerformance
+            from flask_login import current_user
 
-        _log_stt_performance(start_time, len(transcript), "openai-whisper")
+            output_len = len(transcript) if transcript else 0
+
+            if current_user and current_user.is_authenticated:
+                perf_log = AIModelPerformance(
+                    user_id=current_user.userid,
+                    model_type='STT',
+                    model_name=STT_MODEL,
+                    latency_ms=latency_ms,
+                    input_tokens=0,
+                    output_tokens=output_len
+                )
+                db.session.add(perf_log)
+                db.session.commit()
+        except Exception as e:
+            logging.warning(f"Failed to log STT performance: {e}")
+
         return transcript
     except Exception as e:
-        print(f"Error calling OpenAI STT: {e}")
+        print(f"Error calling STT: {e}")
         raise STTError(f"Error calling STT: {e}")
-
-
-# Global cache for the Whisper model to avoid reloading on every request
-_local_whisper_model = None
-
-def _transcribe_local(audio_file_path):
-    """
-    Transcribe using faster-whisper (local, high quality).
-    Automatically picks GPU (cuda) or CPU based on availability.
-    """
-    global _local_whisper_model
-    from faster_whisper import WhisperModel
-    import torch
-
-    # Force reload config
-    load_dotenv(override=True)
-
-    start_time = time.time()
-
-    try:
-        if _local_whisper_model is None:
-            # Auto-detect device
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-            compute_type = "float16" if device == "cuda" else "int8"
-
-            print(f"Loading faster-whisper model on {device} ({compute_type})...")
-            # Using 'base' model for a good balance of speed/quality in Lite Mode.
-            # 'small' or 'medium' are better but slower/larger.
-            _local_whisper_model = WhisperModel("base", device=device, compute_type=compute_type)
-
-        segments, info = _local_whisper_model.transcribe(audio_file_path, beam_size=5)
-
-        # faster-whisper returns a generator, so we must iterate
-        transcript = "".join([segment.text for segment in segments]).strip()
-
-        _log_stt_performance(start_time, len(transcript), "faster-whisper-base")
-        return transcript
-
-    except Exception as e:
-        print(f"Error calling faster-whisper: {e}")
-        # Identify common errors (e.g. missing cuDNN)
-        if "cublas" in str(e).lower():
-            return f"Error: GPU libraries missing. Try running on CPU or install CUDA/cuDNN. Details: {e}"
-        raise STTError(f"Error calling local STT: {e}")
-
-def _log_stt_performance(start_time, output_len, model_name):
-    """Helper to log STT performance."""
-    try:
-        end_time = time.time()
-        latency_ms = int((end_time - start_time) * 1000)
-        from app.core.extensions import db
-        from app.core.models import AIModelPerformance
-        from flask_login import current_user
-
-        if current_user and current_user.is_authenticated:
-            perf_log = AIModelPerformance(
-                user_id=current_user.userid,
-                model_type='STT',
-                model_name=model_name,
-                latency_ms=latency_ms,
-                    input_tokens=0, # Audio input difficult to measure in tokens
-                output_tokens=output_len
-            )
-            db.session.add(perf_log)
-            db.session.commit()
-    except Exception as e:
-             logging.warning(f"Failed to log STT performance: {e}")
-
 
 
 def summarize_text(text, max_lines=4):
@@ -1127,9 +694,9 @@ def log_telemetry(event_type: str, triggers: dict, payload: dict, installation_i
 
         # Resolve Installation ID (Non-Nullable)
         if not installation_id:
-             # Try to find any installation record (assuming single-tenant / personal use)
-             inst_record = Installation.query.first()
-             if inst_record:
+            # Try to find any installation record (assuming single-tenant / personal use)
+            inst_record = Installation.query.first()
+            if inst_record:
                 installation_id = inst_record.installation_id
 
         # If we still don't have an installation_id, we cannot log (Constraint Violation)
@@ -1249,6 +816,7 @@ _update_cache = {
     "data": None
 }
 
+
 def check_for_updates(current_version):
     """
     Checks GitHub for the latest release tag.
@@ -1275,7 +843,9 @@ def check_for_updates(current_version):
 
     return None
 
+
 def _fetch_github_release():
+    """Fetch the latest release from GitHub."""
     url = "https://api.github.com/repos/Rishabh-Bajpai/Personal-Guru/releases/latest"
     resp = requests.get(url, timeout=3)
     if resp.status_code == 200:
@@ -1288,7 +858,9 @@ def _fetch_github_release():
         }
     return None
 
+
 def _compare_versions(current_ver, release_data):
+    """Compare current version with latest release."""
     if not release_data:
         return None
 
@@ -1298,10 +870,10 @@ def _compare_versions(current_ver, release_data):
     # Simple semantic version comparison (assumes format 1.0.0)
     if latest_ver != curr_ver:
         return {
-             "id": -1, # Using -1 to denote system update
-             "title": f"New Update Available: {release_data['tag_name']}",
-             "message": f"A new version ({release_data['tag_name']}) is available on GitHub.",
-             "notification_type": "info",
-             "url": release_data["html_url"]
+            "id": -1,
+            "title": f"New Update Available: {release_data['tag_name']}",
+            "message": f"A new version ({release_data['tag_name']}) is available on GitHub.",
+            "notification_type": "info",
+            "url": release_data["html_url"]
         }
     return None

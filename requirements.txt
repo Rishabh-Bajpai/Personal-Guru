@@ -22,10 +22,11 @@ gunicorn==23.0.0
 psutil==6.1.1
 pre-commit
 flasgger==0.9.7.1
-# Local Audio Dependencies (Optional but recommended for Local Mode)
-pyttsx3==2.90 # Optional: fallback robotic TTS
+
+# Local Audio Dependencies (Optional - for TTS_PROVIDER=local / STT_PROVIDER=local)
+kokoro-onnx @ git+https://github.com/thewh1teagle/kokoro-onnx.git
+misaki[en]
 faster-whisper==1.0.3
+soundfile
+pyttsx3==2.90  # Fallback TTS if Kokoro unavailable
 pyaudio==0.2.14
-kokoro-onnx==0.3.1
-soundfile==0.12.1
-huggingface_hub==0.20.3

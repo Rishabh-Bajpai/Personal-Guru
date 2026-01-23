@@ -403,13 +403,11 @@
                                 <label for="tts_provider">TTS Provider</label>
                                 <select id="tts_provider" name="tts_provider" onchange="toggleAudioSettings()">
                                     <option value="openai" {{ 'selected' if defaults.get('TTS_PROVIDER', 'openai'
-                                        )=='openai' else '' }}>OpenAI API / Docker (Standard)</option>
-                                    <option value="kokoro" {{ 'selected' if defaults.get('TTS_PROVIDER', 'openai'
-                                        )=='kokoro' else '' }}>Local (Kokoro)</option>
+                                        )=='openai' else '' }}>Docker/OpenAI (Default)</option>
                                     <option value="local" {{ 'selected' if defaults.get('TTS_PROVIDER', 'openai'
-                                        )=='local' else '' }}>Local (Robotic - Fallback)</option>
+                                        )=='local' else '' }}>Local (Kokoro)</option>
                                 </select>
-                                <div class="hint">Kokoro (Local) downloads ~300MB model on first run.</div>
+                                <div class="hint">Local mode downloads ~300MB model on first use.</div>
                             </div>
 
                             <div class="form-group" id="tts_url_container">
@@ -468,12 +466,11 @@
                                 <label for="stt_provider">STT Provider</label>
                                 <select id="stt_provider" name="stt_provider" onchange="toggleAudioSettings()">
                                     <option value="openai" {{ 'selected' if defaults.get('STT_PROVIDER', 'openai'
-                                        )=='openai' else '' }}>OpenAI API / Docker (Standard)</option>
+                                        )=='openai' else '' }}>Docker/OpenAI (Default)</option>
                                     <option value="local" {{ 'selected' if defaults.get('STT_PROVIDER', 'openai'
-                                        )=='local' else '' }}>Local (Faster Whisper - Auto GPU/CPU)</option>
+                                        )=='local' else '' }}>Local (faster-whisper)</option>
                                 </select>
-                                <div class="hint">Choose your Speech-to-Text engine. Local uses faster-whisper (high
-                                    quality).
+                                <div class="hint">Local uses faster-whisper medium model (high quality).
                                 </div>
                             </div>
 
@@ -487,7 +484,7 @@
                             <div class="form-group">
                                 <label for="stt_model">Model Name</label>
                                 <input type="text" id="stt_model" name="stt_model"
-                                    value="{{ defaults.get('STT_MODEL', 'Systran/faster-whisper-small.en') }}">
+                                    value="{{ defaults.get('STT_MODEL', 'Systran/faster-whisper-medium.en') }}">
                             </div>
                         </div>
                     </div>
