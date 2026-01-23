@@ -82,7 +82,6 @@ def save_topic(topic_name, data):
                     step.questions = step_data['questions']
 
                 if 'user_answers' in step_data:
-                    logging.info(f"DEBUG: Updating user_answers for step {step.step_index}. New value: {step_data['user_answers']}")
                     step.user_answers = step_data['user_answers']
 
                 if 'score' in step_data:

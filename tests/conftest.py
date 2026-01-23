@@ -53,6 +53,8 @@ def app():
     })
 
     with app.app_context():
+        # Import models to register them with SQLAlchemy before create_all
+        from app.core.models import User, Login, Topic, Installation
         db.create_all()
         yield app
         db.drop_all()

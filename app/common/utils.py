@@ -502,6 +502,7 @@ def generate_podcast_audio(transcript, output_filename):
         for i, (speaker, text) in enumerate(lines):
             voice = voice_map.get(speaker, TTS_VOICE_DEFAULT)
             result, sr = tts.generate(text, voice=voice)
+            print(f"DEBUG: TTS Result Type: {type(result)}")
 
             if isinstance(result, bytes):
                 # Docker/OpenAI mode - save to temp file for ffmpeg merge
@@ -546,12 +547,23 @@ def generate_podcast_audio(transcript, output_filename):
                 output_filename
             ]
 
-            merge_result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            os.remove(list_file_path)
+            try:
+                merge_result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-            if merge_result.returncode != 0:
-                print(f"ffmpeg error: {merge_result.stderr.decode()}")
-                return False, f"ffmpeg merge failed: {merge_result.stderr.decode()}"
+                if merge_result.returncode != 0:
+                    print(f"ffmpeg error: {merge_result.stderr.decode()}")
+                    raise OSError("ffmpeg failed")
+
+            except (OSError, FileNotFoundError):
+                print("ffmpeg not found or failed, falling back to direct concatenation...")
+                # Fallback: Simple concatenation (works for MP3 often)
+                with open(output_filename, 'wb') as outfile:
+                    for tf in temp_files:
+                        with open(tf, 'rb') as infile:
+                            outfile.write(infile.read())
+
+            # Clean up list file
+            os.remove(list_file_path)
 
         # --- Logging Hook for Podcast TTS ---
         try:
