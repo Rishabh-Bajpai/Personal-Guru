@@ -22,7 +22,7 @@ gunicorn==23.0.0
 psutil==6.1.1
 pre-commit
 flasgger==0.9.7.1
-
+pyOpenSSL
 # Local Audio Dependencies (Optional - for TTS_PROVIDER=local / STT_PROVIDER=local)
 kokoro-onnx @ git+https://github.com/thewh1teagle/kokoro-onnx.git
 misaki[en]

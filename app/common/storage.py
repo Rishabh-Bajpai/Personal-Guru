@@ -19,6 +19,14 @@ from app.core.exceptions import (
 def save_topic(topic_name, data):
     """
     Save topic data to PostgreSQL database.
+
+    Handles creation and updates of:
+    - Topic metadata (plan, name)
+    - Chapter, Quiz, Flashcard, and Chat modes
+
+    Special Logic:
+    - Detects step reordering in Chapter Mode. To prevent 'UniqueViolation' errors on the 'step_index' constraint,
+      it temporarily shifts existing steps to negative indices before assigning their new correct positions.
     """
     logger = logging.getLogger(__name__)
 
@@ -58,6 +66,27 @@ def save_topic(topic_name, data):
         # But here we are iterating incoming data.
 
         processed_step_ids = set()
+
+        # Check for reordering to avoid UniqueViolation
+        reorder_needed = False
+        for step_data in incoming_msg_data:
+            s_idx = step_data.get('step_index')
+            s_id = step_data.get('id')
+
+            if s_idx is not None and s_id and s_id in existing_steps_by_id:
+                # If an existing step is moving to a different index
+                if existing_steps_by_id[s_id].step_index != s_idx:
+                    reorder_needed = True
+                    break
+
+        if reorder_needed:
+            logging.info(f"Topic {topic_name}: Reordering detected. Shifting indices to temporary safe space.")
+            for s in topic.chapter_mode:
+                # Use negative indices to avoid collision with any 0+ index
+                # Ensure they stay unique: -1, -2, -3... derived from current index or id
+                # Simple shift might fail if we map 0->-1 and -1 existed? No, all start >=0.
+                s.step_index = -1 * (s.step_index + 1)
+            db.session.flush()
 
         for step_data in incoming_msg_data:
             step_index = step_data.get('step_index')
