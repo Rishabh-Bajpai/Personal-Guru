@@ -24,7 +24,4 @@ pre-commit
 flasgger==0.9.7.1
 pyOpenSSL
 # Local Audio Dependencies (Optional - for TTS_PROVIDER=local / STT_PROVIDER=local)
-kokoro-onnx @ git+https://github.com/thewh1teagle/kokoro-onnx.git
-misaki[en]
-faster-whisper==1.0.3
-soundfile
+# Install separately: pip install -r requirements-local.txt
