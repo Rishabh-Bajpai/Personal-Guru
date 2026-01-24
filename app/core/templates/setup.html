@@ -402,10 +402,10 @@
                             <div class="form-group">
                                 <label for="tts_provider">TTS Provider</label>
                                 <select id="tts_provider" name="tts_provider" onchange="toggleAudioSettings()">
-                                    <option value="openai" {{ 'selected' if defaults.get('TTS_PROVIDER', 'openai'
-                                        )=='openai' else '' }}>Docker/OpenAI (Default)</option>
-                                    <option value="local" {{ 'selected' if defaults.get('TTS_PROVIDER', 'openai'
-                                        )=='local' else '' }}>Local (Kokoro)</option>
+                                    <option value="api" {{ 'selected' if defaults.get('TTS_PROVIDER', 'api' )=='api'
+                                        else '' }}>Docker / External API (Default)</option>
+                                    <option value="native" {{ 'selected' if defaults.get('TTS_PROVIDER', 'api'
+                                        )=='native' else '' }}>Local Library (No Docker)</option>
                                 </select>
                                 <div class="hint">Local mode downloads ~300MB model on first use.</div>
                             </div>
@@ -465,10 +465,10 @@
                             <div class="form-group">
                                 <label for="stt_provider">STT Provider</label>
                                 <select id="stt_provider" name="stt_provider" onchange="toggleAudioSettings()">
-                                    <option value="openai" {{ 'selected' if defaults.get('STT_PROVIDER', 'openai'
-                                        )=='openai' else '' }}>Docker/OpenAI (Default)</option>
-                                    <option value="local" {{ 'selected' if defaults.get('STT_PROVIDER', 'openai'
-                                        )=='local' else '' }}>Local (faster-whisper)</option>
+                                    <option value="api" {{ 'selected' if defaults.get('STT_PROVIDER', 'api' )=='api'
+                                        else '' }}>Docker / External API (Default)</option>
+                                    <option value="native" {{ 'selected' if defaults.get('STT_PROVIDER', 'api'
+                                        )=='native' else '' }}>Local Library (No Docker)</option>
                                 </select>
                                 <div class="hint">Local uses faster-whisper medium model (high quality).
                                 </div>
@@ -498,10 +498,17 @@
                 </div>
                 <div class="card-body">
                     <div class="form-group">
-                        <label for="database_url">PostgreSQL Connection String</label>
-                        <input type="text" id="database_url" name="database_url" required
-                            value="{{ defaults.get('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5433/personal_guru') }}">
-                        <div class="hint">Format: postgresql://user:pass@host:port/dbname</div>
+                        <div class="form-group">
+                            <label for="database_url">Database Connection String</label>
+                            <input type="text" id="database_url" name="database_url" required
+                                value="{{ defaults.get('DATABASE_URL', 'sqlite:///site.db') }}">
+                            <div class="hint">
+                                <strong>Examples:</strong><br>
+                                - SQLite (Local): <code>sqlite:///site.db</code><br>
+                                - PostgreSQL (Docker):
+                                <code>postgresql://postgres:postgres@localhost:5433/personal_guru</code>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

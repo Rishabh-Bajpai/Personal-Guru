@@ -114,8 +114,14 @@ Below is a quick summary for manual setup:
       - **OpenAI**: `https://api.openai.com/v1`
       - **Gemini**: `https://generativelanguage.googleapis.com/v1beta/openai/`
     - `LLM_MODEL_NAME`: e.g., `llama3`, `gpt-4o`.
-    - `TTS_BASE_URL`: `http://localhost:8969/v1` (Replace `localhost` with your machine's actual LAN IP address if running on another machine).
-    - `STT_BASE_URL`: `http://localhost:8969/v1` (Same as TTS if using Speaches).
+    - `TTS_PROVIDER`:
+      - **`native`**: Uses built-in **Kokoro (ONNX)** library running directly in Python. (No Docker required).
+      - **`api`**: Connects to an external OpenAI-compatible API (e.g., Docker container running Speaches, or actual OpenAI API).
+    - `TTS_BASE_URL`: `http://localhost:8969/v1` (Required only if `TTS_PROVIDER=api`).
+    - `STT_PROVIDER`:
+      - **`native`**: Uses built-in **faster-whisper** library running in Python.
+      - **`api`**: Connects to an external OpenAI-compatible API.
+    - `STT_BASE_URL`: `http://localhost:8969/v1` (Required only if `STT_PROVIDER=api`).
 
 4. **Database Setup (Docker)**:
     Start the Postgres database using Docker:

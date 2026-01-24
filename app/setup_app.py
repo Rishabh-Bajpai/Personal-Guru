@@ -58,10 +58,48 @@ def create_setup_app():
             if not config['DATABASE_URL'] or not config['LLM_BASE_URL']:
                 return "Missing required fields", 400
 
+            # --- Capture Audio Settings ---
+            config.update({
+                'TTS_PROVIDER': request.form.get('tts_provider', 'api'),
+                'TTS_BASE_URL': request.form.get('tts_url', ''),
+                'TTS_MODEL': request.form.get('tts_model', 'tts-1'),
+                'TTS_LANGUAGE': request.form.get('tts_language', 'en'),
+                'TTS_VOICE_DEFAULT': request.form.get('tts_voice_default', 'af_bella'),
+                'TTS_VOICE_PODCAST_HOST': request.form.get('tts_voice_host', 'am_michael'),
+                'TTS_VOICE_PODCAST_GUEST': request.form.get('tts_voice_guest', 'af_nicole'),
+                'STT_PROVIDER': request.form.get('stt_provider', 'api'),
+                'STT_BASE_URL': request.form.get('stt_url', ''),
+                'STT_MODEL': request.form.get('stt_model', 'Systran/faster-whisper-medium.en')
+            })
+
             # Write to .env
             with open('.env', 'w') as f:
                 for key, value in config.items():
                     f.write(f"{key}={value}\n")
+
+            # --- Trigger Model Downloads if Native (Local) ---
+            try:
+                if config['TTS_PROVIDER'] == 'native':
+                    print("--- SETUP: Triggering Native TTS Model Download (Kokoro) ---")
+                    try:
+                        from app.common.audio_service import KokoroTTS
+                        KokoroTTS()
+                        print("--- SETUP: TTS Models Ready ---")
+                    except Exception as e:
+                        print(f"--- SETUP WARNING: Failed to download TTS models: {e}")
+
+                if config['STT_PROVIDER'] == 'native':
+                    print("--- SETUP: Triggering Native STT Model Download (Whisper) ---")
+                    try:
+                        from app.common.audio_service import WhisperSTT
+                        WhisperSTT()
+                        print("--- SETUP: STT Models Ready ---")
+                    except Exception as e:
+                        print(f"--- SETUP WARNING: Failed to download STT models: {e}")
+
+            except Exception as e:
+                print(f"--- SETUP: Error during model pre-load: {e}")
+
 
             # Trigger Flask Reload by touching run.py
             try:

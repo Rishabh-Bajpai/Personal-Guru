@@ -66,8 +66,8 @@ if "%mode_choice%"=="2" (
     )
     echo. >> .env
     echo # Local Mode Overrides >> .env
-    echo TTS_PROVIDER=kokoro >> .env
-    echo STT_PROVIDER=local >> .env
+    echo TTS_PROVIDER=native >> .env
+    echo STT_PROVIDER=native >> .env
     echo [INFO] Updated .env for Local Mode (Default: Kokoro + Faster Whisper).
 ) else (
     echo [INFO] Standard Mode selected.

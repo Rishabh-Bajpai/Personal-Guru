@@ -104,8 +104,8 @@ if [[ "$mode_choice" == "2" ]]; then
     # Let's append overrides to the end of .env
     echo "" >> .env
     echo "# Local Mode Overrides" >> .env
-    echo "TTS_PROVIDER=kokoro" >> .env
-    echo "STT_PROVIDER=local" >> .env
+    echo "TTS_PROVIDER=native" >> .env
+    echo "STT_PROVIDER=native" >> .env
     echo "✅ Updated .env for Local Mode (Default: Kokoro + Faster Whisper)."
 elif [[ "$mode_choice" == "1" ]]; then
     local_mode="n"

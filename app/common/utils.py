@@ -478,6 +478,7 @@ def generate_podcast_audio(transcript, output_filename):
 
     # 3. Assign Voices
     unique_speakers = sorted(list(set(s for s, t in lines)))
+    print(f"DEBUG: Detected unique speakers: {unique_speakers}")
     available_voices = [
         TTS_VOICE_PODCAST_HOST,
         TTS_VOICE_PODCAST_GUEST,

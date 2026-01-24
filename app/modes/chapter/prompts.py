@@ -34,6 +34,18 @@ def get_teaching_material_prompt(
         full_plan,
         user_background,
         incorrect_questions=None):
+    """
+    Generate a prompt for creating detailed teaching material.
+
+    Args:
+        topic: Current study topic.
+        full_plan: List of all steps in the plan.
+        user_background: User's knowledge level/background.
+        incorrect_questions: Optional list of previously failed questions.
+
+    Returns:
+        str: Detailed prompt for the LLM.
+    """
     prompt = f"""
 You are an expert tutor. Your role is to teach a topic in detail.
 The current topic is: "{topic}"
@@ -57,6 +69,16 @@ IMPORTANT: The user previously struggled with the following questions. Please pa
 
 
 def get_assessment_prompt(teaching_material, user_background):
+    """
+    Generate a prompt for creating assessments.
+
+    Args:
+        teaching_material: The content to test on.
+        user_background: User's background.
+
+    Returns:
+        str: Prompt for generating 3 multiple-choice questions.
+    """
     return f"""
 You are an expert examiner. Based on the teaching material provided below, generate a set of 3 multiple-choice assessment questions to test the user's understanding of the topic.
 
@@ -87,6 +109,16 @@ JSON FORMAT:
 
 
 def get_podcast_script_prompt(context, user_background):
+    """
+    Generate a prompt for the podcast script.
+
+    Args:
+        context: Content to be discussed.
+        user_background: Target audience profile.
+
+    Returns:
+        str: Prompt for generating a dialogue script.
+    """
     return f"""
             You are an expert podcast script writer for podcast "Personal-Guru".
             Your goal is to generate a engaging podcast script between two speakers, Alex and Jamie to teach the audience about current learning material.
@@ -105,4 +137,5 @@ def get_podcast_script_prompt(context, user_background):
             "Jamie: [text]\n"
             "Alex: [text]\n"
             "...and so on."
+            6. CRITICAL: Start every single line with "Alex:" or "Jamie:". Do NOT use any other names, titles, or variations like "Alex (Host)" or "Jamie (Guest)".
         """

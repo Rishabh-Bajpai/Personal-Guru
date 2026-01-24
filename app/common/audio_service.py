@@ -70,6 +70,16 @@ class OpenAITTS(TTSService):
         logger.info(f"OpenAI TTS initialized: {base_url}")
 
     def generate(self, text: str, voice: Optional[str] = None) -> Tuple[bytes, None]:
+        """
+        Generate audio using OpenAI-compatible API.
+
+        Args:
+            text: Text content to synthesize.
+            voice: Optional voice ID override.
+
+        Returns:
+            Tuple: (audio_bytes, None) - Compatible with downstream logic.
+        """
         voice = voice or self.default_voice
         response = self.client.audio.speech.create(
             model=self.model,
@@ -89,6 +99,15 @@ class OpenAISTT(STTService):
         logger.info(f"OpenAI STT initialized: {base_url}")
 
     def transcribe(self, audio_path: str) -> str:
+        """
+        Transcribe audio file using OpenAI API.
+
+        Args:
+            audio_path: Absolute path to the audio file.
+
+        Returns:
+            str: Transcribed text.
+        """
         with open(audio_path, "rb") as f:
             result = self.client.audio.transcriptions.create(
                 model=self.model,
@@ -152,6 +171,13 @@ class KokoroTTS(TTSService):
             raise
 
     def _download_file(self, url, path):
+        """
+        Helper to download a file from a URL to a local path.
+
+        Args:
+            url: Source URL.
+            path: Destination file path.
+        """
         import requests
         try:
             with requests.get(url, stream=True) as r:
@@ -164,6 +190,16 @@ class KokoroTTS(TTSService):
             raise
 
     def generate(self, text: str, voice: Optional[str] = None) -> Tuple[any, int]:
+        """
+        Generate audio using local Kokoro model.
+
+        Args:
+            text: Text to synthesize.
+            voice: Voice ID to use (defaults to 'af_bella').
+
+        Returns:
+            Tuple: (audio_samples, sample_rate). Samples are numpy array.
+        """
         voice = voice or self.default_voice
         # Convert text to phonemes first using Misaki
         phonemes, _ = self.g2p(text)
@@ -187,6 +223,15 @@ class WhisperSTT(STTService):
         logger.info("Whisper STT initialized successfully")
 
     def transcribe(self, audio_path: str) -> str:
+        """
+        Transcribe audio using local Whisper model.
+
+        Args:
+            audio_path: Path to the audio file.
+
+        Returns:
+            str: Transcribed text.
+        """
         segments, _ = self.model.transcribe(audio_path, beam_size=5)
         return "".join([segment.text for segment in segments]).strip()
 
@@ -210,15 +255,15 @@ def init_audio_services():
     """
     global _tts_service, _stt_service
 
-    tts_provider = os.getenv("TTS_PROVIDER", "openai").lower()
-    stt_provider = os.getenv("STT_PROVIDER", "openai").lower()
+    tts_provider = os.getenv("TTS_PROVIDER", "api").lower()
+    stt_provider = os.getenv("STT_PROVIDER", "api").lower()
 
     logger.info(f"Initializing audio services: TTS={tts_provider}, STT={stt_provider}")
 
     # Initialize TTS
-    if tts_provider == "local":
+    if tts_provider == "native":
         try:
-            logger.info("Loading local Kokoro TTS model...")
+            logger.info("Loading Native Kokoro TTS model (in-process)...")
             _tts_service = KokoroTTS(
                 default_voice=os.getenv("TTS_VOICE_DEFAULT", "af_bella")
             )
@@ -232,7 +277,7 @@ def init_audio_services():
             traceback.print_exc()
             raise
     else:
-        # Docker/OpenAI mode - lightweight API client
+        # API mode (OpenAI compatible) - docker or external api
         _tts_service = OpenAITTS(
             base_url=os.getenv("TTS_BASE_URL", "http://localhost:8969/v1"),
             api_key=os.getenv("OPENAI_API_KEY", "not-required"),
@@ -241,9 +286,9 @@ def init_audio_services():
         )
 
     # Initialize STT
-    if stt_provider == "local":
+    if stt_provider == "native":
         try:
-            logger.info("Loading local Whisper STT model...")
+            logger.info("Loading Native Whisper STT model (in-process)...")
             _stt_service = WhisperSTT(model_size="medium")
         except ImportError as e:
             logger.error(f"faster-whisper not installed: {e}")
@@ -255,7 +300,7 @@ def init_audio_services():
             traceback.print_exc()
             raise
     else:
-        # Docker/OpenAI mode - lightweight API client
+        # API mode (OpenAI compatible) - docker or external api
         _stt_service = OpenAISTT(
             base_url=os.getenv("STT_BASE_URL", "http://localhost:8969/v1"),
             api_key=os.getenv("OPENAI_API_KEY", "not-required"),
