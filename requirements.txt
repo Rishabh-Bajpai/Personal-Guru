@@ -28,5 +28,3 @@ kokoro-onnx @ git+https://github.com/thewh1teagle/kokoro-onnx.git
 misaki[en]
 faster-whisper==1.0.3
 soundfile
-pyttsx3==2.90  # Fallback TTS if Kokoro unavailable
-pyaudio==0.2.14
