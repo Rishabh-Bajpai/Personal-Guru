@@ -531,7 +531,9 @@ def test_llm_error_handling(client_no_auth, app):
 
         # Use Chapter route which bubles up exceptions
         # Patch the class method to ensure it catches all instances
-        with patch('app.common.agents.PlannerAgent.generate_study_plan') as mock_planner:
+        with patch('app.common.agents.PlannerAgent.generate_study_plan') as mock_planner, \
+             patch('app.core.routes.decrypt_jwe') as mock_decrypt:
+
             mock_planner.side_effect = LLMResponseError(
                 "Service Down",
                 error_code="LLM503",
@@ -539,10 +541,16 @@ def test_llm_error_handling(client_no_auth, app):
                 should_retry=True
             )
 
+            mock_user.userid = 'test_user_id' # Explicit ID
+            mock_decrypt.return_value = {'user_id': 'test_user_id'} # Match ID
+
             with patch('app.common.utils.get_user_context', return_value="Beginner"):
                 response = client_no_auth.post('/chapter/generate',
                                      json={"topic": "TestTopic"},
-                                     headers={"Content-Type": "application/json"},
+                                     headers={
+                                         "Content-Type": "application/json",
+                                         "X-JWE-Token": "fake_token" # Required to trigger decrypt_jwe
+                                     },
                                      follow_redirects=False)
 
                 assert response.status_code == 503

@@ -127,7 +127,8 @@ function initChatPopup(config) {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-JWE-Token': document.querySelector('meta[name="jwe-token"]')?.getAttribute('content') || ''
                 },
                 body: JSON.stringify({ question: question })
             });
@@ -240,7 +241,8 @@ function initChatPopup(config) {
                             const response = await fetch("/api/transcribe", {
                                 method: "POST",
                                 headers: {
-                                    'X-CSRFToken': csrfToken
+                                    'X-CSRFToken': csrfToken,
+                                    'X-JWE-Token': document.querySelector('meta[name="jwe-token"]')?.getAttribute('content') || ''
                                 },
                                 body: formData
                             });

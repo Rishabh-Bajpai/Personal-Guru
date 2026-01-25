@@ -16,12 +16,12 @@ openai==2.14.0
 pytest==8.3.4
 pytest-mock==3.14.0
 pytest-cov
-black
-flake8
 gunicorn==23.0.0
 psutil==6.1.1
 pre-commit
 flasgger==0.9.7.1
 pyOpenSSL
+Authlib==1.4.0
+cryptography==42.0.5
 # Local Audio Dependencies (Optional - for TTS_PROVIDER=local / STT_PROVIDER=local)
 # Install separately: pip install -r requirements-local.txt

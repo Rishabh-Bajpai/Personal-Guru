@@ -118,11 +118,13 @@ if (feedbackForm) {
 
         try {
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            const jweToken = document.querySelector('meta[name="jwe-token"]')?.content;
             const response = await fetch('/api/feedback', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken || ''
+                    'X-CSRFToken': csrfToken || '',
+                    'X-JWE-Token': jweToken || ''
                 },
                 body: JSON.stringify({
                     feedback_type: feedbackType,

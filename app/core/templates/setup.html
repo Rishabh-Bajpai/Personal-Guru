@@ -321,6 +321,7 @@
 
         <form method="POST">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="jwe_token" value="{{ jwe_token if jwe_token else '' }}">
 
             <!-- LLM Settings Card -->
             <div class="card">

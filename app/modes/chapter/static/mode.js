@@ -15,7 +15,10 @@ function setupChapterMode(config) {
             try {
                 const res = await fetch(config.urls.generate_plan, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-JWE-Token': document.querySelector('meta[name="jwe-token"]')?.getAttribute('content') || ''
+                    },
                     body: JSON.stringify({ topic: config.topicName })
                 });
 
