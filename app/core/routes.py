@@ -248,25 +248,6 @@ def signup():
         except Exception:
             pass # Telemetry failures must not block user flow; ignore logging errors.
 
-        response = redirect(url_for('main.user_profile', new_user='true'))
-
-        # Issue JWE Token
-        try:
-            token = create_jwe({'user_id': uid})
-            if isinstance(token, bytes):
-                token = token.decode('utf-8')
-            # Derive cookie security from environment, defaulting to secure in production-like setups
-            secure_cookie = os.getenv("JWE_COOKIE_SECURE", "true").lower() == "true"
-
-            response.set_cookie(
-                'jwe_token',
-                token,
-                httponly=True,
-                secure=secure_cookie,
-            )
-        except Exception as e:
-            print(f"Failed to issue JWE: {e}")
-
         return response
 
     return render_template('signup.html')
