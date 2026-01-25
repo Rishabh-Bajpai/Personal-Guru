@@ -5,9 +5,9 @@ from authlib.jose import JsonWebEncryption, JoseError
 
 def get_jwe_key():
     """Derive a 32-byte key from the dedicated JWE secret."""
-    secret = current_app.config.get('JWE_SECRET_KEY')
+    secret = current_app.config.get('SECRET_KEY')
     if not secret:
-        raise ValueError("JWE_SECRET_KEY must be set in app config")
+        raise ValueError("SECRET_KEY must be set in app config")
     # SHA-256 produces 32 bytes, perfect for A256KW
     return hashlib.sha256(secret.encode()).digest()
 
