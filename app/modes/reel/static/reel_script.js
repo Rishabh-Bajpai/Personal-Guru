@@ -31,7 +31,8 @@ function logVideoEvent(videoId, eventType) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'X-JWE-Token': document.querySelector('meta[name="jwe-token"]')?.getAttribute('content') || ''
         },
         body: JSON.stringify({
             session_id: currentSessionId,
@@ -69,7 +70,8 @@ async function performSearch(topic) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-JWE-Token': document.querySelector('meta[name="jwe-token"]')?.getAttribute('content') || ''
             },
             body: JSON.stringify({ topic })
         });

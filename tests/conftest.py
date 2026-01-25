@@ -81,4 +81,19 @@ def auth_client(client, app):
 
     # Login
     client.post('/login', data={'username': 'testuser', 'password': 'password'}, follow_redirects=True)
+
+    # Generate and attach JWE token
+    # We need to find the userid for 'testuser'
+    with app.app_context():
+        login_user_obj = Login.query.filter_by(username='testuser').first()
+        uid = login_user_obj.userid
+
+        from app.common.auth import create_jwe
+        token = create_jwe({'user_id': uid})
+        if isinstance(token, bytes):
+            token = token.decode('utf-8')
+
+    # Set default header for future requests
+    client.environ_base['HTTP_X_JWE_TOKEN'] = token
+
     return client

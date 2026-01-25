@@ -13,6 +13,7 @@ class TimeTracker {
         this.startTime = Date.now();
         this.csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
             document.querySelector('input[name="csrf_token"]')?.value;
+        this.jweToken = document.querySelector('meta[name="jwe-token"]')?.getAttribute('content') || '';
 
         this.init();
     }
@@ -70,6 +71,7 @@ class TimeTracker {
         const data = new FormData();
         data.append('time_spent', duration);
         data.append('csrf_token', this.csrfToken);
+        data.append('jwe_token', this.jweToken);
 
         // Add extra data
         for (const [key, value] of Object.entries(this.extraData)) {

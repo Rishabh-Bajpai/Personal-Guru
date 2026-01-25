@@ -213,7 +213,8 @@ document.addEventListener('DOMContentLoaded', function () {
                             const response = await fetch("/api/transcribe", {
                                 method: "POST",
                                 headers: {
-                                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value,
+                                    'X-JWE-Token': document.querySelector('meta[name="jwe-token"]')?.getAttribute('content') || ''
                                 },
                                 body: formData
                             });
