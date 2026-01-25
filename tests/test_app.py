@@ -634,10 +634,9 @@ def dcs_app():
     """Create a fresh app and database for DCS tests."""
     from app import create_app
     from app.core.extensions import db
+    from config import TestConfig
 
-    app = create_app()
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    app = create_app(TestConfig)
 
     with app.app_context():
         db.create_all()

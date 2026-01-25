@@ -132,10 +132,11 @@ def get_podcast_script_prompt(context, user_background):
             2. Use simple and easy to understand language.
             3. Don't repeat the same point multiple times.
             4. Use the audience's background to decide the level of difficulty of the content only.
-            5. Format the output exactly as follows:\n
+            5. Start the episode with Alex welcoming the listener by name (extracting the Name from the audience's background) and introducing the topic of discussion with Jamie.
+            6. Alex should be the host and Jamie should be the guest.
+            7. Format the output exactly as follows:\n
             "Alex: [text]\n"
             "Jamie: [text]\n"
             "Alex: [text]\n"
             "...and so on."
-            6. CRITICAL: Start every single line with "Alex:" or "Jamie:". Do NOT use any other names, titles, or variations like "Alex (Host)" or "Jamie (Guest)".
-        """
+            """

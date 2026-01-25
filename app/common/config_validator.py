@@ -3,6 +3,7 @@ import os
 REQUIRED_VARS = [
     "LLM_BASE_URL",
     "LLM_MODEL_NAME",
+    "DATABASE_URL",
 ]
 
 

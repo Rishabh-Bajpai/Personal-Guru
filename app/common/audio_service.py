@@ -255,13 +255,14 @@ def init_audio_services():
     """
     global _tts_service, _stt_service
 
-    tts_provider = os.getenv("TTS_PROVIDER", "api").lower()
-    stt_provider = os.getenv("STT_PROVIDER", "api").lower()
+    tts_provider = os.getenv("TTS_PROVIDER", "externalapi").lower()
+    stt_provider = os.getenv("STT_PROVIDER", "externalapi").lower()
 
     logger.info(f"Initializing audio services: TTS={tts_provider}, STT={stt_provider}")
 
     # Initialize TTS
     if tts_provider == "native":
+
         try:
             logger.info("Loading Native Kokoro TTS model (in-process)...")
             _tts_service = KokoroTTS(
@@ -276,7 +277,7 @@ def init_audio_services():
             import traceback
             traceback.print_exc()
             raise
-    else:
+    elif tts_provider == "externalapi":
         # API mode (OpenAI compatible) - docker or external api
         _tts_service = OpenAITTS(
             base_url=os.getenv("TTS_BASE_URL", "http://localhost:8969/v1"),
@@ -288,6 +289,7 @@ def init_audio_services():
     # Initialize STT
     if stt_provider == "native":
         try:
+
             logger.info("Loading Native Whisper STT model (in-process)...")
             _stt_service = WhisperSTT(model_size="medium")
         except ImportError as e:
@@ -299,7 +301,7 @@ def init_audio_services():
             import traceback
             traceback.print_exc()
             raise
-    else:
+    elif stt_provider == "externalapi":
         # API mode (OpenAI compatible) - docker or external api
         _stt_service = OpenAISTT(
             base_url=os.getenv("STT_BASE_URL", "http://localhost:8969/v1"),

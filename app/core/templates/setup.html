@@ -402,9 +402,10 @@
                             <div class="form-group">
                                 <label for="tts_provider">TTS Provider</label>
                                 <select id="tts_provider" name="tts_provider" onchange="toggleAudioSettings()">
-                                    <option value="api" {{ 'selected' if defaults.get('TTS_PROVIDER', 'api' )=='api'
-                                        else '' }}>Docker / External API (Default)</option>
-                                    <option value="native" {{ 'selected' if defaults.get('TTS_PROVIDER', 'api'
+                                    <option value="externalapi" {{ 'selected' if
+                                        defaults.get('TTS_PROVIDER', 'externalapi' )=='externalapi' else '' }}>Docker /
+                                        External API (Default)</option>
+                                    <option value="native" {{ 'selected' if defaults.get('TTS_PROVIDER', 'externalapi'
                                         )=='native' else '' }}>Local Library (No Docker)</option>
                                 </select>
                                 <div class="hint">Local mode downloads ~300MB model on first use.</div>
@@ -465,9 +466,10 @@
                             <div class="form-group">
                                 <label for="stt_provider">STT Provider</label>
                                 <select id="stt_provider" name="stt_provider" onchange="toggleAudioSettings()">
-                                    <option value="api" {{ 'selected' if defaults.get('STT_PROVIDER', 'api' )=='api'
-                                        else '' }}>Docker / External API (Default)</option>
-                                    <option value="native" {{ 'selected' if defaults.get('STT_PROVIDER', 'api'
+                                    <option value="externalapi" {{ 'selected' if
+                                        defaults.get('STT_PROVIDER', 'externalapi' )=='externalapi' else '' }}>Docker /
+                                        External API (Default)</option>
+                                    <option value="native" {{ 'selected' if defaults.get('STT_PROVIDER', 'externalapi'
                                         )=='native' else '' }}>Local Library (No Docker)</option>
                                 </select>
                                 <div class="hint">Local uses faster-whisper medium model (high quality).
@@ -553,23 +555,23 @@
     </div>
 
     <script>
-        // --- Core Audio Toggle Logic (Moved to Top) ---
+        // --- Core Audio Toggle Logic ---
         function toggleAudioSettings() {
             try {
                 // TTS Logic
                 const ttsProvider = document.getElementById('tts_provider');
                 const ttsUrlContainer = document.getElementById('tts_url_container');
                 if (ttsProvider && ttsUrlContainer) {
-                    // Hide if NOT openai
-                    ttsUrlContainer.style.display = (ttsProvider.value === 'openai') ? 'block' : 'none';
+                    // Show if externalapi
+                    ttsUrlContainer.style.display = (ttsProvider.value === 'externalapi') ? 'block' : 'none';
                 }
 
                 // STT Logic
                 const sttProvider = document.getElementById('stt_provider');
                 const sttUrlContainer = document.getElementById('stt_url_container');
                 if (sttProvider && sttUrlContainer) {
-                    // Hide if NOT openai
-                    sttUrlContainer.style.display = (sttProvider.value === 'openai') ? 'block' : 'none';
+                    // Show if externalapi
+                    sttUrlContainer.style.display = (sttProvider.value === 'externalapi') ? 'block' : 'none';
                 }
             } catch (e) {
                 console.error("Audio Toggle Error:", e);
@@ -703,35 +705,6 @@
         });
 
         // Audio Settings Visibility
-        function toggleAudioSettings() {
-            try {
-                const ttsProvider = document.getElementById('tts_provider');
-                const ttsUrlContainer = document.getElementById('tts_url_container');
-
-                if (ttsProvider && ttsUrlContainer) {
-                    // Show URL only if provider is 'openai'
-                    if (ttsProvider.value === 'openai') {
-                        ttsUrlContainer.style.display = 'block';
-                    } else {
-                        ttsUrlContainer.style.display = 'none';
-                    }
-                }
-
-                const sttProvider = document.getElementById('stt_provider');
-                const sttUrlContainer = document.getElementById('stt_url_container');
-
-                if (sttProvider && sttUrlContainer) {
-                    // Show URL only if provider is 'openai'
-                    if (sttProvider.value === 'openai') {
-                        sttUrlContainer.style.display = 'block';
-                    } else {
-                        sttUrlContainer.style.display = 'none';
-                    }
-                }
-            } catch (e) {
-                console.error("Audio Toggle Error:", e);
-            }
-        }
 
         // Init Audio Settings on Load
         window.addEventListener('load', toggleAudioSettings);

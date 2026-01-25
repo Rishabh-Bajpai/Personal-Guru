@@ -58,9 +58,11 @@ def update_database():
                 # Handle relative paths (common in sqlite:///site.db)
                 if not os.path.isabs(db_path):
                      db_path = os.path.join(app.instance_path, db_path) # Try instance path layout or current dir?
+
+                     logger.info(f"DEBUG: app.instance_path: {app.instance_path}")
+                     logger.info(f"DEBUG: Final DB Path: {os.path.abspath(db_path)}")
                      # Actually default config is sqlite:///site.db, relative to CWD usually or app root.
                      # Let's just create the folder if it implies one.
-                     pass
 
                 # If path contains directories, ensure they exist
                 db_dir = os.path.dirname(db_path)

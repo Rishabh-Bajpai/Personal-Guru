@@ -19,6 +19,8 @@ from app.core.exceptions import (
     STTError
 )
 
+logger = logging.getLogger(__name__)
+
 load_dotenv(override=True)
 
 LLM_BASE_URL = os.getenv("LLM_BASE_URL")
@@ -325,9 +327,14 @@ def generate_audio(text, step_index):
     """
     Generates audio from text using the configured TTS service.
     Supports both Docker/OpenAI and local Kokoro modes via audio_service.
+    Handles long text by chunking and merging.
     """
     from app.common.audio_service import get_tts
-    import soundfile as sf
+    import tempfile
+    import subprocess
+    import re
+    # Import numpy only if needed/available, though usually available if soundfile is needed.
+    # soundfile import will be lazy.
 
     start_time = time.time()
     static_dir = os.path.join(os.getcwd(), 'app', 'static')
@@ -344,16 +351,124 @@ def generate_audio(text, step_index):
             except OSError:
                 pass
 
+    # 1. Chunk Text
+    # Kokoro and some APIs have limits. Target ~300 chars to be safe.
+    chunks = []
+
+    # Helper to split text by sentence delimiters
+    sentences = re.split(r'([.!?]+)', text)
+    current_chunk = ""
+
+    for i in range(0, len(sentences) - 1, 2):
+        sentence = sentences[i] + sentences[i + 1]
+        if len(current_chunk) + len(sentence) < 300:
+            current_chunk += sentence
+        else:
+            if current_chunk:
+                chunks.append(current_chunk)
+            current_chunk = sentence
+
+    # Add trailing sentence/text
+    if len(sentences) % 2 == 1:
+        current_chunk += sentences[-1]
+
+    if current_chunk:
+        chunks.append(current_chunk)
+
+    if not chunks:
+        chunks = [text]  # Fallback if split failed or empty
+
     try:
         tts = get_tts()
-        result, sample_rate = tts.generate(text)
+        temp_files = []
+        sample_rate = None
 
-        # Handle both formats: bytes (Docker/OpenAI) or samples (local/Kokoro)
-        if isinstance(result, bytes):
-            with open(output_filename, 'wb') as f:
-                f.write(result)
+        # 2. Generate Audio for each chunk
+        for chunk in chunks:
+            if not chunk.strip():
+                continue
+
+            result, sr = tts.generate(chunk)
+
+            # Save segment to temp file
+            fd, temp_path = tempfile.mkstemp(suffix=".wav")
+            os.close(fd)
+
+            if isinstance(result, bytes):
+                # Docker/OpenAI mode: result is bytes (usually mp3 or wav depending on model, let's assume valid audio bytes)
+                with open(temp_path, 'wb') as f:
+                    f.write(result)
+            else:
+                # Local/Kokoro mode: result is numpy array
+                try:
+                    import soundfile as sf
+                except ImportError:
+                    logger.error("soundfile not installed. Cannot save local audio.")
+                    return None, "soundfile dependency missing for local TTS"
+
+                sf.write(temp_path, result, sr)
+                if sample_rate is None:
+                    sample_rate = sr
+
+            temp_files.append(temp_path)
+
+        if not temp_files:
+            return None, "Failed to generate any audio content"
+
+        # 3. Merge Audio
+        # If there's only one file, just rename it to output
+        if len(temp_files) == 1:
+            if os.path.exists(output_filename):
+                os.remove(output_filename)
+            import shutil
+            shutil.move(temp_files[0], output_filename)
+
         else:
-            sf.write(output_filename, result, sample_rate)
+            # multiple files, merge
+            list_file_fd, list_file_path = tempfile.mkstemp(suffix=".txt")
+            with os.fdopen(list_file_fd, 'w') as f:
+                for tf in temp_files:
+                    # Escape paths for ffmpeg concat demuxer
+                    # Windows paths need careful escaping, but forward slashes usually work or simple quoting
+                    safe_path = tf.replace("\\", "/")
+                    f.write(f"file '{safe_path}'\n")
+
+            cmd = [
+                "ffmpeg",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", list_file_path,
+                "-c", "copy",
+                "-y",
+                output_filename
+            ]
+
+            try:
+                merge_result = subprocess.run(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
+                if merge_result.returncode != 0:
+                    # Fallback to simple concatenation if ffmpeg fails (mostly for simple formats)
+                    logger.warning(f"ffmpeg merge failed: {merge_result.stderr.decode()}. Trying direct concatenation.")
+                    with open(output_filename, 'wb') as outfile:
+                        for tf in temp_files:
+                            with open(tf, 'rb') as infile:
+                                outfile.write(infile.read())
+
+                os.remove(list_file_path)
+            except (OSError, FileNotFoundError):
+                 # FFmpeg not installed, fallback to concat
+                with open(output_filename, 'wb') as outfile:
+                    for tf in temp_files:
+                        with open(tf, 'rb') as infile:
+                            outfile.write(infile.read())
+
+        # Cleanup temp files
+        for tf in temp_files:
+            if os.path.exists(tf):
+                os.remove(tf)
 
         # --- Logging Hook for TTS ---
         try:
@@ -451,8 +566,7 @@ def generate_podcast_audio(transcript, output_filename):
     Supports both Docker/OpenAI and local Kokoro modes via audio_service.
     """
     from app.common.audio_service import get_tts
-    import soundfile as sf
-    import numpy as np
+    # soundfile and numpy are imported lazily to avoid strict dependency in CI
 
     start_time = time.time()
 
@@ -463,6 +577,8 @@ def generate_podcast_audio(transcript, output_filename):
         if ':' in line:
             parts = line.split(':', 1)
             speaker = parts[0].strip()
+            # Normalize speaker name (remove parentheticals like "(Host)")
+            speaker = re.sub(r'\(.*?\)', '', speaker).strip()
             content = parts[1].strip()
             if content:
                 lines.append((speaker, content))
@@ -521,6 +637,13 @@ def generate_podcast_audio(transcript, output_filename):
 
         if is_local_mode:
             # Local mode - concatenate samples and save directly
+            try:
+                import numpy as np
+                import soundfile as sf
+            except ImportError as e:
+                logger.error(f"Missing dependencies for local audio generation: {e}")
+                return False, f"Missing dependencies (numpy/soundfile): {e}"
+
             if all_samples:
                 combined = np.concatenate(all_samples)
                 sf.write(output_filename, combined, sample_rate)
