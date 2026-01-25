@@ -120,12 +120,12 @@ Below is a quick summary for manual setup:
     - `LLM_MODEL_NAME`: e.g., `llama3`, `gpt-4o`.
     - `TTS_PROVIDER`:
       - **`native`**: Uses built-in **Kokoro (ONNX)** library running directly in Python. (No Docker required).
-      - **`api`**: Connects to an external OpenAI-compatible API (e.g., Docker container running Speaches, or actual OpenAI API).
-    - `TTS_BASE_URL`: `http://localhost:8969/v1` (Required only if `TTS_PROVIDER=api`).
+      - **`externalapi`**: Connects to an external OpenAI-compatible API (e.g., Docker container running Speaches, or actual OpenAI API).
+    - `TTS_BASE_URL`: `http://localhost:8969/v1` (Required only if `TTS_PROVIDER=externalapi`).
     - `STT_PROVIDER`:
       - **`native`**: Uses built-in **faster-whisper** library running in Python.
-      - **`api`**: Connects to an external OpenAI-compatible API.
-    - `STT_BASE_URL`: `http://localhost:8969/v1` (Required only if `STT_PROVIDER=api`).
+      - **`externalapi`**: Connects to an external OpenAI-compatible API.
+    - `STT_BASE_URL`: `http://localhost:8969/v1` (Required only if `STT_PROVIDER=externalapi`).
 
 4. **Database Setup (Docker)**:
     Start the Postgres database using Docker:
