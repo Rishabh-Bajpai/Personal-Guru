@@ -126,7 +126,7 @@ def call_llm(prompt_or_messages, is_json=False):
                     raise LLMConnectionError(
                         f"Model '{LLM_MODEL_NAME}' not found. Please pull it first.",
                         endpoint=api_url,
-                        error_code="LLM015",
+                        error_code="LLM015", # New code for Model Not Found
                         debug_info={"model": LLM_MODEL_NAME}
                     )
             except (json.JSONDecodeError, AttributeError):
@@ -323,6 +323,38 @@ def validate_quiz_structure(quiz_data):
                     "correct_answer": correct_answer})
 
 
+def chunk_text(text, max_chars=300):
+    """
+    Splits text into chunks of approximately max_chars, breaking at sentence boundaries.
+    Used to avoid TTS limits (e.g., Kokoro ~500 tokens).
+    """
+    import re
+    chunks = []
+    sentences = re.split(r'([.!?]+)', text)
+    current_chunk = ""
+
+    for i in range(0, len(sentences) - 1, 2):
+        sentence = sentences[i] + sentences[i + 1]
+        if len(current_chunk) + len(sentence) < max_chars:
+            current_chunk += sentence
+        else:
+            if current_chunk:
+                chunks.append(current_chunk)
+            current_chunk = sentence
+
+    # Add trailing sentence/text
+    if len(sentences) % 2 == 1:
+        current_chunk += sentences[-1]
+
+    if current_chunk:
+        chunks.append(current_chunk)
+
+    if not chunks:
+        chunks = [text]  # Fallback if split failed or empty
+
+    return chunks
+
+
 def generate_audio(text, step_index):
     """
     Generates audio from text using the configured TTS service.
@@ -332,7 +364,6 @@ def generate_audio(text, step_index):
     from app.common.audio_service import get_tts
     import tempfile
     import subprocess
-    import re
     # Import numpy only if needed/available, though usually available if soundfile is needed.
     # soundfile import will be lazy.
 
@@ -351,32 +382,8 @@ def generate_audio(text, step_index):
             except OSError:
                 pass
 
-    # 1. Chunk Text
-    # Kokoro and some APIs have limits. Target ~300 chars to be safe.
-    chunks = []
-
-    # Helper to split text by sentence delimiters
-    sentences = re.split(r'([.!?]+)', text)
-    current_chunk = ""
-
-    for i in range(0, len(sentences) - 1, 2):
-        sentence = sentences[i] + sentences[i + 1]
-        if len(current_chunk) + len(sentence) < 300:
-            current_chunk += sentence
-        else:
-            if current_chunk:
-                chunks.append(current_chunk)
-            current_chunk = sentence
-
-    # Add trailing sentence/text
-    if len(sentences) % 2 == 1:
-        current_chunk += sentences[-1]
-
-    if current_chunk:
-        chunks.append(current_chunk)
-
-    if not chunks:
-        chunks = [text]  # Fallback if split failed or empty
+    # 1. Chunk Text using shared helper
+    chunks = chunk_text(text, max_chars=300)
 
     try:
         tts = get_tts()
@@ -618,22 +625,29 @@ def generate_podcast_audio(transcript, output_filename):
     try:
         for i, (speaker, text) in enumerate(lines):
             voice = voice_map.get(speaker, TTS_VOICE_DEFAULT)
-            result, sr = tts.generate(text, voice=voice)
-            print(f"DEBUG: TTS Result Type: {type(result)}")
+            # Chunk long text to avoid TTS limits
+            text_chunks = chunk_text(text, max_chars=300)
 
-            if isinstance(result, bytes):
-                # Docker/OpenAI mode - save to temp file for ffmpeg merge
-                fd, temp_path = tempfile.mkstemp(suffix=".mp3")
-                os.close(fd)
-                with open(temp_path, 'wb') as f:
-                    f.write(result)
-                temp_files.append(temp_path)
-            else:
-                # Local mode - concatenate samples directly
-                is_local_mode = True
-                if sample_rate is None:
-                    sample_rate = sr
-                all_samples.append(result)
+            for chunk in text_chunks:
+                if not chunk.strip():
+                    continue
+
+                result, sr = tts.generate(chunk, voice=voice)
+                print(f"DEBUG: TTS Result Type: {type(result)}, chunk len: {len(chunk)}")
+
+                if isinstance(result, bytes):
+                    # Docker/OpenAI mode - save to temp file for ffmpeg merge
+                    fd, temp_path = tempfile.mkstemp(suffix=".mp3")
+                    os.close(fd)
+                    with open(temp_path, 'wb') as f:
+                        f.write(result)
+                    temp_files.append(temp_path)
+                else:
+                    # Local mode - concatenate samples directly
+                    is_local_mode = True
+                    if sample_rate is None:
+                        sample_rate = sr
+                    all_samples.append(result)
 
         if is_local_mode:
             # Local mode - concatenate samples and save directly
