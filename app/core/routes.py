@@ -255,8 +255,6 @@ def signup():
             token = create_jwe({'user_id': uid})
             if isinstance(token, bytes):
                 token = token.decode('utf-8')
-
-
             # Derive cookie security from environment, defaulting to secure in production-like setups
             secure_cookie = os.getenv("JWE_COOKIE_SECURE", "true").lower() == "true"
 
