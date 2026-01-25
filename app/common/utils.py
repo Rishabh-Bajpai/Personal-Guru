@@ -10,7 +10,6 @@ import platform
 import psutil
 from datetime import datetime
 from dotenv import load_dotenv
-from openai import OpenAI
 from app.core.exceptions import (
     MissingConfigError,
     LLMConnectionError,
@@ -19,6 +18,8 @@ from app.core.exceptions import (
     QuizValidationError,
     STTError
 )
+
+logger = logging.getLogger(__name__)
 
 load_dotenv(override=True)
 
@@ -118,18 +119,18 @@ def call_llm(prompt_or_messages, is_json=False):
 
         # Check specifically for model not found (404 from Ollama often means this)
         if response.status_code == 404:
-             try:
-                 err_body = response.json()
-                 if "model" in err_body.get('error', {}).get('message', '').lower():
-                     logger.error(f"Model not found: {LLM_MODEL_NAME}")
-                     raise LLMConnectionError(
+            try:
+                err_body = response.json()
+                if "model" in err_body.get('error', {}).get('message', '').lower():
+                    logger.error(f"Model not found: {LLM_MODEL_NAME}")
+                    raise LLMConnectionError(
                         f"Model '{LLM_MODEL_NAME}' not found. Please pull it first.",
                         endpoint=api_url,
                         error_code="LLM015", # New code for Model Not Found
                         debug_info={"model": LLM_MODEL_NAME}
-                     )
-             except (json.JSONDecodeError, AttributeError):
-                 pass
+                    )
+            except (json.JSONDecodeError, AttributeError):
+                pass
 
         response.raise_for_status()
 
@@ -157,7 +158,7 @@ def call_llm(prompt_or_messages, is_json=False):
             # Only log if user is authenticated and we are in a request context
             if current_user and current_user.is_authenticated:
                 perf_log = AIModelPerformance(
-                    user_id=current_user.userid, # Use userid from Login
+                    user_id=current_user.userid,
                     model_type='LLM',
                     model_name=LLM_MODEL_NAME,
                     latency_ms=latency_ms,
@@ -322,37 +323,19 @@ def validate_quiz_structure(quiz_data):
                     "correct_answer": correct_answer})
 
 
-def generate_audio(text, step_index):
+def chunk_text(text, max_chars=300):
     """
-    Generates audio from text using the configured OpenAI-compatible TTS (Kokoro).
-    Supports long text by chunking and merging.
+    Splits text into chunks of approximately max_chars, breaking at sentence boundaries.
+    Used to avoid TTS limits (e.g., Kokoro ~500 tokens).
     """
-    start_time = time.time()
-    static_dir = os.path.join(os.getcwd(), 'app', 'static')
-    if not os.path.exists(static_dir):
-        os.makedirs(static_dir)
-
-    # Clean up old audio
-    for filename in os.listdir(static_dir):
-        if filename.endswith('.wav') and f"step_{step_index}.wav" == filename:
-            try:
-                os.remove(os.path.join(static_dir, filename))
-            except OSError:
-                pass
-
-    # 1. Chunk Text
-    # Split by simple sentence delimiters to be safe
-    # Kokoro has a limit around 500 tokens (approx 2000 chars maybe, but 510 phonemes is small)
-    # Let's target ~300 chars to be safe.
+    import re
     chunks = []
-
-    # Helper to split text
     sentences = re.split(r'([.!?]+)', text)
     current_chunk = ""
 
     for i in range(0, len(sentences) - 1, 2):
         sentence = sentences[i] + sentences[i + 1]
-        if len(current_chunk) + len(sentence) < 300:
+        if len(current_chunk) + len(sentence) < max_chars:
             current_chunk += sentence
         else:
             if current_chunk:
@@ -369,62 +352,130 @@ def generate_audio(text, step_index):
     if not chunks:
         chunks = [text]  # Fallback if split failed or empty
 
-    # 2. Generate Segments
-    temp_files = []
+    return chunks
+
+
+def generate_audio(text, step_index):
+    """
+    Generates audio from text using the configured TTS service.
+    Supports both Docker/OpenAI and local Kokoro modes via audio_service.
+    Handles long text by chunking and merging.
+    """
+    from app.common.audio_service import get_tts
+    import tempfile
+    import subprocess
+    # Import numpy only if needed/available, though usually available if soundfile is needed.
+    # soundfile import will be lazy.
+
+    start_time = time.time()
+    static_dir = os.path.join(os.getcwd(), 'app', 'static')
+    if not os.path.exists(static_dir):
+        os.makedirs(static_dir)
+
     output_filename = os.path.join(static_dir, f"step_{step_index}.wav")
 
-    print(f"Connecting to TTS at: {TTS_BASE_URL} for {len(chunks)} chunks")
+    # Clean up old audio
+    for filename in os.listdir(static_dir):
+        if f"step_{step_index}" in filename:
+            try:
+                os.remove(os.path.join(static_dir, filename))
+            except OSError:
+                pass
+
+    # 1. Chunk Text using shared helper
+    chunks = chunk_text(text, max_chars=300)
 
     try:
-        tts_client = OpenAI(base_url=TTS_BASE_URL, api_key=OPENAI_API_KEY)
-        voice = TTS_VOICE_DEFAULT
+        tts = get_tts()
+        temp_files = []
+        sample_rate = None
 
-        for i, chunk in enumerate(chunks):
+        # 2. Generate Audio for each chunk
+        for chunk in chunks:
             if not chunk.strip():
                 continue
 
-            print(
-                f"DEBUG: Generating chunk {i+1}/{len(chunks)}, len: {len(chunk)}")
-            response = tts_client.audio.speech.create(
-                model=TTS_MODEL,
-                voice=voice,
-                input=chunk
-            )
+            result, sr = tts.generate(chunk)
 
             # Save segment to temp file
-            fd, temp_path = tempfile.mkstemp(suffix=".mp3")
+            fd, temp_path = tempfile.mkstemp(suffix=".wav")
             os.close(fd)
-            response.stream_to_file(temp_path)
+
+            if isinstance(result, bytes):
+                # Docker/OpenAI mode: result is bytes (usually mp3 or wav depending on model, let's assume valid audio bytes)
+                with open(temp_path, 'wb') as f:
+                    f.write(result)
+            else:
+                # Local/Kokoro mode: result is numpy array
+                try:
+                    import soundfile as sf
+                except ImportError:
+                    logger.error("soundfile not installed. Cannot save local audio.")
+                    return None, "soundfile dependency missing for local TTS"
+
+                sf.write(temp_path, result, sr)
+                if sample_rate is None:
+                    sample_rate = sr
+
             temp_files.append(temp_path)
 
         if not temp_files:
             return None, "Failed to generate any audio content"
 
-        # 3. Merge Audio using ffmpeg
-        list_file_fd, list_file_path = tempfile.mkstemp(suffix=".txt")
-        with os.fdopen(list_file_fd, 'w') as f:
-            for tf in temp_files:
-                f.write(f"file '{tf}'\n")
+        # 3. Merge Audio
+        # If there's only one file, just rename it to output
+        if len(temp_files) == 1:
+            if os.path.exists(output_filename):
+                os.remove(output_filename)
+            import shutil
+            shutil.move(temp_files[0], output_filename)
 
-        print("Merging audio files...")
-        cmd = [
-            "ffmpeg",
-            "-f", "concat",
-            "-safe", "0",
-            "-i", list_file_path,
-            "-c", "copy",
-            "-y",
-            output_filename
-        ]
+        else:
+            # multiple files, merge
+            list_file_fd, list_file_path = tempfile.mkstemp(suffix=".txt")
+            with os.fdopen(list_file_fd, 'w') as f:
+                for tf in temp_files:
+                    # Escape paths for ffmpeg concat demuxer
+                    # Windows paths need careful escaping, but forward slashes usually work or simple quoting
+                    safe_path = tf.replace("\\", "/")
+                    f.write(f"file '{safe_path}'\n")
 
-        result = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-        os.remove(list_file_path)
+            cmd = [
+                "ffmpeg",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", list_file_path,
+                "-c", "copy",
+                "-y",
+                output_filename
+            ]
 
-        if result.returncode != 0:
-            return None, f"ffmpeg merge failed: {result.stderr.decode()}"
+            try:
+                merge_result = subprocess.run(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
+                if merge_result.returncode != 0:
+                    # Fallback to simple concatenation if ffmpeg fails (mostly for simple formats)
+                    logger.warning(f"ffmpeg merge failed: {merge_result.stderr.decode()}. Trying direct concatenation.")
+                    with open(output_filename, 'wb') as outfile:
+                        for tf in temp_files:
+                            with open(tf, 'rb') as infile:
+                                outfile.write(infile.read())
+
+                os.remove(list_file_path)
+            except (OSError, FileNotFoundError):
+                 # FFmpeg not installed, fallback to concat
+                with open(output_filename, 'wb') as outfile:
+                    for tf in temp_files:
+                        with open(tf, 'rb') as infile:
+                            outfile.write(infile.read())
+
+        # Cleanup temp files
+        for tf in temp_files:
+            if os.path.exists(tf):
+                os.remove(tf)
 
         # --- Logging Hook for TTS ---
         try:
@@ -435,31 +486,24 @@ def generate_audio(text, step_index):
             from flask_login import current_user
 
             if current_user and current_user.is_authenticated:
-                # Use total text length as proxy for input tokens
-                input_len = len(text)
                 perf_log = AIModelPerformance(
                     user_id=current_user.userid,
                     model_type='TTS',
-                    model_name=TTS_MODEL, # Hardcoded as per implementation
+                    model_name=TTS_MODEL,
                     latency_ms=latency_ms,
-                    input_tokens=input_len,
-                    output_tokens=0 # Audio output doesn't measure in tokens easily
+                    input_tokens=len(text),
+                    output_tokens=0
                 )
                 db.session.add(perf_log)
                 db.session.commit()
         except Exception as e:
-             logging.warning(f"Failed to log TTS performance: {e}")
+            logging.warning(f"Failed to log TTS performance: {e}")
 
         return f"step_{step_index}.wav", None
 
     except Exception as e:
         print(f"Error calling TTS: {e}")
         return None, f"Error calling TTS: {e}"
-    finally:
-        # Cleanup temp segments
-        for tf in temp_files:
-            if os.path.exists(tf):
-                os.remove(tf)
 
 
 def reconcile_plan_steps(current_steps, current_plan, new_plan):
@@ -492,7 +536,7 @@ def reconcile_plan_steps(current_steps, current_plan, new_plan):
 
             # Ensure title is populated from plan if missing in data (e.g. placeholder)
             if not step_data.get('title'):
-                 step_data['title'] = step_text
+                step_data['title'] = step_text
 
             # Update step_index to match new position
             step_data['step_index'] = i
@@ -525,9 +569,14 @@ def get_user_context():
 
 def generate_podcast_audio(transcript, output_filename):
     """
-    Generates a full podcast audio file from a transcript using OpenAI-compatible TTS.
+    Generates a full podcast audio file from a transcript using the configured TTS service.
+    Supports both Docker/OpenAI and local Kokoro modes via audio_service.
     """
+    from app.common.audio_service import get_tts
+    # soundfile and numpy are imported lazily to avoid strict dependency in CI
+
     start_time = time.time()
+
     # 1. Parse Transcript
     lines = []
     print("Parsing transcript...")
@@ -535,6 +584,8 @@ def generate_podcast_audio(transcript, output_filename):
         if ':' in line:
             parts = line.split(':', 1)
             speaker = parts[0].strip()
+            # Normalize speaker name (remove parentheticals like "(Host)")
+            speaker = re.sub(r'\(.*?\)', '', speaker).strip()
             content = parts[1].strip()
             if content:
                 lines.append((speaker, content))
@@ -542,22 +593,15 @@ def generate_podcast_audio(transcript, output_filename):
     if not lines:
         return False, "No dialogue lines found in transcript"
 
-    # 2. Setup TTS
-    print(f"Connecting to TTS at: {TTS_BASE_URL}")
+    # 2. Get TTS Service
     try:
-        tts_client = OpenAI(base_url=TTS_BASE_URL, api_key=OPENAI_API_KEY)
+        tts = get_tts()
     except Exception as e:
-        return False, f"Failed to initialize TTS client: {e}"
+        return False, f"Failed to get TTS service: {e}"
 
     # 3. Assign Voices
-    # Use configured podcast voices first
-    # Host is typically speaker 1, Guest is speaker 2 in many transcripts,
-    # but we map based on unique speakers found.
-    # We will try to map the first speaker found to Host if feasible, or just map them.
-
     unique_speakers = sorted(list(set(s for s, t in lines)))
-
-    # Create valid voice list starting with our configured ones
+    print(f"DEBUG: Detected unique speakers: {unique_speakers}")
     available_voices = [
         TTS_VOICE_PODCAST_HOST,
         TTS_VOICE_PODCAST_GUEST,
@@ -566,71 +610,98 @@ def generate_podcast_audio(transcript, output_filename):
         'bf_emma', 'bf_isabella',
         'bm_george', 'bm_lewis'
     ]
-
-    # Filter out duplicates if defaults are in fallback
     available_voices = list(dict.fromkeys(available_voices))
-
-    voice_map = {speaker: available_voices[i % len(
-        available_voices)] for i, speaker in enumerate(unique_speakers)}
+    voice_map = {speaker: available_voices[i % len(available_voices)]
+                 for i, speaker in enumerate(unique_speakers)}
 
     # 4. Generate Audio Segments
     temp_files = []
+    all_samples = []
+    sample_rate = None
+    is_local_mode = False
+
     print("--- Synthesizing Audio Segments ---")
 
     try:
         for i, (speaker, text) in enumerate(lines):
-            voice = voice_map.get(speaker, 'alloy')
-            # Debug: Generating: {speaker} ({voice}) -> '{text[:20]}...'
+            voice = voice_map.get(speaker, TTS_VOICE_DEFAULT)
+            # Chunk long text to avoid TTS limits
+            text_chunks = chunk_text(text, max_chars=300)
 
-            response = tts_client.audio.speech.create(
-                model=TTS_MODEL,
-                voice=voice,
-                input=text
-            )
+            for chunk in text_chunks:
+                if not chunk.strip():
+                    continue
 
-            # Save segment to temp file
-            # Use .wav extension to ensure ffmpeg treats it correctly if
-            # headers are weird, though usually .mp3 from OpenAI
-            fd, temp_path = tempfile.mkstemp(suffix=".mp3")
-            os.close(fd)
-            response.stream_to_file(temp_path)
-            temp_files.append(temp_path)
+                result, sr = tts.generate(chunk, voice=voice)
+                print(f"DEBUG: TTS Result Type: {type(result)}, chunk len: {len(chunk)}")
 
-        if not temp_files:
-            return False, "Failed to generate any audio content"
+                if isinstance(result, bytes):
+                    # Docker/OpenAI mode - save to temp file for ffmpeg merge
+                    fd, temp_path = tempfile.mkstemp(suffix=".mp3")
+                    os.close(fd)
+                    with open(temp_path, 'wb') as f:
+                        f.write(result)
+                    temp_files.append(temp_path)
+                else:
+                    # Local mode - concatenate samples directly
+                    is_local_mode = True
+                    if sample_rate is None:
+                        sample_rate = sr
+                    all_samples.append(result)
 
-        # 5. Merge Audio using ffmpeg
-        # ffmpeg -i "concat:file1.mp3|file2.mp3" -c copy output.mp3 (concatenation protocol)
-        # OR using a list file for safer handling of many files
+        if is_local_mode:
+            # Local mode - concatenate samples and save directly
+            try:
+                import numpy as np
+                import soundfile as sf
+            except ImportError as e:
+                logger.error(f"Missing dependencies for local audio generation: {e}")
+                return False, f"Missing dependencies (numpy/soundfile): {e}"
 
-        list_file_fd, list_file_path = tempfile.mkstemp(suffix=".txt")
-        with os.fdopen(list_file_fd, 'w') as f:
-            for tf in temp_files:
-                f.write(f"file '{tf}'\n")
+            if all_samples:
+                combined = np.concatenate(all_samples)
+                sf.write(output_filename, combined, sample_rate)
+                print(f"Saved podcast audio to: {output_filename}")
+            else:
+                return False, "Failed to generate any audio content"
+        else:
+            # Docker/OpenAI mode - merge using ffmpeg
+            if not temp_files:
+                return False, "Failed to generate any audio content"
 
-        print("Merging audio files using ffmpeg...")
-        # ffmpeg -f concat -safe 0 -i list.txt -c copy output.mp3
-        cmd = [
-            "ffmpeg",
-            "-f", "concat",
-            "-safe", "0",
-            "-i", list_file_path,
-            "-c", "copy",
-            "-y",  # Overwrite output
-            output_filename
-        ]
+            list_file_fd, list_file_path = tempfile.mkstemp(suffix=".txt")
+            with os.fdopen(list_file_fd, 'w') as f:
+                for tf in temp_files:
+                    f.write(f"file '{tf}'\n")
 
-        result = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
+            print("Merging audio files using ffmpeg...")
+            cmd = [
+                "ffmpeg",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", list_file_path,
+                "-c", "copy",
+                "-y",
+                output_filename
+            ]
 
-        # Clean up list file
-        os.remove(list_file_path)
+            try:
+                merge_result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        if result.returncode != 0:
-            print(f"ffmpeg error: {result.stderr.decode()}")
-            return False, f"ffmpeg merge failed: {result.stderr.decode()}"
+                if merge_result.returncode != 0:
+                    print(f"ffmpeg error: {merge_result.stderr.decode()}")
+                    raise OSError("ffmpeg failed")
+
+            except (OSError, FileNotFoundError):
+                print("ffmpeg not found or failed, falling back to direct concatenation...")
+                # Fallback: Simple concatenation (works for MP3 often)
+                with open(output_filename, 'wb') as outfile:
+                    for tf in temp_files:
+                        with open(tf, 'rb') as infile:
+                            outfile.write(infile.read())
+
+            # Clean up list file
+            os.remove(list_file_path)
 
         # --- Logging Hook for Podcast TTS ---
         try:
@@ -655,7 +726,7 @@ def generate_podcast_audio(transcript, output_filename):
                 db.session.add(perf_log)
                 db.session.commit()
         except Exception as e:
-             logging.warning(f"Failed to log Podcast TTS performance: {e}")
+            logging.warning(f"Failed to log Podcast TTS performance: {e}")
 
         return True, None
 
@@ -671,22 +742,19 @@ def generate_podcast_audio(transcript, output_filename):
 
 def transcribe_audio(audio_file_path):
     """
-    Transcribes audio using an OpenAI-compatible STT service (e.g., speaches).
+    Transcribes audio using the configured STT service.
+    Supports both Docker/OpenAI and local faster-whisper modes via audio_service.
     """
+    from app.common.audio_service import get_stt
+
     start_time = time.time()
-    if not STT_BASE_URL:
-        return None, "STT service not configured"
+
+    if not os.path.exists(audio_file_path):
+        raise STTError(f"Audio file not found: {audio_file_path}")
 
     try:
-        print(f"Connecting to STT at: {STT_BASE_URL}")
-        client = OpenAI(base_url=STT_BASE_URL, api_key=OPENAI_API_KEY)
-
-        with open(audio_file_path, "rb") as audio_file:
-            transcript = client.audio.transcriptions.create(
-                model=STT_MODEL,
-                file=audio_file,
-                response_format="text"
-            )
+        stt = get_stt()
+        transcript = stt.transcribe(audio_file_path)
 
         # --- Logging Hook for STT ---
         try:
@@ -696,8 +764,7 @@ def transcribe_audio(audio_file_path):
             from app.core.models import AIModelPerformance
             from flask_login import current_user
 
-            # Use transcript length as proxy for output tokens
-            output_len = len(transcript)
+            output_len = len(transcript) if transcript else 0
 
             if current_user and current_user.is_authenticated:
                 perf_log = AIModelPerformance(
@@ -705,13 +772,13 @@ def transcribe_audio(audio_file_path):
                     model_type='STT',
                     model_name=STT_MODEL,
                     latency_ms=latency_ms,
-                    input_tokens=0, # Audio input difficult to measure in tokens
+                    input_tokens=0,
                     output_tokens=output_len
                 )
                 db.session.add(perf_log)
                 db.session.commit()
         except Exception as e:
-             logging.warning(f"Failed to log STT performance: {e}")
+            logging.warning(f"Failed to log STT performance: {e}")
 
         return transcript
     except Exception as e:
@@ -777,9 +844,9 @@ def log_telemetry(event_type: str, triggers: dict, payload: dict, installation_i
 
         # Resolve Installation ID (Non-Nullable)
         if not installation_id:
-             # Try to find any installation record (assuming single-tenant / personal use)
-             inst_record = Installation.query.first()
-             if inst_record:
+            # Try to find any installation record (assuming single-tenant / personal use)
+            inst_record = Installation.query.first()
+            if inst_record:
                 installation_id = inst_record.installation_id
 
         # If we still don't have an installation_id, we cannot log (Constraint Violation)
@@ -899,6 +966,7 @@ _update_cache = {
     "data": None
 }
 
+
 def check_for_updates(current_version):
     """
     Checks GitHub for the latest release tag.
@@ -925,7 +993,9 @@ def check_for_updates(current_version):
 
     return None
 
+
 def _fetch_github_release():
+    """Fetch the latest release from GitHub."""
     url = "https://api.github.com/repos/Rishabh-Bajpai/Personal-Guru/releases/latest"
     resp = requests.get(url, timeout=3)
     if resp.status_code == 200:
@@ -938,7 +1008,9 @@ def _fetch_github_release():
         }
     return None
 
+
 def _compare_versions(current_ver, release_data):
+    """Compare current version with latest release."""
     if not release_data:
         return None
 
@@ -948,10 +1020,10 @@ def _compare_versions(current_ver, release_data):
     # Simple semantic version comparison (assumes format 1.0.0)
     if latest_ver != curr_ver:
         return {
-             "id": -1, # Using -1 to denote system update
-             "title": f"New Update Available: {release_data['tag_name']}",
-             "message": f"A new version ({release_data['tag_name']}) is available on GitHub.",
-             "notification_type": "info",
-             "url": release_data["html_url"]
+            "id": -1,
+            "title": f"New Update Available: {release_data['tag_name']}",
+            "message": f"A new version ({release_data['tag_name']}) is available on GitHub.",
+            "notification_type": "info",
+            "url": release_data["html_url"]
         }
     return None

@@ -23,3 +23,5 @@ psutil==6.1.1
 pre-commit
 flasgger==0.9.7.1
 pyOpenSSL
+# Local Audio Dependencies (Optional - for TTS_PROVIDER=local / STT_PROVIDER=local)
+# Install separately: pip install -r requirements-local.txt

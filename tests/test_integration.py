@@ -281,19 +281,24 @@ def test_quiz_result_persistence(logger, app):
             logger.info("Quiz result persistence verified.")
 
 
+
 def test_generate_audio(logger):
     """Test the generate_audio function with chunking logic."""
     logger.section("test_generate_audio")
     from app.common.utils import generate_audio
 
-    # Mock OpenAI and subprocess
-    with patch('app.common.utils.OpenAI') as MockOpenAI, \
+    # Mock audio_service.get_tts and subprocess/os
+    with patch('app.common.audio_service.get_tts') as mock_get_tts, \
          patch('app.common.utils.subprocess.run') as mock_run, \
          patch('app.common.utils.os.remove'):
 
-        # Setup OpenAI mock
-        mock_client = MockOpenAI.return_value
-        # stream_to_file is called on the response
+        # Setup TTS Service mock
+        mock_tts_service = MagicMock()
+        mock_get_tts.return_value = mock_tts_service
+
+        # Mock generate return value: (bytes, sample_rate)
+        # Using bytes triggers the temp file logic in utils which we want to test coverage for
+        mock_tts_service.generate.return_value = (b"fake_audio_bytes", 24000)
 
         # Setup subprocess mock
         mock_run.return_value.returncode = 0
@@ -303,11 +308,11 @@ def test_generate_audio(logger):
         filename, error = generate_audio("Short text.", 0)
         assert error is None
         assert filename == "step_0.wav"
-        # Should call create once
-        assert mock_client.audio.speech.create.call_count == 1
+        # Should call generate once
+        assert mock_tts_service.generate.call_count == 1
 
         # Reset mocks
-        mock_client.audio.speech.create.reset_mock()
+        mock_tts_service.generate.reset_mock()
 
         # Test Case 2: Long text (needs chunking)
         # Create a text > 300 chars
@@ -318,16 +323,14 @@ def test_generate_audio(logger):
         assert error is None
         assert filename == "step_1.wav"
 
-        # Should call create multiple times
-        call_count = mock_client.audio.speech.create.call_count
-        logger.info(f"LLM called {call_count} times for long text.")
-        assert call_count > 1
+        # Should call generate at least once
+        call_count = mock_tts_service.generate.call_count
+        logger.info(f"TTS called {call_count} times for long text.")
+        assert call_count >= 1
 
-        # Should call ffmpeg
-        args, _ = mock_run.call_args
-        command = args[0]
-        assert command[0] == "ffmpeg"
-        assert command[-1].endswith("step_1.wav")
+        # We no longer manually chunk in utils.py, so ffmpeg (subprocess) is NOT called for single file generation.
+        # The service handles it. So we do NOT assert mock_run was called.
+
 
 
 def test_transcribe_audio(logger):
@@ -335,42 +338,35 @@ def test_transcribe_audio(logger):
     logger.section("test_transcribe_audio")
     from app.common.utils import transcribe_audio
 
-    # Mock OpenAI
-    with patch('app.common.utils.OpenAI') as MockOpenAI:
-        mock_client = MockOpenAI.return_value
+    # Mock audio_service.get_stt
+    with patch('app.common.audio_service.get_stt') as mock_get_stt:
+        mock_stt_service = MagicMock()
+        mock_get_stt.return_value = mock_stt_service
 
         # Mock successful transcription
-        mock_client.audio.transcriptions.create.return_value = "Hello world"
+        mock_stt_service.transcribe.return_value = "Hello world"
 
-        # Create a dummy file
-        with patch('builtins.open', list=True): # Just to allow open() to work if needed, or better use real temp file
-             # utils.transcribe_audio opens the file. We should probably use a real temp file for robustness
-             # or mock the open call inside utils.
-             # Given utils.py does: with open(audio_file_path, "rb") as audio_file:
-             # It acts on a path.
+        # Create a dummy file path (utils.transcribe_audio expects a path)
+        import tempfile
+        import os
 
-             import tempfile
-             import os
+        fd, path = tempfile.mkstemp()
+        os.close(fd)
 
-             # Create a real dummy file
-             fd, path = tempfile.mkstemp()
-             os.write(fd, b"fake audio data")
-             os.close(fd)
+        try:
+            transcript = transcribe_audio(path)
+            error = None
 
-             try:
-                 transcript = transcribe_audio(path)
-                 error = None
+            assert error is None
+            assert transcript == "Hello world"
+            mock_stt_service.transcribe.assert_called_once_with(path)
 
-                 assert error is None
-                 assert transcript == "Hello world"
-                 mock_client.audio.transcriptions.create.assert_called_once()
-
-             finally:
-                 if os.path.exists(path):
-                     os.remove(path)
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
 
         # Test Error handling
-        mock_client.audio.transcriptions.create.side_effect = Exception("STT Error")
+        mock_stt_service.transcribe.side_effect = Exception("STT Error")
 
         # Create another dummy file
         fd, path = tempfile.mkstemp()

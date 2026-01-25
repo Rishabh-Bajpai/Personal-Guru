@@ -285,4 +285,11 @@ def create_app(config_class=Config):
         except Exception as e:
             logger.error(f"Failed to start SyncManager: {e}")
 
+        # Initialize Audio Services (TTS/STT)
+        try:
+            from app.common.audio_service import init_audio_services
+            init_audio_services()
+        except Exception as e:
+            logger.warning(f"Audio services initialization failed: {e}")
+
     return app

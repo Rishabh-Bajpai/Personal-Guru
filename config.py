@@ -21,8 +21,16 @@ class Config:
     TTS_BASE_URL = os.environ.get('TTS_BASE_URL')
     STT_BASE_URL = os.environ.get('STT_BASE_URL')
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+    TTS_PROVIDER = os.environ.get('TTS_PROVIDER', 'externalapi')  # Options: 'native', 'externalapi'
+    STT_PROVIDER = os.environ.get('STT_PROVIDER', 'externalapi')  # Options: 'native', 'externalapi'
 
     # App Settings
     USER_BACKGROUND = os.environ.get('USER_BACKGROUND', 'a beginner')
     ENABLE_TELEMETRY_LOGGING = os.environ.get('ENABLE_TELEMETRY_LOGGING', 'True').lower() == 'true'
     SANDBOX_PATH = os.environ.get('SANDBOX_PATH') or os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data', 'sandbox')
+
+class TestConfig(Config):
+    """Configuration for running tests."""
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    WTF_CSRF_ENABLED = False

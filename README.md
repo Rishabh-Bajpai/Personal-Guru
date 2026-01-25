@@ -2,6 +2,10 @@
 
 This is a Flask-based web application that serves as a proof-of-concept for a personalized learning tool. It uses a multi-agent AI system to create an interactive learning experience tailored to the user's chosen topic.
 
+# For live demo:
+ [https://pg-demo.samosa-ai.com/](https://pg-demo.samosa-ai.com)
+Use desktop computer for the best experience.
+
 ## Features
 
 - **User Accounts:** Secure sign-up, login, and profile management.
@@ -58,7 +62,9 @@ cd Personal-Guru
 
 ### Method 1: Automatic Setup (Recommended)
 
-Best for most users. An interactive script guides you through the process, setting up the environment and dependencies for you.
+Best for most users. An interactive script guides you through the process, allowing you to choose between:
+- **Standard Mode**: Runs Database and Audio services in Docker (Best performance/features).
+- **Local Lite Mode**: Runs entirely without Docker using SQLite and local audio libraries (Easiest setup).
 
 - **Linux/Mac**: `bash scripts/installation/setup.sh`
 - **Windows**: `scripts\installation\setup.bat`
@@ -112,8 +118,14 @@ Below is a quick summary for manual setup:
       - **OpenAI**: `https://api.openai.com/v1`
       - **Gemini**: `https://generativelanguage.googleapis.com/v1beta/openai/`
     - `LLM_MODEL_NAME`: e.g., `llama3`, `gpt-4o`.
-    - `TTS_BASE_URL`: `http://localhost:8969/v1` (Replace `localhost` with your machine's actual LAN IP address if running on another machine).
-    - `STT_BASE_URL`: `http://localhost:8969/v1` (Same as TTS if using Speaches).
+    - `TTS_PROVIDER`:
+      - **`native`**: Uses built-in **Kokoro (ONNX)** library running directly in Python. (No Docker required).
+      - **`externalapi`**: Connects to an external OpenAI-compatible API (e.g., Docker container running Speaches, or actual OpenAI API).
+    - `TTS_BASE_URL`: `http://localhost:8969/v1` (Required only if `TTS_PROVIDER=externalapi`).
+    - `STT_PROVIDER`:
+      - **`native`**: Uses built-in **faster-whisper** library running in Python.
+      - **`externalapi`**: Connects to an external OpenAI-compatible API.
+    - `STT_BASE_URL`: `http://localhost:8969/v1` (Required only if `STT_PROVIDER=externalapi`).
 
 4. **Database Setup (Docker)**:
     Start the Postgres database using Docker:

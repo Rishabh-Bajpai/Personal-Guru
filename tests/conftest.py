@@ -45,14 +45,12 @@ def logger(show_llm_responses):
 @pytest.fixture
 def app():
     """Create and configure a new app instance for each test."""
-    app = create_app()
-    app.config.update({
-        "TESTING": True,
-        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        "WTF_CSRF_ENABLED": False
-    })
+    from config import TestConfig
+    app = create_app(TestConfig)
 
     with app.app_context():
+        # Import models to register them with SQLAlchemy before create_all
+        from app.core.models import User, Login, Topic, Installation
         db.create_all()
         yield app
         db.drop_all()

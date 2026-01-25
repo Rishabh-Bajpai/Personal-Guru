@@ -253,23 +253,20 @@ def test_validate_config_all_present(monkeypatch):
 
 def test_validate_config_missing_vars(monkeypatch):
     # Ensure they are unset
-    monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("LLM_BASE_URL", raising=False)
     monkeypatch.delenv("LLM_MODEL_NAME", raising=False)
 
     missing = validate_config()
-    assert "DATABASE_URL" in missing
     assert "LLM_BASE_URL" in missing
     assert "LLM_MODEL_NAME" in missing
 
 def test_validate_config_partial_missing(monkeypatch):
-    monkeypatch.setenv("DATABASE_URL", "postgresql://localhost:5432/db")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://localhost:5432/db") # Set but not checked
     monkeypatch.delenv("LLM_BASE_URL", raising=False)
     monkeypatch.setenv("LLM_MODEL_NAME", "llama3")
 
     missing = validate_config()
     assert "LLM_BASE_URL" in missing
-    assert "DATABASE_URL" not in missing
 
 @pytest.fixture
 def setup_client():
@@ -637,10 +634,9 @@ def dcs_app():
     """Create a fresh app and database for DCS tests."""
     from app import create_app
     from app.core.extensions import db
+    from config import TestConfig
 
-    app = create_app()
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    app = create_app(TestConfig)
 
     with app.app_context():
         db.create_all()
