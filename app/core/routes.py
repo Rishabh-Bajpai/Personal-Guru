@@ -671,7 +671,7 @@ def enforce_jwe_security():
     - JWE is handled here.
 
     If the request is state-changing (POST, PUT, DELETE, PATCH) and the user is authenticated,
-    we REQUIRE a valid JWE cookie that matches the current user.
+    we REQUIRE a valid JWE token (from the X-JWE-Token header, form field 'jwe_token', or JSON body field 'jwe_token') that matches the current user.
     """
     if request.method in ['POST', 'PUT', 'DELETE', 'PATCH']:
         if current_user.is_authenticated:
