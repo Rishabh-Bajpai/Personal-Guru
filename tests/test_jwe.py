@@ -2,7 +2,6 @@ import pytest
 from app import create_app
 from app.common.auth import create_jwe, decrypt_jwe
 from app.core.models import Login
-import json
 
 @pytest.fixture
 def app():
