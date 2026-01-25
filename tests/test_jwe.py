@@ -254,3 +254,37 @@ def test_jwe_injection_in_templates(client, app):
         assert match, "JWE Meta tag not found in Chapter template"
         token = match.group(1)
         assert token and token.strip() != '', "JWE Token is empty"
+
+def test_jwe_identity_verification(client, app):
+    """Test that a JWE token from one user cannot be used by another."""
+    with app.app_context():
+        from app.core.extensions import db
+        # Create two distinct users
+        u1 = Login(userid='user_a', username='usera', installation_id='i1')
+        u1.set_password('pass')
+        u2 = Login(userid='user_b', username='userb', installation_id='i1')
+        u2.set_password('pass')
+        db.session.add_all([u1, u2])
+        db.session.commit()
+
+    # 1. Login as User A to generate a valid token
+    client.post('/login', data={'username': 'usera', 'password': 'pass'})
+
+    with app.app_context():
+        token_bytes = create_jwe({'user_id': 'user_a'})
+        token_a = token_bytes.decode('utf-8')
+
+    # Logout User A
+    client.get('/logout')
+
+    # 2. Login as User B
+    client.post('/login', data={'username': 'userb', 'password': 'pass'})
+
+    # 3. Attempt to use Token A while logged in as User B
+    response = client.post('/api/feedback',
+        json={'feedback_type': 'general_feedback', 'rating': 5, 'comment': 'Good'},
+        headers={'X-JWE-Token': token_a}
+    )
+
+    # Should be 403 Forbidden (Identity Mismatch)
+    assert response.status_code == 403

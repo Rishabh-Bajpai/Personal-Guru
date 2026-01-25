@@ -145,7 +145,8 @@ def inject_jwe():
                 token = token.decode('utf-8')
             return dict(jwe_token=token)
         except Exception:
-            pass
+            from flask import current_app
+            current_app.logger.exception("Failed to inject JWE token")
     return dict(jwe_token='')
 
 @main_bp.route('/login', methods=['GET', 'POST'])
@@ -248,7 +249,7 @@ def signup():
         except Exception:
             pass # Telemetry failures must not block user flow; ignore logging errors.
 
-        return response
+        return redirect(url_for('main.user_profile', new_user='true'))
 
     return render_template('signup.html')
 
@@ -655,6 +656,10 @@ def enforce_jwe_security():
     we REQUIRE a valid JWE token (from the X-JWE-Token header, form field 'jwe_token', or JSON body field 'jwe_token') that matches the current user.
     """
     if request.method in ['POST', 'PUT', 'DELETE', 'PATCH']:
+        # Exempt login and signup routes from JWE check to allow account switching
+        if request.endpoint in ['main.login', 'main.signup']:
+            return
+
         if current_user.is_authenticated:
             # Check for JWE Header (first priority)
             token = request.headers.get('X-JWE-Token')
