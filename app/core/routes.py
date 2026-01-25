@@ -706,8 +706,7 @@ def enforce_jwe_security():
                 abort(401, description="Invalid Security Token")
 
             # Verify identity matches
-            # payload is expected to be {'user_id': ...}
-            print("JWE Identity Mismatch")
-            from flask import abort
-            print("JWE Identity Mismatch")
-            abort(403, description="Token Identity Mismatch")
+            if payload.get('user_id') != current_user.userid:
+                 from flask import abort
+                 print(f"JWE Identity Mismatch: payload={payload.get('user_id')} vs current={current_user.userid}")
+                 abort(403, description="Token Identity Mismatch")
