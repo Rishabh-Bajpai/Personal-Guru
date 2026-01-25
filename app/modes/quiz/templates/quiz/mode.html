@@ -23,6 +23,7 @@
 <h1>Quiz on {{ topic_name }}</h1>
 <form method="post" action="{{ url_for('quiz.submit_quiz', topic_name=topic_name) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <input type="hidden" name="jwe_token" value="{{ jwe_token if jwe_token else '' }}">
     {% for i in range(quiz_data.questions|length) %}
     {% set question_index = loop.index0 %}
     <div class="question">

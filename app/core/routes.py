@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for
 from app.common.storage import get_all_topics, load_topic
 from app.common.utils import log_telemetry
+from app.common.auth import create_jwe, decrypt_jwe
 from flask_login import login_user, logout_user, login_required, current_user
 import os
 
@@ -113,7 +114,7 @@ def favicon():
     return current_app.send_static_file('favicon.ico')
 
 
-@main_bp.context_processor
+@main_bp.app_context_processor
 def inject_notifications():
     """Make notifications available to all templates."""
     from app.common.utils import check_for_updates
@@ -130,6 +131,22 @@ def inject_notifications():
 
     return dict(system_notifications=[])
 
+
+@main_bp.app_context_processor
+def inject_jwe():
+    """
+    Inject JWE token into all templates.
+    This allows the frontend to read it from a meta tag and send it in headers.
+    """
+    if current_user.is_authenticated:
+        try:
+            token = create_jwe({'user_id': current_user.userid})
+            if isinstance(token, bytes):
+                token = token.decode('utf-8')
+            return dict(jwe_token=token)
+        except Exception:
+            pass
+    return dict(jwe_token='')
 
 @main_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -161,6 +178,7 @@ def login():
             pass # Telemetry failures must not block user flow; ignore logging errors.
 
         return redirect(url_for('main.index'))
+
 
     return render_template('login.html')
 
@@ -230,7 +248,28 @@ def signup():
         except Exception:
             pass # Telemetry failures must not block user flow; ignore logging errors.
 
-        return redirect(url_for('main.user_profile', new_user='true'))
+        response = redirect(url_for('main.user_profile', new_user='true'))
+
+        # Issue JWE Token
+        try:
+            token = create_jwe({'user_id': uid})
+            if isinstance(token, bytes):
+                token = token.decode('utf-8')
+
+
+            # Derive cookie security from environment, defaulting to secure in production-like setups
+            secure_cookie = os.getenv("JWE_COOKIE_SECURE", "true").lower() == "true"
+
+            response.set_cookie(
+                'jwe_token',
+                token,
+                httponly=True,
+                secure=secure_cookie,
+            )
+        except Exception as e:
+            print(f"Failed to issue JWE: {e}")
+
+        return response
 
     return render_template('signup.html')
 
@@ -624,3 +663,51 @@ def submit_feedback():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@main_bp.before_app_request
+def enforce_jwe_security():
+    """
+    Enforce Dual Token Security (CSRF + JWE) for state-changing requests.
+
+    - CSRF is handled by Flask-WTF globally.
+    - JWE is handled here.
+
+    If the request is state-changing (POST, PUT, DELETE, PATCH) and the user is authenticated,
+    we REQUIRE a valid JWE cookie that matches the current user.
+    """
+    if request.method in ['POST', 'PUT', 'DELETE', 'PATCH']:
+        if current_user.is_authenticated:
+            # Check for JWE Header (first priority)
+            token = request.headers.get('X-JWE-Token')
+
+            # Fallback 1: Check form data (for standard POST submissions)
+            if not token and request.form:
+                token = request.form.get('jwe_token')
+
+            # Fallback 2: Check JSON body (if content-type is json)
+            if not token and request.is_json:
+                try:
+                    data = request.get_json(silent=True)
+                    if data and isinstance(data, dict):
+                        token = data.get('jwe_token')
+                except Exception:
+                    pass
+
+            if not token:
+                # Telemetry or log could go here
+                from flask import abort
+                print(f"Missing Security Token. Path: {request.path}, Method: {request.method}")
+                abort(401, description="Missing Security Token")
+
+            payload = decrypt_jwe(token)
+            if not payload:
+                from flask import abort
+                print("Invalid X-JWE-Token")
+                abort(401, description="Invalid Security Token")
+
+            # Verify identity matches
+            # payload is expected to be {'user_id': ...}
+            print("JWE Identity Mismatch")
+            from flask import abort
+            print("JWE Identity Mismatch")
+            abort(403, description="Token Identity Mismatch")

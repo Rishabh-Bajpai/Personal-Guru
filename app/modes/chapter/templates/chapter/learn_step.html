@@ -34,6 +34,7 @@
                 action="{{ url_for('chapter.update_plan', topic_name=topic.name) }}">
                 <h3>Modify the Plan</h3>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="jwe_token" value="{{ jwe_token if jwe_token else '' }}">
                 <!-- Pass current step index to return to it -->
                 <input type="hidden" name="current_step_index" value="{{ step_index }}">
                 <textarea id="plan-modification-input" name="comment" maxlength="255"
@@ -116,6 +117,7 @@
                 <form action="{{ url_for('chapter.assess_step', topic_name=topic.name, step_index=step_index) }}"
                     method="post" onsubmit="showLoader()">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <input type="hidden" name="jwe_token" value="{{ jwe_token if jwe_token else '' }}">
                     {% for question in question_data.questions %}
                     <div class="question">
                         <p>{{ loop.index }}. {{ question.question }}</p>
@@ -175,6 +177,7 @@
                     <form action="{{ url_for('chapter.reset_quiz', topic_name=topic.name, step_index=step_index) }}"
                         method="post" style="margin-top: 20px;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <input type="hidden" name="jwe_token" value="{{ jwe_token if jwe_token else '' }}">
                         <button type="submit" class="button secondary">Retry Quiz</button>
                     </form>
                 </div>
