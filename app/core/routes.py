@@ -689,6 +689,8 @@ def enforce_jwe_security():
                     if data and isinstance(data, dict):
                         token = data.get('jwe_token')
                 except Exception:
+                    # Best-effort JSON parsing: if this fails, we simply fall back to
+                    # other token sources (headers or form data). Do not block the request.
                     pass
 
             if not token:
