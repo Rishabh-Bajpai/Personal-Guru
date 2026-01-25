@@ -101,7 +101,7 @@ If you prefer full control over your environment or want to contribute, please c
 Below is a quick summary for manual setup:
 
 1. **Create Environment**: `conda create -n Personal-Guru python=3.11 && conda activate Personal-Guru`
-2. **Install Dependencies**: `pip install -r requirements.txt`
+2. **Install Dependencies**: `pip install -e .` (or `pip install -e .[local]` for local features)
 3. **Setup Environment Variables**:
     Creating a `.env` file is **optional** as the application has a built-in UI Wizard to help you configure these settings. However, you can configure it manually:
 

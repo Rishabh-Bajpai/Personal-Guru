@@ -123,11 +123,17 @@ else
 fi
 
 # Install Dependencies
-echo "📦 Installing Dependencies from requirements.txt..."
+echo "📦 Installing Dependencies from pyproject.toml..."
 ENV_PYTHON=$(conda run -n Personal-Guru which python)
 
 # Core Install
-$ENV_PYTHON -m pip install -r requirements.txt
+if [[ "$local_mode" =~ ^[Yy]$ ]]; then
+    # Local Mode includes local dependencies (TTS/STT)
+    $ENV_PYTHON -m pip install -e ".[local]"
+else
+    # Standard Mode (Core only)
+    $ENV_PYTHON -m pip install -e "."
+fi
 
 # Optional TTS
 # Docker TTS Setup

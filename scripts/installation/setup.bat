@@ -100,8 +100,12 @@ call conda activate Personal-Guru
 if %errorlevel% neq 0 goto :env_activate_fail
 
 REM Install Dependencies
-echo [INFO] Installing Dependencies from requirements.txt...
-call pip install -r requirements.txt
+echo [INFO] Installing Dependencies from pyproject.toml...
+if /i "%local_mode%"=="y" (
+    call pip install -e .[local]
+) else (
+    call pip install -e .
+)
 if %errorlevel% neq 0 echo [WARNING] Some dependencies may have failed to install.
 
 REM Optional TTS
