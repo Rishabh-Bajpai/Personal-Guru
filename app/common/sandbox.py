@@ -41,7 +41,18 @@ class Sandbox:
             self,
             base_path=None,
             sandbox_id=None):
-        self.base_path = base_path if base_path else Config.SANDBOX_PATH
+        if base_path:
+            self.base_path = base_path
+        else:
+            try:
+                from flask import current_app
+                if current_app:
+                    self.base_path = current_app.config.get('SANDBOX_PATH', Config.SANDBOX_PATH)
+                else:
+                    self.base_path = Config.SANDBOX_PATH
+            except ImportError:
+                 self.base_path = Config.SANDBOX_PATH
+
         self.id = sandbox_id if sandbox_id else str(uuid.uuid4())
         self.path = os.path.join(self.base_path, self.id)
         self.venv_path = os.path.join(self.path, "venv")

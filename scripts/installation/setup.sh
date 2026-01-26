@@ -25,46 +25,67 @@ check_env_exists() {
 
 # --- Main Script ---
 
-check_ffmpeg() {
+check_system_deps() {
+    echo "🔍 Checking system dependencies..."
+    PACKAGES="ffmpeg"
+
+    # Check for pkg-config (required for building av)
+    if ! command -v pkg-config &> /dev/null; then
+        echo "⚠️  pkg-config is missing."
+        PACKAGES="$PACKAGES pkg-config"
+    fi
+
+    # Check for FFmpeg (runtime)
     if ! command -v ffmpeg &> /dev/null; then
-        echo "⚠️  FFmpeg is not installed. It is required for audio processing."
-        read -p "Do you want to install it now? [y/N]: " install_ffmpeg
-        if [[ "$install_ffmpeg" =~ ^[Yy]$ ]]; then
-            if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-                if command -v apt &> /dev/null; then
-                    echo "📦 Installing FFmpeg via apt..."
-                    sudo apt update && sudo apt install -y ffmpeg
-                elif command -v dnf &> /dev/null; then
-                    echo "📦 Installing FFmpeg via dnf..."
-                    sudo dnf install -y ffmpeg
-                elif command -v pacman &> /dev/null; then
-                    echo "📦 Installing FFmpeg via pacman..."
-                    sudo pacman -S ffmpeg
-                else
-                    echo "❌ Could not detect package manager. Please install FFmpeg manually."
-                fi
-            elif [[ "$OSTYPE" == "darwin"* ]]; then
-                 if command -v brew &> /dev/null; then
-                    echo "📦 Installing FFmpeg via Homebrew..."
-                    brew install ffmpeg
-                 else
-                    echo "❌ Homebrew not found. Please install FFmpeg manually."
-                 fi
+        echo "⚠️  FFmpeg is missing."
+    else
+        echo "✅ FFmpeg is installed."
+        # If we just need runtime ffmpeg, we might be good, but for building 'av' we need dev libs on Linux
+    fi
+
+    # On Linux, usually need dev headers for av build if no wheel
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        # We can't easily check for libs existence without pkg-config or dpkg, so we might just ensure they are installed if user agrees
+        echo "⚠️  On Linux, 'av' python package requires FFmpeg development libraries and pkg-config to build."
+    fi
+
+    echo "Do you want to install missing system dependencies (ffmpeg, pkg-config, dev libs)? [y/N]: "
+    read -p "" install_deps
+
+    if [[ "$install_deps" =~ ^[Yy]$ ]]; then
+        if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+            if command -v apt &> /dev/null; then
+                echo "📦 Installing System Dependencies via apt..."
+                sudo apt update && sudo apt install -y ffmpeg pkg-config libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libswscale-dev libswresample-dev libavfilter-dev
+            elif command -v dnf &> /dev/null; then
+                echo "📦 Installing System Dependencies via dnf..."
+                sudo dnf install -y ffmpeg pkgconfig ffmpeg-devel
+            elif command -v pacman &> /dev/null; then
+                echo "📦 Installing System Dependencies via pacman..."
+                sudo pacman -S ffmpeg pkgconf
             else
-                echo "❌ OS not supported for auto-install. Please install FFmpeg manually."
+                echo "❌ Could not detect package manager. Please install ffmpeg and pkg-config manually."
             fi
+        elif [[ "$OSTYPE" == "darwin"* ]]; then
+             if command -v brew &> /dev/null; then
+                echo "📦 Installing Dependencies via Homebrew..."
+                brew install ffmpeg pkg-config
+             else
+                echo "❌ Homebrew not found. Please install ffmpeg and pkg-config manually."
+             fi
         else
-            echo "⚠️  Skipping FFmpeg installation. Audio features may not work."
+            echo "❌ OS not supported for auto-install. Please install dependencies manually."
         fi
     else
-        echo "✅ FFmpeg is already installed."
+        echo "⚠️  Skipping system dependency installation. 'pip install' may fail if wheels are missing."
     fi
 }
 
 # --- Main Script ---
 
 check_conda
-check_ffmpeg
+check_conda
+check_system_deps
 
 # Interactive Prompts
 
