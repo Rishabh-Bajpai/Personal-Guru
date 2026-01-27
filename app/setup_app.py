@@ -69,15 +69,18 @@ def create_setup_app():
                 return "Missing required fields", 400
 
             # --- Capture Audio Settings ---
+            # Default to 'native' for exe, 'externalapi' for dev mode
+            is_frozen = getattr(sys, 'frozen', False)
+            default_audio_provider = 'native' if is_frozen else 'externalapi'
             config.update({
-                'TTS_PROVIDER': request.form.get('tts_provider', 'api'),
+                'TTS_PROVIDER': request.form.get('tts_provider', default_audio_provider),
                 'TTS_BASE_URL': request.form.get('tts_url', ''),
                 'TTS_MODEL': request.form.get('tts_model', 'tts-1'),
                 'TTS_LANGUAGE': request.form.get('tts_language', 'en'),
                 'TTS_VOICE_DEFAULT': request.form.get('tts_voice_default', 'af_bella'),
                 'TTS_VOICE_PODCAST_HOST': request.form.get('tts_voice_host', 'am_michael'),
                 'TTS_VOICE_PODCAST_GUEST': request.form.get('tts_voice_guest', 'af_nicole'),
-                'STT_PROVIDER': request.form.get('stt_provider', 'api'),
+                'STT_PROVIDER': request.form.get('stt_provider', default_audio_provider),
                 'STT_BASE_URL': request.form.get('stt_url', ''),
                 'STT_MODEL': request.form.get('stt_model', 'Systran/faster-whisper-medium.en')
             })
@@ -203,7 +206,7 @@ def create_setup_app():
                 </html>
                 """
 
-        return render_template('setup.html', defaults=defaults)
+        return render_template('setup.html', defaults=defaults, is_frozen=getattr(sys, 'frozen', False))
 
     @app.route('/favicon.ico')
     def favicon():

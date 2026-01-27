@@ -7,6 +7,7 @@ from flask_login import LoginManager
 from flasgger import Swagger
 import logging
 import os
+import sys
 
 csrf = CSRFProtect()
 sess = Session()
@@ -34,6 +35,13 @@ def create_app(config_class=Config):
     csrf.init_app(app)
     sess.init_app(app)  # Initialize server-side sessions
     login_manager.init_app(app)
+
+    # Create database tables if they don't exist
+    # This is essential for first-run scenarios (especially from frozen .exe)
+    with app.app_context():
+        # Import models to register them with SQLAlchemy before create_all
+        from app.core import models  # noqa: F401
+        db.create_all()
 
     # Initialize Swagger
     swagger_config = {
@@ -276,8 +284,15 @@ def create_app(config_class=Config):
     # to avoid double initialization and incorrect config.
     # In production (without reloader), WERKZEUG_RUN_MAIN won't be set, so we also start.
     run_main_env = os.environ.get('WERKZEUG_RUN_MAIN')
-    if run_main_env == 'true':
-        # Child process of reloader - this is the main server process
+    is_frozen = getattr(sys, 'frozen', False)  # PyInstaller sets this
+    
+    # Start sync if:
+    # 1. We're in the reloader child process (WERKZEUG_RUN_MAIN='true'), OR
+    # 2. We're in production/frozen mode (no reloader, WERKZEUG_RUN_MAIN not set)
+    should_start_sync = (run_main_env == 'true') or (run_main_env is None and is_frozen)
+    
+    if should_start_sync:
+        # Main server process - start background services
         try:
             from app.common.dcs import SyncManager
             sync_manager = SyncManager(app)

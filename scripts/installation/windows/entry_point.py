@@ -36,6 +36,19 @@ if 'SANDBOX_PATH' not in os.environ:
 env_path = os.path.join(base_dir, '.env')
 load_dotenv(env_path, override=True)
 
+# In frozen mode, default to native TTS/STT (bundled Kokoro/Whisper)
+# This is set AFTER loading .env so we can override invalid values
+if getattr(sys, 'frozen', False):
+    # Valid providers are 'native' or 'externalapi'
+    # If not set or set to invalid value (like 'external-api'), default to native
+    tts_provider = os.environ.get('TTS_PROVIDER', '').lower()
+    stt_provider = os.environ.get('STT_PROVIDER', '').lower()
+    
+    if tts_provider not in ('native', 'externalapi'):
+        os.environ['TTS_PROVIDER'] = 'native'
+    if stt_provider not in ('native', 'externalapi'):
+        os.environ['STT_PROVIDER'] = 'native'
+
 # Now import app modules
 # We need to make sure the root directory is in sys.path if running from script
 if not getattr(sys, 'frozen', False):
@@ -116,9 +129,14 @@ def main():
         print(f"Opening browser at {url}")
         webbrowser.open(url)
 
-    # Start browser in a separate thread
-    import threading
-    threading.Thread(target=open_browser, args=(port,), daemon=True).start()
+    # Start browser in a separate thread, but only if not already opened
+    # This prevents duplicate tabs when Flask restarts
+    if os.environ.get('PG_BROWSER_OPENED') != '1':
+        os.environ['PG_BROWSER_OPENED'] = '1'
+        import threading
+        threading.Thread(target=open_browser, args=(port,), daemon=True).start()
+    else:
+        print("Browser already opened in previous run, skipping.")
     
     app.run(
         debug=debug_mode,

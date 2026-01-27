@@ -69,11 +69,72 @@ class Sandbox:
             return
 
         os.makedirs(self.path, exist_ok=True)
+        
+        # Find the Python executable to use for creating venv
+        python_exe = self._find_python_executable()
+        if not python_exe:
+            logger.error("No Python interpreter found. Code execution sandbox will not work.")
+            logger.error("Please ensure Python is installed and in PATH.")
+            # Create a marker file to indicate venv creation failed
+            with open(os.path.join(self.path, ".no_python"), "w") as f:
+                f.write("No Python interpreter found for sandbox creation")
+            return
+        
         # Create venv
-        logger.info(f"Creating virtual environment in {self.venv_path}...")
-        subprocess.run([sys.executable, "-m", "venv",
-                       self.venv_path], check=True)
-        logger.info("Virtual environment created.")
+        logger.info(f"Creating virtual environment in {self.venv_path} using {python_exe}...")
+        try:
+            subprocess.run([python_exe, "-m", "venv", self.venv_path], check=True)
+            logger.info("Virtual environment created.")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to create virtual environment: {e}")
+            with open(os.path.join(self.path, ".venv_failed"), "w") as f:
+                f.write(f"Failed to create venv: {e}")
+
+    def _find_python_executable(self):
+        """
+        Find a suitable Python executable for creating virtual environments.
+        
+        In frozen mode (PyInstaller), sys.executable points to the .exe itself,
+        so we need to find the system Python installation.
+        
+        Returns:
+            str: Path to Python executable, or None if not found.
+        """
+        # If not frozen, use sys.executable (normal development mode)
+        if not getattr(sys, 'frozen', False):
+            return sys.executable
+        
+        logger.info("Frozen mode detected. Searching for system Python...")
+        
+        # Try common Python executable names via PATH
+        python_names = ['python', 'python3', 'python3.11', 'python3.12', 'python3.13']
+        for name in python_names:
+            python_path = shutil.which(name)
+            if python_path:
+                # Verify it's not pointing back to our frozen exe
+                if python_path.lower() != sys.executable.lower():
+                    logger.info(f"Found system Python: {python_path}")
+                    return python_path
+        
+        # Try common Windows Python installation paths
+        if os.name == 'nt':
+            common_paths = [
+                os.path.expandvars(r'%LOCALAPPDATA%\Programs\Python\Python313\python.exe'),
+                os.path.expandvars(r'%LOCALAPPDATA%\Programs\Python\Python312\python.exe'),
+                os.path.expandvars(r'%LOCALAPPDATA%\Programs\Python\Python311\python.exe'),
+                os.path.expandvars(r'%LOCALAPPDATA%\Programs\Python\Python310\python.exe'),
+                r'C:\Python313\python.exe',
+                r'C:\Python312\python.exe',
+                r'C:\Python311\python.exe',
+                r'C:\Python310\python.exe',
+            ]
+            for path in common_paths:
+                if os.path.exists(path):
+                    logger.info(f"Found system Python: {path}")
+                    return path
+        
+        logger.warning("No system Python interpreter found.")
+        return None
 
     def install_deps(self, libraries):
         """Installs dependencies in the virtual environment."""
