@@ -35,6 +35,7 @@ env/
 ENV/
 env.bak/
 venv.bak/
+.build_venv/
 .python-version
 __pypackages__/
 Personal-Guru/

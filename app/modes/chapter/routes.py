@@ -7,11 +7,18 @@ from app.common.agents import FeedbackAgent, PlannerAgent
 from .agent import ChapterTeachingAgent, AssessorAgent, PodcastAgent
 from app.common.utils import generate_audio
 from markdown_it import MarkdownIt
-from weasyprint import HTML
 import datetime
 from app.common.agents import CodeExecutionAgent
 from app.common.sandbox import Sandbox
 from app.common.utils import log_telemetry
+
+# WeasyPrint requires GTK native libraries - make it optional
+try:
+    from weasyprint import HTML
+    WEASYPRINT_AVAILABLE = True
+except (ImportError, OSError) as e:
+    WEASYPRINT_AVAILABLE = False
+    print(f"Warning: WeasyPrint not available (PDF export disabled): {e}")
 
 # Instantiate agents
 teacher = ChapterTeachingAgent()
@@ -570,6 +577,10 @@ def export_topic(topic_name):
 @chapter_bp.route('/export/<topic_name>/pdf')
 def export_topic_pdf(topic_name):
     """Export the topic content as a PDF file."""
+    if not WEASYPRINT_AVAILABLE:
+        return ("PDF export is not available. WeasyPrint requires GTK libraries "
+                "which are not installed. Please use Markdown export instead."), 503
+    
     topic_data = load_topic(topic_name)
     if not topic_data:
         return "Topic not found", 404

@@ -3,9 +3,16 @@ from . import quiz_bp
 from app.common.storage import load_topic, save_topic
 from app.common.agents import FeedbackAgent
 from .agent import QuizAgent
-from weasyprint import HTML
 import datetime
 from app.common.utils import log_telemetry
+
+# WeasyPrint requires GTK native libraries - make it optional
+try:
+    from weasyprint import HTML
+    WEASYPRINT_AVAILABLE = True
+except (ImportError, OSError) as e:
+    WEASYPRINT_AVAILABLE = False
+    print(f"Warning: WeasyPrint not available (PDF export disabled): {e}")
 
 quiz_agent = QuizAgent()
 feedback_agent = FeedbackAgent()
@@ -185,6 +192,10 @@ def update_time(topic_name):
 
 @quiz_bp.route('/<topic_name>/export/pdf')
 def export_quiz_pdf(topic_name):
+    if not WEASYPRINT_AVAILABLE:
+        return ("PDF export is not available. WeasyPrint requires GTK libraries "
+                "which are not installed. Please export as HTML instead."), 503
+    
     topic_data = load_topic(topic_name)
     quiz_results = topic_data.get('last_quiz_result') if topic_data else None
 

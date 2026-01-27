@@ -40,11 +40,16 @@ local = [
     "misaki[en]",
     "faster-whisper==1.0.3",
     "soundfile",
+    "pillow",
 ]
 
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+namespaces = false
 
 [tool.ruff]
 exclude = ["tests"]
