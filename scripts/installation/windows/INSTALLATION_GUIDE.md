@@ -55,7 +55,7 @@ conda activate personal_guru_py311
 
 ### Step 2: Clone the Repository
 ```powershell
-git clone https://github.com/yourusername/Personal-Guru.git
+git clone https://github.com/Rishabh-Bajpai/Personal-Guru.git
 cd Personal-Guru
 ```
 
