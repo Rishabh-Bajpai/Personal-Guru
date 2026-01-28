@@ -2,7 +2,14 @@ from flask import render_template, request, make_response
 from . import flashcard_bp
 from app.common.storage import load_topic, save_topic
 from .agent import FlashcardTeachingAgent
-from weasyprint import HTML
+
+# WeasyPrint requires GTK native libraries - make it optional
+try:
+    from weasyprint import HTML
+    WEASYPRINT_AVAILABLE = True
+except (ImportError, OSError) as e:
+    WEASYPRINT_AVAILABLE = False
+    print(f"Warning: WeasyPrint not available (PDF export disabled): {e}")
 
 teacher = FlashcardTeachingAgent()
 
@@ -177,6 +184,10 @@ def update_progress(topic_name):
 @flashcard_bp.route('/<topic_name>/export/pdf')
 def export_pdf(topic_name):
     """Export flashcards as a PDF."""
+    if not WEASYPRINT_AVAILABLE:
+        return ("PDF export is not available. WeasyPrint requires GTK libraries "
+                "which are not installed."), 503
+
     topic_data = load_topic(topic_name)
     if not topic_data:
         return "Topic not found", 404

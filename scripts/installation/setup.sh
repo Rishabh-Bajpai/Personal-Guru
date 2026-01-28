@@ -25,46 +25,66 @@ check_env_exists() {
 
 # --- Main Script ---
 
-check_ffmpeg() {
+check_system_deps() {
+    echo "🔍 Checking system dependencies..."
+    PACKAGES="ffmpeg"
+
+    # Check for pkg-config (required for building av)
+    if ! command -v pkg-config &> /dev/null; then
+        echo "⚠️  pkg-config is missing."
+        PACKAGES="$PACKAGES pkg-config"
+    fi
+
+    # Check for FFmpeg (runtime)
     if ! command -v ffmpeg &> /dev/null; then
-        echo "⚠️  FFmpeg is not installed. It is required for audio processing."
-        read -p "Do you want to install it now? [y/N]: " install_ffmpeg
-        if [[ "$install_ffmpeg" =~ ^[Yy]$ ]]; then
-            if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-                if command -v apt &> /dev/null; then
-                    echo "📦 Installing FFmpeg via apt..."
-                    sudo apt update && sudo apt install -y ffmpeg
-                elif command -v dnf &> /dev/null; then
-                    echo "📦 Installing FFmpeg via dnf..."
-                    sudo dnf install -y ffmpeg
-                elif command -v pacman &> /dev/null; then
-                    echo "📦 Installing FFmpeg via pacman..."
-                    sudo pacman -S ffmpeg
-                else
-                    echo "❌ Could not detect package manager. Please install FFmpeg manually."
-                fi
-            elif [[ "$OSTYPE" == "darwin"* ]]; then
-                 if command -v brew &> /dev/null; then
-                    echo "📦 Installing FFmpeg via Homebrew..."
-                    brew install ffmpeg
-                 else
-                    echo "❌ Homebrew not found. Please install FFmpeg manually."
-                 fi
+        echo "⚠️  FFmpeg is missing."
+    else
+        echo "✅ FFmpeg is installed."
+        # If we just need runtime ffmpeg, we might be good, but for building 'av' we need dev libs on Linux
+    fi
+
+    # On Linux, usually need dev headers for av build if no wheel
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        # We can't easily check for libs existence without pkg-config or dpkg, so we might just ensure they are installed if user agrees
+        echo "⚠️  On Linux, 'av' python package requires FFmpeg development libraries and pkg-config to build."
+    fi
+
+    echo "Do you want to install missing system dependencies (ffmpeg, pkg-config, dev libs)? [y/N]: "
+    read -p "" install_deps
+
+    if [[ "$install_deps" =~ ^[Yy]$ ]]; then
+        if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+            if command -v apt &> /dev/null; then
+                echo "📦 Installing System Dependencies via apt..."
+                sudo apt update && sudo apt install -y ffmpeg pkg-config libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libswscale-dev libswresample-dev libavfilter-dev
+            elif command -v dnf &> /dev/null; then
+                echo "📦 Installing System Dependencies via dnf..."
+                sudo dnf install -y ffmpeg pkgconfig ffmpeg-devel
+            elif command -v pacman &> /dev/null; then
+                echo "📦 Installing System Dependencies via pacman..."
+                sudo pacman -S ffmpeg pkgconf
             else
-                echo "❌ OS not supported for auto-install. Please install FFmpeg manually."
+                echo "❌ Could not detect package manager. Please install ffmpeg and pkg-config manually."
             fi
+        elif [[ "$OSTYPE" == "darwin"* ]]; then
+             if command -v brew &> /dev/null; then
+                echo "📦 Installing Dependencies via Homebrew..."
+                brew install ffmpeg pkg-config
+             else
+                echo "❌ Homebrew not found. Please install ffmpeg and pkg-config manually."
+             fi
         else
-            echo "⚠️  Skipping FFmpeg installation. Audio features may not work."
+            echo "❌ OS not supported for auto-install. Please install dependencies manually."
         fi
     else
-        echo "✅ FFmpeg is already installed."
+        echo "⚠️  Skipping system dependency installation. 'pip install' may fail if wheels are missing."
     fi
 }
 
 # --- Main Script ---
 
 check_conda
-check_ffmpeg
+check_system_deps
 
 # Interactive Prompts
 
@@ -104,14 +124,12 @@ if [[ "$mode_choice" == "2" ]]; then
     # Let's append overrides to the end of .env
     echo "" >> .env
     echo "# Local Mode Overrides" >> .env
-    echo "TTS_PROVIDER=native" >> .env
-    echo "STT_PROVIDER=native" >> .env
-    echo "✅ Updated .env for Local Mode (Default: Kokoro + Faster Whisper)."
+    echo "✅ Updated .env for Local Mode."
+
 elif [[ "$mode_choice" == "1" ]]; then
     local_mode="n"
     echo "✅ Standard Mode selected."
     echo ""
-    read -p "Install Speech Services (TTS/STT) via Docker? (Large download) [y/N]: " install_tts
 fi
 
 # Environment Creation
@@ -123,33 +141,25 @@ else
 fi
 
 # Install Dependencies
-echo "📦 Installing Dependencies from requirements.txt..."
+echo "📦 Installing Dependencies from pyproject.toml..."
 ENV_PYTHON=$(conda run -n Personal-Guru which python)
 
 # Core Install
-$ENV_PYTHON -m pip install -r requirements.txt
+if [[ "$local_mode" =~ ^[Yy]$ ]]; then
+    # Local Mode includes local dependencies (TTS/STT)
+    $ENV_PYTHON -m pip install -e ".[local]"
+else
+    # Standard Mode (Core only) -> Now enforcing dev deps for everyone per requirement
+    echo "📦 Installing development dependencies..."
+    $ENV_PYTHON -m pip install -e ".[dev]"
 
-# Optional TTS
-# Docker TTS Setup
-if [[ "$install_tts" =~ ^[Yy]$ ]]; then
-    if command -v docker &> /dev/null; then
-        echo "🎤 Starting TTS Server (Speaches/Kokoro)..."
-        docker compose up -d speaches
-
-        echo "⏳ Waiting for TTS Server to start (15s)..."
-        sleep 15
-
-        echo "⬇️  Downloading Kokoro-82M model..."
-        docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
-
-        echo "⬇️  Downloading Faster Whisper Medium model (STT)..."
-        docker compose exec speaches uv tool run speaches-cli model download Systran/faster-whisper-medium.en
-
-        echo "✅ TTS Setup Complete."
-    else
-        echo "❌ Docker not found. Cannot set up TTS server."
-    fi
+    # Install pre-commit hooks
+    echo "🪝 Installing pre-commit hooks..."
+    $ENV_PYTHON -m pre-commit install
 fi
+
+# Optional TTS (Removed)
+
 
 # Database Setup
 echo ""

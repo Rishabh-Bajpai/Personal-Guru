@@ -16,7 +16,7 @@ Thank you for your interest in contributing to Personal Guru! We welcome contrib
    ```bash
    conda create -n Personal-Guru python=3.11
    conda activate Personal-Guru
-   pip install -r requirements.txt
+   pip install -e .[dev]
    pre-commit install
    ```
 

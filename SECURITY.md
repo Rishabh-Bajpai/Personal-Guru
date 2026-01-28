@@ -49,7 +49,7 @@ Personal Guru is designed to run locally with privacy in mind:
 1. **Keep Dependencies Updated**
 
    ```bash
-   pip install --upgrade -r requirements.txt
+   pip install --upgrade .
    ```
 
 2. **Use Strong Database Credentials**
