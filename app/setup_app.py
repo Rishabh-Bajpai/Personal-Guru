@@ -102,6 +102,15 @@ def create_setup_app():
                     except Exception as e:
                         print(f"--- SETUP WARNING: Failed to download STT models: {e}")
 
+                # --- Initialize Shared Sandbox ---
+                print("--- SETUP: Initializing Shared Sandbox environment ---")
+                try:
+                    from app.common.sandbox import Sandbox, SHARED_SANDBOX_ID
+                    Sandbox(sandbox_id=SHARED_SANDBOX_ID)
+                    print("--- SETUP: Shared Sandbox Ready ---")
+                except Exception as e:
+                     print(f"--- SETUP WARNING: Failed to initialize shared sandbox: {e}")
+
             except Exception as e:
                 print(f"--- SETUP: Error during model pre-load: {e}")
 

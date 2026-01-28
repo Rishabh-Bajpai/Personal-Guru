@@ -20,15 +20,31 @@ if not logger.handlers:
     logger.addHandler(handler)
 
 
+SHARED_SANDBOX_ID = "shared_env"
+
+
 def cleanup_old_sandboxes(base_path=None):
-    """Removes the entire sandbox directory to clean up old sessions."""
+    """Removes the entire sandbox directory to clean up old sessions, except the shared env."""
     if base_path is None:
         base_path = Config.SANDBOX_PATH
 
     if os.path.exists(base_path):
         try:
             logger.info(f"Cleaning up old sandboxes at: {base_path}")
-            shutil.rmtree(base_path)
+            # Iterate over items in the base_path
+            for item in os.listdir(base_path):
+                item_path = os.path.join(base_path, item)
+                # Skip the shared environment
+                if item == SHARED_SANDBOX_ID:
+                    logger.info(f"Skipping cleanup for shared sandbox: {item}")
+                    continue
+                
+                if os.path.isdir(item_path):
+                    try:
+                        shutil.rmtree(item_path)
+                        logger.info(f"Removed sandbox: {item}")
+                    except Exception as e:
+                        logger.error(f"Failed to remove sandbox {item}: {e}")
             logger.info("Sandbox cleanup complete.")
         except Exception as e:
             logger.error(f"Failed to clean up sandbox directory: {e}")

@@ -47,10 +47,10 @@ def mode(topic_name):
     topic_data = load_topic(topic_name)
 
     # Initialize Persistent Sandbox
-    sandbox_id = session.get('sandbox_id')
-    # If exists, reuse. If None, create new.
-    sandbox = Sandbox(sandbox_id=sandbox_id)
-    session['sandbox_id'] = sandbox.id
+    from app.common.sandbox import Sandbox, SHARED_SANDBOX_ID
+    # Always use the shared environment
+    sandbox = Sandbox(sandbox_id=SHARED_SANDBOX_ID)
+    # session['sandbox_id'] = sandbox.id  # No longer needed to store in session
 
     # If topic exists and has a plan, go directly to learning
     # If topic exists and has a plan, go directly to learning
@@ -683,12 +683,15 @@ def execute_code():
     dependencies = enhanced_data.get('dependencies', [])
 
     # 2. Run in Sandbox
-    sandbox_id = session.get('sandbox_id')
-    sandbox = Sandbox(sandbox_id=sandbox_id)
+    from app.common.sandbox import Sandbox, SHARED_SANDBOX_ID
+    sandbox = Sandbox(sandbox_id=SHARED_SANDBOX_ID)
 
-    # Ensure ID is in session (if it was lost or new)
-    if not sandbox_id:
-        session['sandbox_id'] = sandbox.id
+    # Ensure ID is in session (if it was lost or new) - Not strictly needed if ID is constant, 
+    # but harmless to keep if other parts rely on it (though we are removing session usage).
+    # Actually, removing session usage for ID is cleaner.
+    
+    # if not sandbox_id:
+    #     session['sandbox_id'] = sandbox.id
 
     try:
         # Install deps (basic caching could be used here in future)
