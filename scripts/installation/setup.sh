@@ -84,7 +84,6 @@ check_system_deps() {
 # --- Main Script ---
 
 check_conda
-check_conda
 check_system_deps
 
 # Interactive Prompts
