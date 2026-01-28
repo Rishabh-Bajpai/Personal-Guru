@@ -52,6 +52,7 @@ jobs:
         run: python -m pytest -m unit
 
       - name: Run Integration Tests
+        if: success() || failure()
         env:
           RUN_INTEGRATION_TESTS: "1"
           LLM_BASE_URL: "http://localhost:11434/v1"
