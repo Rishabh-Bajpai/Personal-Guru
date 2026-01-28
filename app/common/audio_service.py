@@ -7,6 +7,7 @@ backed by either Docker/OpenAI or local models (Kokoro/faster-whisper).
 Services are initialized once at app startup based on environment configuration.
 """
 import os
+import sys
 import logging
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple, Union
@@ -120,92 +121,10 @@ class OpenAISTT(STTService):
 # LOCAL IMPLEMENTATIONS
 # =============================================================================
 
-class KokoroTTS(TTSService):
-    """TTS using local Kokoro ONNX model."""
+# KokoroTTS removed as per configuration change
 
-    def __init__(self, default_voice: str = "af_bella"):
-        from kokoro_onnx import Kokoro
-        from misaki import en, espeak
 
-        logger.info("Loading Kokoro TTS model (downloading on first run)...")
-        self.default_voice = default_voice
 
-        # Define model paths (V1.0 Standard)
-        model_dir = os.path.join(os.getcwd(), 'data', 'models')
-        os.makedirs(model_dir, exist_ok=True)
-
-        onnx_path = os.path.join(model_dir, "kokoro-v1.0.onnx")
-        voices_path = os.path.join(model_dir, "voices-v1.0.bin")
-
-        # GitHub Release URLs (v1.0)
-        base_url = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0"
-        onnx_url = f"{base_url}/kokoro-v1.0.onnx"
-        voices_url = f"{base_url}/voices-v1.0.bin"
-
-        # Download if missing
-        if not os.path.exists(onnx_path):
-            logger.info(f"Downloading model to {onnx_path}...")
-            self._download_file(onnx_url, onnx_path)
-
-        if not os.path.exists(voices_path):
-            logger.info(f"Downloading voices to {voices_path}...")
-            self._download_file(voices_url, voices_path)
-
-        # Initialize G2P (Graph-to-Phoneme)
-        # Suppress phonemizer warnings (usually harmless word count mismatches)
-        logging.getLogger("phonemizer").setLevel(logging.ERROR)
-
-        try:
-            # Try with espeak fallback if available, else standard
-            fallback = espeak.EspeakFallback(british=False)
-            self.g2p = en.G2P(trf=False, british=False, fallback=fallback)
-        except Exception:
-            logger.info("eSpeak not available, using pure Misaki G2P")
-            self.g2p = en.G2P(trf=False, british=False, fallback=None)
-
-        try:
-            self.kokoro = Kokoro(onnx_path, voices_path)
-            logger.info("Kokoro TTS initialized successfully (V1.0)")
-        except Exception as e:
-            logger.error(f"Failed to initialize Kokoro: {e}")
-            raise
-
-    def _download_file(self, url, path):
-        """
-        Helper to download a file from a URL to a local path.
-
-        Args:
-            url: Source URL.
-            path: Destination file path.
-        """
-        import requests
-        try:
-            with requests.get(url, stream=True) as r:
-                r.raise_for_status()
-                with open(path, 'wb') as f:
-                    for chunk in r.iter_content(chunk_size=8192):
-                        f.write(chunk)
-        except Exception as e:
-            logger.error(f"Failed to download {url}: {e}")
-            raise
-
-    def generate(self, text: str, voice: Optional[str] = None) -> Tuple[any, int]:
-        """
-        Generate audio using local Kokoro model.
-
-        Args:
-            text: Text to synthesize.
-            voice: Voice ID to use (defaults to 'af_bella').
-
-        Returns:
-            Tuple: (audio_samples, sample_rate). Samples are numpy array.
-        """
-        voice = voice or self.default_voice
-        # Convert text to phonemes first using Misaki
-        phonemes, _ = self.g2p(text)
-        # Generate audio from phonemes
-        samples, sample_rate = self.kokoro.create(phonemes, voice=voice, speed=1.0, is_phonemes=True)
-        return samples, sample_rate
 
 
 class WhisperSTT(STTService):
@@ -213,13 +132,36 @@ class WhisperSTT(STTService):
 
     def __init__(self, model_size: str = "medium"):
         from faster_whisper import WhisperModel
-        import torch
+        
+        device = "cpu"
+        compute_type = "int8"
+        
+        try:
+            import torch
+            if torch.cuda.is_available():
+                device = "cuda"
+                compute_type = "float16"
+        except ImportError:
+            pass # Use defaults (cpu/int8)
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        compute_type = "float16" if device == "cuda" else "int8"
+        # Determine base directory for model storage
+        if getattr(sys, 'frozen', False):
+            base_dir = os.path.dirname(sys.executable)
+        else:
+            # Assumes running from project root or similar structure
+            # If running via 'python run.py', getcwd() is usually root.
+            # But let's be safe and use file relative path logic if getcwd isn't reliable?
+            # Actually, standard practice for this app seems to be relying on GetCwd for dev, or relative paths.
+            # Let's use the same logic as entry_point if possible, or just os.getcwd() if we trust it.
+            # safer:
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+        model_dir = os.path.join(base_dir, 'data', 'models', 'whisper')
+        os.makedirs(model_dir, exist_ok=True)
 
         logger.info(f"Loading faster-whisper {model_size} on {device}...")
-        self.model = WhisperModel(model_size, device=device, compute_type=compute_type)
+        logger.info(f"Model path: {model_dir}")
+        self.model = WhisperModel(model_size, device=device, compute_type=compute_type, download_root=model_dir)
         logger.info("Whisper STT initialized successfully")
 
     def transcribe(self, audio_path: str) -> str:
@@ -261,23 +203,12 @@ def init_audio_services():
     logger.info(f"Initializing audio services: TTS={tts_provider}, STT={stt_provider}")
 
     # Initialize TTS
+    # Initialize TTS
     if tts_provider == "native":
+        logger.warning("Native TTS (Kokoro) has been removed. Falling back to externalapi.")
+        tts_provider = "externalapi"
 
-        try:
-            logger.info("Loading Native Kokoro TTS model (in-process)...")
-            _tts_service = KokoroTTS(
-                default_voice=os.getenv("TTS_VOICE_DEFAULT", "af_bella")
-            )
-        except ImportError as e:
-            logger.error(f"Kokoro not installed: {e}")
-            logger.warning("Install with: pip install kokoro-onnx")
-            raise
-        except Exception as e:
-            logger.error(f"Failed to initialize Kokoro TTS: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
-    elif tts_provider == "externalapi":
+    if tts_provider == "externalapi":
         # API mode (OpenAI compatible) - docker or external api
         _tts_service = OpenAITTS(
             base_url=os.getenv("TTS_BASE_URL", "http://localhost:8969/v1"),

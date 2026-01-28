@@ -66,14 +66,12 @@ if "%mode_choice%"=="2" (
     )
     echo. >> .env
     echo # Local Mode Overrides >> .env
-    echo TTS_PROVIDER=native >> .env
-    echo STT_PROVIDER=native >> .env
-    echo [INFO] Updated .env for Local Mode (Default: Kokoro + Faster Whisper).
+    echo [INFO] Updated .env for Local Mode.
+
 ) else (
     echo [INFO] Standard Mode selected.
     set local_mode=n
     echo.
-    set /p install_tts="Install Speech Services (TTS/STT) dependencies? (Large download) [y/N]: "
 )
 
 REM Check if environment already exists
@@ -108,21 +106,8 @@ if /i "%local_mode%"=="y" (
 )
 if %errorlevel% neq 0 echo [WARNING] Some dependencies may have failed to install.
 
-REM Optional TTS
-if /i not "%install_tts%"=="y" goto :skip_tts
-echo.
-echo [WARNING] High-quality TTS is best run via Docker (see deployment guide).
-echo          Local installation of TTS on Windows is experimental.
-echo [INFO] Starting TTS Server (Speaches/Kokoro)...
-docker compose up -d speaches
-echo [INFO] Waiting for TTS Server to start (15s)...
-timeout /t 15 /nobreak
-echo [INFO] Downloading Kokoro-82M model...
-docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
-echo [INFO] Downloading Faster Whisper Medium model (STT)...
-docker compose exec speaches uv tool run speaches-cli model download Systran/faster-whisper-medium.en
-echo [SUCCESS] TTS Setup Complete.
-:skip_tts
+REM Optional TTS (Removed from setup)
+
 
 REM Install GTK3 for WeasyPrint (required for PDF generation on Windows)
 echo.

@@ -125,14 +125,12 @@ if [[ "$mode_choice" == "2" ]]; then
     # Let's append overrides to the end of .env
     echo "" >> .env
     echo "# Local Mode Overrides" >> .env
-    echo "TTS_PROVIDER=native" >> .env
-    echo "STT_PROVIDER=native" >> .env
-    echo "✅ Updated .env for Local Mode (Default: Kokoro + Faster Whisper)."
+    echo "✅ Updated .env for Local Mode."
+
 elif [[ "$mode_choice" == "1" ]]; then
     local_mode="n"
     echo "✅ Standard Mode selected."
     echo ""
-    read -p "Install Speech Services (TTS/STT) via Docker? (Large download) [y/N]: " install_tts
 fi
 
 # Environment Creation
@@ -156,27 +154,8 @@ else
     $ENV_PYTHON -m pip install -e "."
 fi
 
-# Optional TTS
-# Docker TTS Setup
-if [[ "$install_tts" =~ ^[Yy]$ ]]; then
-    if command -v docker &> /dev/null; then
-        echo "🎤 Starting TTS Server (Speaches/Kokoro)..."
-        docker compose up -d speaches
+# Optional TTS (Removed)
 
-        echo "⏳ Waiting for TTS Server to start (15s)..."
-        sleep 15
-
-        echo "⬇️  Downloading Kokoro-82M model..."
-        docker compose exec speaches uv tool run speaches-cli model download speaches-ai/Kokoro-82M-v1.0-ONNX
-
-        echo "⬇️  Downloading Faster Whisper Medium model (STT)..."
-        docker compose exec speaches uv tool run speaches-cli model download Systran/faster-whisper-medium.en
-
-        echo "✅ TTS Setup Complete."
-    else
-        echo "❌ Docker not found. Cannot set up TTS server."
-    fi
-fi
 
 # Database Setup
 echo ""

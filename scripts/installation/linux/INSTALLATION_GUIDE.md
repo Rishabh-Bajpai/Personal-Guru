@@ -14,11 +14,15 @@ The AppImage **does not** contain the database or AI models. Before running the 
 1.  **PostgreSQL Database**:
     *   Must be running locally or defined in the config.
     *   **Extension Required**: `pgvector` must be installed and enabled on the database.
-2.  **Ollama**:
-    *   Must be running (default `http://localhost:11434`).
-    *   Models should be pulled (e.g., `llama3`, `mistral`).
-3.  **API Keys** (Optional but recommended):
-    *   OpenAI API Key (for specific agents).
+2.  **LLM Provider** (Required):
+    *   **Local**: [Ollama](https://ollama.com) or [LM Studio](https://lmstudio.ai/) (running locally).
+    *   **Cloud**: OpenAI, Google Gemini, or compatible APIs.
+    *   Configure your choice in the Setup Wizard.
+3.  **Text-to-Speech (TTS)**:
+    *   **External API Required**: The application now exclusively uses OpenAI-compatible APIs for TTS.
+    *   You can use OpenAI, or a self-hosted alternative (like `speaches` or `f5-tts`) that provides an OpenAI-compatible endpoint.
+4.  **API Keys** (Optional but recommended):
+    *   OpenAI API Key (for specific agents or TTS).
     *   YouTube Data API Key (Reel mode).
 
 > **Note**: On first launch, the Setup Wizard will open in your browser to help you configure these connections.

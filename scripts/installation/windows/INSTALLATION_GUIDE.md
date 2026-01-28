@@ -6,17 +6,20 @@ The `PersonalGuru.exe` is a standalone executable for Windows 10/11 (64-bit).
 It bundles:
 *   **The Application Code**: Core logic, web interface, and agents.
 *   **Python Dependencies**: Flask, SQLAlchemy, WeasyPrint, etc.
-*   **Local AI Models** (optional): Kokoro TTS, Faster Whisper STT.
+*   **Local AI Models**: Faster Whisper STT (models downloaded to `data/models/whisper` on first use). **Note**: TTS requires an external API.
 
 ## 🛠️ User Requirements
 The executable **does not** contain the database or AI models. Before running the application, the user must set up:
 
-1.  **Ollama** (Required for AI features):
-    *   Download and install from [ollama.com](https://ollama.com).
-    *   Must be running (default `http://localhost:11434`).
-    *   Pull required models (e.g., `ollama pull llama3`, `ollama pull mistral`).
-2.  **API Keys** (Optional but recommended):
-    *   OpenAI API Key (for GPT-based agents).
+1.  **LLM Provider** (Required):
+    *   **Local**: [Ollama](https://ollama.com) or [LM Studio](https://lmstudio.ai/) (running locally).
+    *   **Cloud**: OpenAI, Google Gemini, or compatible APIs.
+    *   Configure your choice in the Setup Wizard.
+2.  **Text-to-Speech (TTS)**:
+    *   **External API Required**: The application uses OpenAI-compatible APIs for TTS.
+    *   Configure your provider (OpenAI, or local Docker alternatives like `speaches`) in the Setup Wizard.
+3.  **API Keys** (Optional but recommended):
+    *   OpenAI API Key (for GPT-based agents or TTS).
     *   YouTube Data API Key (for Reel mode).
 
 > **Note**: On first launch, the Setup Wizard will open in your browser to help you configure these connections.
@@ -125,6 +128,7 @@ When running `PersonalGuru.exe`, the following files/folders are created in the 
 |-------------|-------------|
 | `site.db` | SQLite database storing user data, settings, and content |
 | `data/` | Application data directory |
+| `data/models/whisper/` | Directory where Local STT models are stored |
 | `data/sandbox/` | Temporary files for document processing |
 | `data/flask_session/` | Server-side session storage |
 | `.env` | Configuration file (created by Setup Wizard) |

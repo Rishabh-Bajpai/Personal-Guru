@@ -40,14 +40,17 @@ load_dotenv(env_path, override=True)
 # This is set AFTER loading .env so we can override invalid values
 if getattr(sys, 'frozen', False):
     # Valid providers are 'native' or 'externalapi'
-    # If not set or set to invalid value (like 'external-api'), default to native
-    tts_provider = os.environ.get('TTS_PROVIDER', '').lower()
-    stt_provider = os.environ.get('STT_PROVIDER', '').lower()
+    # Default to externalapi for TTS as native option is removed, but native for STT
+    tts_provider = os.environ.get('TTS_PROVIDER', 'externalapi').lower()
+    stt_provider = os.environ.get('STT_PROVIDER', 'native').lower()
     
-    if tts_provider not in ('native', 'externalapi'):
-        os.environ['TTS_PROVIDER'] = 'native'
-    if stt_provider not in ('native', 'externalapi'):
-        os.environ['STT_PROVIDER'] = 'native'
+    # Enforce externalapi for TTS
+    if tts_provider != 'externalapi':
+        os.environ['TTS_PROVIDER'] = 'externalapi'
+        
+    # STT can technically still be native (Whisper) if not removed, but user context implies cleaning up "local TTS (Kokoro)".
+    # I will stick to TTS enforcement primarily, but if the user wants to remove "local TTS from configuration", I should ensure it's not selected.
+
 
 # Now import app modules
 # We need to make sure the root directory is in sys.path if running from script
