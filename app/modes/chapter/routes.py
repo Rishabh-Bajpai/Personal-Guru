@@ -10,6 +10,9 @@ from markdown_it import MarkdownIt
 import datetime
 from app.common.agents import CodeExecutionAgent
 from app.common.utils import log_telemetry
+import logging
+
+logger = logging.getLogger(__name__)
 
 # WeasyPrint requires GTK native libraries - make it optional
 try:
@@ -17,7 +20,7 @@ try:
     WEASYPRINT_AVAILABLE = True
 except (ImportError, OSError) as e:
     WEASYPRINT_AVAILABLE = False
-    print(f"Warning: WeasyPrint not available (PDF export disabled): {e}")
+    logger.warning(f"Warning: WeasyPrint not available (PDF export disabled): {e}")
 
 # Instantiate agents
 teacher = ChapterTeachingAgent()
