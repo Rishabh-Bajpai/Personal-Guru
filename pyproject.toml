@@ -25,9 +25,6 @@ dependencies = [
     "pyOpenSSL",
     "Authlib==1.4.0",
     "cryptography==42.0.5",
-    "faster-whisper==1.0.3",
-    "soundfile",
-    "pillow",
 ]
 
 [project.optional-dependencies]
@@ -38,7 +35,11 @@ dev = [
     "pre-commit",
     "pydoc-markdown==4.8.2",
 ]
-local = []
+local = [
+    "faster-whisper==1.0.3",
+    "soundfile",
+    "pillow",
+]
 
 [build-system]
 requires = ["setuptools", "wheel"]

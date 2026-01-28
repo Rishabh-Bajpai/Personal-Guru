@@ -404,10 +404,10 @@
                                 <label for="tts_provider">TTS Provider</label>
                                 <select id="tts_provider" name="tts_provider" onchange="toggleAudioSettings()">
                                     <option value="externalapi" {{ 'selected' if
-                                        defaults.get('TTS_PROVIDER', 'native' if is_frozen else 'externalapi')=='externalapi' else '' }}>Docker /
-                                        External API{% if not is_frozen %} (Default){% endif %}</option>
-                                    <option value="native" {{ 'selected' if defaults.get('TTS_PROVIDER', 'native' if is_frozen else 'externalapi'
-                                        )=='native' else '' }}>Local Library (No Docker){% if is_frozen %} (Default){% endif %}</option>
+                                        defaults.get('TTS_PROVIDER', 'externalapi')=='externalapi' else '' }}>Docker /
+                                        External API (Default)</option>
+                                    <option value="native" {{ 'selected' if defaults.get('TTS_PROVIDER', 'externalapi'
+                                        )=='native' else '' }}>Local Library (No Docker)</option>
                                 </select>
                                 <div class="hint">Local mode downloads ~300MB model on first use.</div>
                             </div>
