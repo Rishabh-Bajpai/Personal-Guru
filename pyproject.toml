@@ -1,3 +1,53 @@
+[project]
+name = "personal-guru"
+version = "0.1.0"
+description = "A personal guru application"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "Flask==3.1.0",
+    "Flask-Session==0.8.0",
+    "python-dotenv==1.0.1",
+    "requests==2.32.3",
+    "WeasyPrint==63.1",
+    "markdown-it-py==3.0.0",
+    "google-api-python-client==2.159.0",
+    "flask-sqlalchemy==3.1.1",
+    "pgvector==0.3.6",
+    "flask-migrate==4.0.7",
+    "flask-wtf==1.2.2",
+    "psycopg2-binary==2.9.10",
+    "flask-login==0.6.3",
+    "openai==2.14.0",
+    "gunicorn==23.0.0",
+    "psutil==6.1.1",
+    "flasgger==0.9.7.1",
+    "pyOpenSSL",
+    "Authlib==1.4.0",
+    "cryptography==42.0.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "pytest-mock==3.14.0",
+    "pytest-cov",
+    "pre-commit",
+    "pydoc-markdown==4.8.2",
+]
+local = [
+    "faster-whisper==1.0.3",
+    "soundfile",
+    "pillow",
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+namespaces = false
 
 [tool.ruff]
 exclude = ["tests"]

@@ -101,7 +101,19 @@ If you prefer full control over your environment or want to contribute, please c
 Below is a quick summary for manual setup:
 
 1. **Create Environment**: `conda create -n Personal-Guru python=3.11 && conda activate Personal-Guru`
-2. **Install Dependencies**: `pip install -r requirements.txt`
+2. **Install Dependencies**: `pip install -e .` (or `pip install -e .[local]` for local features)
+    > **Linux Users**: If you encounter errors with `pip install -e .[local]` (e.g., "pkg-config is required"), install the necessary system libraries first:
+    > ```bash
+    > # Tip: Deactivate conda first if you see "ModuleNotFoundError: No module named 'apt_pkg'"
+    > conda deactivate
+    > sudo apt update && sudo apt install -y pkg-config libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libswscale-dev libswresample-dev libavfilter-dev
+    > conda activate Personal-Guru
+    > ```
+    > **Tip (Save Space)**: If you don't have an NVIDIA GPU, you can avoid downloading ~1GB of CUDA libraries by installing the CPU-only version of PyTorch first:
+    > ```bash
+    > pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+    > pip install -e .[local]
+    > ```
 3. **Setup Environment Variables**:
     Creating a `.env` file is **optional** as the application has a built-in UI Wizard to help you configure these settings. However, you can configure it manually:
 

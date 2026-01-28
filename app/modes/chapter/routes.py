@@ -7,11 +7,20 @@ from app.common.agents import FeedbackAgent, PlannerAgent
 from .agent import ChapterTeachingAgent, AssessorAgent, PodcastAgent
 from app.common.utils import generate_audio
 from markdown_it import MarkdownIt
-from weasyprint import HTML
 import datetime
 from app.common.agents import CodeExecutionAgent
-from app.common.sandbox import Sandbox
 from app.common.utils import log_telemetry
+import logging
+
+logger = logging.getLogger(__name__)
+
+# WeasyPrint requires GTK native libraries - make it optional
+try:
+    from weasyprint import HTML
+    WEASYPRINT_AVAILABLE = True
+except (ImportError, OSError) as e:
+    WEASYPRINT_AVAILABLE = False
+    logger.warning(f"Warning: WeasyPrint not available (PDF export disabled): {e}")
 
 # Instantiate agents
 teacher = ChapterTeachingAgent()
@@ -40,10 +49,10 @@ def mode(topic_name):
     topic_data = load_topic(topic_name)
 
     # Initialize Persistent Sandbox
-    sandbox_id = session.get('sandbox_id')
-    # If exists, reuse. If None, create new.
-    sandbox = Sandbox(sandbox_id=sandbox_id)
-    session['sandbox_id'] = sandbox.id
+    from app.common.sandbox import Sandbox, SHARED_SANDBOX_ID
+    # Always use the shared environment
+    _ = Sandbox(sandbox_id=SHARED_SANDBOX_ID)
+    # session['sandbox_id'] = sandbox.id  # No longer needed to store in session
 
     # If topic exists and has a plan, go directly to learning
     # If topic exists and has a plan, go directly to learning
@@ -570,6 +579,10 @@ def export_topic(topic_name):
 @chapter_bp.route('/export/<topic_name>/pdf')
 def export_topic_pdf(topic_name):
     """Export the topic content as a PDF file."""
+    if not WEASYPRINT_AVAILABLE:
+        return ("PDF export is not available. WeasyPrint requires GTK libraries "
+                "which are not installed. Please use Markdown export instead."), 503
+
     topic_data = load_topic(topic_name)
     if not topic_data:
         return "Topic not found", 404
@@ -672,12 +685,15 @@ def execute_code():
     dependencies = enhanced_data.get('dependencies', [])
 
     # 2. Run in Sandbox
-    sandbox_id = session.get('sandbox_id')
-    sandbox = Sandbox(sandbox_id=sandbox_id)
+    from app.common.sandbox import Sandbox, SHARED_SANDBOX_ID
+    sandbox = Sandbox(sandbox_id=SHARED_SANDBOX_ID)
 
-    # Ensure ID is in session (if it was lost or new)
-    if not sandbox_id:
-        session['sandbox_id'] = sandbox.id
+    # Ensure ID is in session (if it was lost or new) - Not strictly needed if ID is constant,
+    # but harmless to keep if other parts rely on it (though we are removing session usage).
+    # Actually, removing session usage for ID is cleaner.
+
+    # if not sandbox_id:
+    #     session['sandbox_id'] = sandbox.id
 
     try:
         # Install deps (basic caching could be used here in future)

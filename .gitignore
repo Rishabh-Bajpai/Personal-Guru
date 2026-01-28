@@ -35,8 +35,10 @@ env/
 ENV/
 env.bak/
 venv.bak/
+.build_venv/
 .python-version
 __pypackages__/
+Personal-Guru/
 
 # ==============================================================================
 # DISTRIBUTION & PACKAGING
@@ -62,6 +64,11 @@ MANIFEST
 pip-wheel-metadata/
 pip-log.txt
 pip-delete-this-directory.txt
+
+# AppImage / Linux Build
+AppDir/
+*.AppImage
+build_env_release/
 
 # ==============================================================================
 # TESTING & COVERAGE

@@ -404,7 +404,7 @@
                                 <label for="tts_provider">TTS Provider</label>
                                 <select id="tts_provider" name="tts_provider" onchange="toggleAudioSettings()">
                                     <option value="externalapi" {{ 'selected' if
-                                        defaults.get('TTS_PROVIDER', 'externalapi' )=='externalapi' else '' }}>Docker /
+                                        defaults.get('TTS_PROVIDER', 'externalapi')=='externalapi' else '' }}>Docker /
                                         External API (Default)</option>
                                     <option value="native" {{ 'selected' if defaults.get('TTS_PROVIDER', 'externalapi'
                                         )=='native' else '' }}>Local Library (No Docker)</option>
@@ -468,13 +468,19 @@
                                 <label for="stt_provider">STT Provider</label>
                                 <select id="stt_provider" name="stt_provider" onchange="toggleAudioSettings()">
                                     <option value="externalapi" {{ 'selected' if
-                                        defaults.get('STT_PROVIDER', 'externalapi' )=='externalapi' else '' }}>Docker /
-                                        External API (Default)</option>
-                                    <option value="native" {{ 'selected' if defaults.get('STT_PROVIDER', 'externalapi'
-                                        )=='native' else '' }}>Local Library (No Docker)</option>
+                                        defaults.get('STT_PROVIDER', 'native' if is_frozen else 'externalapi')=='externalapi' else '' }}>Docker /
+                                        External API{% if not is_frozen %} (Default){% endif %}</option>
+                                    <option value="native" {{ 'selected' if defaults.get('STT_PROVIDER', 'native' if is_frozen else 'externalapi'
+                                        )=='native' else '' }}>Local Library (No Docker){% if is_frozen %} (Default){% endif %}</option>
                                 </select>
-                                <div class="hint">Local uses faster-whisper medium model (high quality).
+                                <div class="hint">Local uses faster-whisper medium model (high quality).</div>
+                                {% if is_frozen %}
+                                <div class="hint">
+                                    When running from a bundled binary/AppImage, choosing the local provider will download
+                                    Whisper models to your machine. This can use several GB of disk space and be
+                                    CPU-intensive during transcription.
                                 </div>
+                                {% endif %}
                             </div>
 
                             <div class="form-group" id="stt_url_container">
