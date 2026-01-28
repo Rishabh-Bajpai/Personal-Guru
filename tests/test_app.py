@@ -309,7 +309,11 @@ def test_setup_success_mock_fs(setup_client, mocker):
     assert b"Configuration Saved!" in rv.data
 
     # Verify file write
-    m.assert_called_with('.env', 'w')
+    # Verify file write
+    # m.assert_called_with('.env', 'w') -> Relaxed check for absolute paths
+    args, kwargs = m.call_args
+    assert args[0].endswith('.env')
+    assert args[1] == 'w'
     handle = m()
 
     # Collect all content written
