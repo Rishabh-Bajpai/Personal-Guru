@@ -473,8 +473,14 @@
                                     <option value="native" {{ 'selected' if defaults.get('STT_PROVIDER', 'native' if is_frozen else 'externalapi'
                                         )=='native' else '' }}>Local Library (No Docker){% if is_frozen %} (Default){% endif %}</option>
                                 </select>
-                                <div class="hint">Local uses faster-whisper medium model (high quality).
+                                <div class="hint">Local uses faster-whisper medium model (high quality).</div>
+                                {% if is_frozen %}
+                                <div class="hint">
+                                    When running from a bundled binary/AppImage, choosing the local provider will download
+                                    Whisper models to your machine. This can use several GB of disk space and be
+                                    CPU-intensive during transcription.
                                 </div>
+                                {% endif %}
                             </div>
 
                             <div class="form-group" id="stt_url_container">
