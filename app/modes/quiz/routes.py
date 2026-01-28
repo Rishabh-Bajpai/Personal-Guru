@@ -195,7 +195,7 @@ def export_quiz_pdf(topic_name):
     if not WEASYPRINT_AVAILABLE:
         return ("PDF export is not available. WeasyPrint requires GTK libraries "
                 "which are not installed. Please export as HTML instead."), 503
-    
+
     topic_data = load_topic(topic_name)
     quiz_results = topic_data.get('last_quiz_result') if topic_data else None
 

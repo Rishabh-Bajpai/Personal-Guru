@@ -38,7 +38,7 @@ def cleanup_old_sandboxes(base_path=None):
                 if item == SHARED_SANDBOX_ID:
                     logger.info(f"Skipping cleanup for shared sandbox: {item}")
                     continue
-                
+
                 if os.path.isdir(item_path):
                     try:
                         shutil.rmtree(item_path)
@@ -85,7 +85,7 @@ class Sandbox:
             return
 
         os.makedirs(self.path, exist_ok=True)
-        
+
         # Find the Python executable to use for creating venv
         python_exe = self._find_python_executable()
         if not python_exe:
@@ -95,7 +95,7 @@ class Sandbox:
             with open(os.path.join(self.path, ".no_python"), "w") as f:
                 f.write("No Python interpreter found for sandbox creation")
             return
-        
+
         # Create venv
         logger.info(f"Creating virtual environment in {self.venv_path} using {python_exe}...")
         try:
@@ -109,19 +109,19 @@ class Sandbox:
     def _find_python_executable(self):
         """
         Find a suitable Python executable for creating virtual environments.
-        
+
         In frozen mode (PyInstaller), sys.executable points to the .exe itself,
         so we need to find the system Python installation.
-        
+
         Returns:
             str: Path to Python executable, or None if not found.
         """
         # If not frozen, use sys.executable (normal development mode)
         if not getattr(sys, 'frozen', False):
             return sys.executable
-        
+
         logger.info("Frozen mode detected. Searching for system Python...")
-        
+
         # Try common Python executable names via PATH
         python_names = ['python', 'python3', 'python3.11', 'python3.12', 'python3.13']
         for name in python_names:
@@ -131,7 +131,7 @@ class Sandbox:
                 if python_path.lower() != sys.executable.lower():
                     logger.info(f"Found system Python: {python_path}")
                     return python_path
-        
+
         # Try common Windows Python installation paths
         if os.name == 'nt':
             common_paths = [
@@ -148,7 +148,7 @@ class Sandbox:
                 if os.path.exists(path):
                     logger.info(f"Found system Python: {path}")
                     return path
-        
+
         logger.warning("No system Python interpreter found.")
         return None
 

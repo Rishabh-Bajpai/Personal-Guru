@@ -109,7 +109,7 @@ conda activate personal_guru_py311
 ### "PyInstaller failed with exit code 1"
 **Symptoms**: Build fails with various errors in the PyInstaller step.
 
-**Solution**: 
+**Solution**:
 1.  Check that the correct conda environment is activated.
 2.  Run with `-Clean` flag to rebuild everything from scratch.
 3.  Check the error logs for specific missing modules.

@@ -102,9 +102,15 @@ echo [INFO] Installing Dependencies from pyproject.toml...
 if /i "%local_mode%"=="y" (
     call pip install -e .[local]
 ) else (
-    call pip install -e .
+    echo [INFO] Installing development dependencies...
+    call pip install -e .[dev]
 )
 if %errorlevel% neq 0 echo [WARNING] Some dependencies may have failed to install.
+
+REM Install pre-commit hooks
+echo [INFO] Installing pre-commit hooks...
+call pre-commit install
+if %errorlevel% neq 0 echo [WARNING] Failed to install pre-commit hooks.
 
 REM Optional TTS (Removed from setup)
 

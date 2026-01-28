@@ -43,11 +43,11 @@ if getattr(sys, 'frozen', False):
     # Default to externalapi for TTS as native option is removed, but native for STT
     tts_provider = os.environ.get('TTS_PROVIDER', 'externalapi').lower()
     stt_provider = os.environ.get('STT_PROVIDER', 'native').lower()
-    
+
     # Enforce externalapi for TTS
     if tts_provider != 'externalapi':
         os.environ['TTS_PROVIDER'] = 'externalapi'
-        
+
     # STT can technically still be native (Whisper) if not removed, but user context implies cleaning up "local TTS (Kokoro)".
     # I will stick to TTS enforcement primarily, but if the user wants to remove "local TTS from configuration", I should ensure it's not selected.
 
@@ -63,8 +63,8 @@ else:
     if bundle_dir not in sys.path:
         sys.path.insert(0, bundle_dir)
 
-from app.common.config_validator import validate_config
-from config import Config
+from app.common.config_validator import validate_config  # noqa: E402
+from config import Config  # noqa: E402
 
 # Patch Config for Session directory if running frozen
 # (config.py sets this based on __file__ which is temp in frozen mode)
@@ -90,16 +90,16 @@ def main():
             app = create_app()
     except Exception as e:
         print(f"\n{'='*60}")
-        print(f"ERROR: Failed to initialize application")
+        print("ERROR: Failed to initialize application")
         print(f"{'='*60}")
         print(f"Details: {e}")
-        print(f"\nPlease check that all files are present and try again.")
-        print(f"If this persists, please report the issue.")
+        print("\nPlease check that all files are present and try again.")
+        print("If this persists, please report the issue.")
         input("\nPress Enter to exit...")
         sys.exit(1)
 
     port = int(os.getenv('PORT', 5011))
-    
+
     # Certs relative to base_dir
     cert_path = os.path.join(base_dir, 'certs', 'cert.pem')
     key_path = os.path.join(base_dir, 'certs', 'key.pem')
@@ -116,7 +116,7 @@ def main():
     # We disable debug and reloader for the stable release exe
     use_reloader = False if getattr(sys, 'frozen', False) else True
     debug_mode = False if getattr(sys, 'frozen', False) else True
-    
+
     # If user explicitly asks for debug via env
     if os.getenv('FLASK_DEBUG'):
         debug_mode = True
@@ -140,7 +140,7 @@ def main():
         threading.Thread(target=open_browser, args=(port,), daemon=True).start()
     else:
         print("Browser already opened in previous run, skipping.")
-    
+
     app.run(
         debug=debug_mode,
         host='127.0.0.1',

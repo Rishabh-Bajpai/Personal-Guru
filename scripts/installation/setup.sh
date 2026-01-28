@@ -150,8 +150,13 @@ if [[ "$local_mode" =~ ^[Yy]$ ]]; then
     # Local Mode includes local dependencies (TTS/STT)
     $ENV_PYTHON -m pip install -e ".[local]"
 else
-    # Standard Mode (Core only)
-    $ENV_PYTHON -m pip install -e "."
+    # Standard Mode (Core only) -> Now enforcing dev deps for everyone per requirement
+    echo "📦 Installing development dependencies..."
+    $ENV_PYTHON -m pip install -e ".[dev]"
+
+    # Install pre-commit hooks
+    echo "🪝 Installing pre-commit hooks..."
+    $ENV_PYTHON -m pre-commit install
 fi
 
 # Optional TTS (Removed)

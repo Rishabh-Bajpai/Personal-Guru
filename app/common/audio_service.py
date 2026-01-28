@@ -132,10 +132,10 @@ class WhisperSTT(STTService):
 
     def __init__(self, model_size: str = "medium"):
         from faster_whisper import WhisperModel
-        
+
         device = "cpu"
         compute_type = "int8"
-        
+
         try:
             import torch
             if torch.cuda.is_available():

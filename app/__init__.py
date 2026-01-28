@@ -285,12 +285,12 @@ def create_app(config_class=Config):
     # In production (without reloader), WERKZEUG_RUN_MAIN won't be set, so we also start.
     run_main_env = os.environ.get('WERKZEUG_RUN_MAIN')
     is_frozen = getattr(sys, 'frozen', False)  # PyInstaller sets this
-    
+
     # Start sync if:
     # 1. We're in the reloader child process (WERKZEUG_RUN_MAIN='true'), OR
     # 2. We're in production/frozen mode (no reloader, WERKZEUG_RUN_MAIN not set)
     should_start_sync = (run_main_env == 'true') or (run_main_env is None and is_frozen)
-    
+
     if should_start_sync:
         # Main server process - start background services
         try:

@@ -21,7 +21,7 @@ def create_setup_app():
         base_dir = os.path.dirname(sys.executable)
     else:
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    
+
     # Load defaults
     defaults = {}
 
@@ -29,7 +29,7 @@ def create_setup_app():
     env_file = os.path.join(base_dir, '.env')
     env_example = os.path.join(base_dir, '.env.example')
     env_path = env_file if os.path.exists(env_file) else env_example
-    
+
     if os.path.exists(env_path):
         with open(env_path, 'r') as f:
             for line in f:
@@ -72,7 +72,7 @@ def create_setup_app():
             # Default: TTS=externalapi, STT=native (for both frozen and dev, as per recent changes)
             default_tts_provider = 'externalapi'
             default_stt_provider = 'native'
-            
+
             config.update({
                 'TTS_PROVIDER': request.form.get('tts_provider', default_tts_provider),
                 'TTS_BASE_URL': request.form.get('tts_url', ''),
@@ -117,7 +117,7 @@ def create_setup_app():
 
             # Trigger restart based on environment
             is_frozen = getattr(sys, 'frozen', False)
-            
+
             if is_frozen:
                 # In frozen mode, we can't touch run.py - show manual restart message
                 return """

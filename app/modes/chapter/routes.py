@@ -9,7 +9,6 @@ from app.common.utils import generate_audio
 from markdown_it import MarkdownIt
 import datetime
 from app.common.agents import CodeExecutionAgent
-from app.common.sandbox import Sandbox
 from app.common.utils import log_telemetry
 
 # WeasyPrint requires GTK native libraries - make it optional
@@ -49,7 +48,7 @@ def mode(topic_name):
     # Initialize Persistent Sandbox
     from app.common.sandbox import Sandbox, SHARED_SANDBOX_ID
     # Always use the shared environment
-    sandbox = Sandbox(sandbox_id=SHARED_SANDBOX_ID)
+    _ = Sandbox(sandbox_id=SHARED_SANDBOX_ID)
     # session['sandbox_id'] = sandbox.id  # No longer needed to store in session
 
     # If topic exists and has a plan, go directly to learning
@@ -580,7 +579,7 @@ def export_topic_pdf(topic_name):
     if not WEASYPRINT_AVAILABLE:
         return ("PDF export is not available. WeasyPrint requires GTK libraries "
                 "which are not installed. Please use Markdown export instead."), 503
-    
+
     topic_data = load_topic(topic_name)
     if not topic_data:
         return "Topic not found", 404
@@ -686,10 +685,10 @@ def execute_code():
     from app.common.sandbox import Sandbox, SHARED_SANDBOX_ID
     sandbox = Sandbox(sandbox_id=SHARED_SANDBOX_ID)
 
-    # Ensure ID is in session (if it was lost or new) - Not strictly needed if ID is constant, 
+    # Ensure ID is in session (if it was lost or new) - Not strictly needed if ID is constant,
     # but harmless to keep if other parts rely on it (though we are removing session usage).
     # Actually, removing session usage for ID is cleaner.
-    
+
     # if not sandbox_id:
     #     session['sandbox_id'] = sandbox.id
 
