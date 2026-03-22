@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for
-from app.common.storage import get_all_topics, load_topic
+from app.common.storage import get_all_topics
 from app.common.utils import log_telemetry
 from app.common.auth import create_jwe, decrypt_jwe
 from flask_login import login_user, logout_user, login_required, current_user
@@ -7,6 +7,12 @@ import os
 import sys
 
 main_bp = Blueprint('main', __name__)
+
+
+def _get_recent_topics(limit=5):
+    from app.common.storage import get_topics_metadata
+
+    return get_topics_metadata()[:limit]
 
 @main_bp.route('/', methods=['GET', 'POST'])
 def index():
@@ -22,48 +28,16 @@ def index():
             pass  # Ignore cleanup errors
         session.pop('sandbox_id', None)
 
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 10, type=int)
-
-    # Manual Pagination Helper Class
-    class MockPagination:
-        def __init__(self, items, page, per_page, total):
-            self.items = items
-            self.page = page
-            self.per_page = per_page
-            self.total = total
-            self.pages = (total + per_page - 1) // per_page
-            self.has_prev = page > 1
-            self.has_next = page < self.pages
-            self.prev_num = page - 1
-            self.next_num = page + 1
+    recent_topics = _get_recent_topics(limit=5)
 
     if request.method == 'POST':
         topic_name = request.form.get('topic', '').strip()
         mode = request.form.get('mode', 'chapter')
 
         if not topic_name:
-            all_topics = get_all_topics()
-            # Default to first page on error
-            start = 0
-            end = per_page
-            paginated_items = all_topics[start:end]
-            pagination = MockPagination(paginated_items, 1, per_page, len(all_topics))
-
-            topics_data = []
-            for topic in paginated_items:
-                data = load_topic(topic)
-                if data:
-                    has_plan = bool(data.get('plan'))
-                    topics_data.append({'name': topic, 'has_plan': has_plan})
-                else:
-                    topics_data.append({'name': topic, 'has_plan': True})
-
             return render_template(
                 'index.html',
-                topics=topics_data,
-                pagination=pagination,
-                per_page=per_page,
+                topics=recent_topics,
                 error="Please enter a topic name.")
 
         # Telemetry Hook: Topic Created/Opened (Intent)
@@ -72,7 +46,6 @@ def index():
              # Note: get_all_topics() hits DB, but we need it eventually?
              # For specific topic check, Model query is better but we want to avoid raw queries if possible.
              # But here we are just logging log_telemetry.
-             # Let's just use load_topic check which is safe or assume new.
              # Actually, simpler:
              all_existing = get_all_topics()
              exists = topic_name in all_existing
@@ -105,36 +78,21 @@ def index():
                 return redirect(url_for('chat.mode', topic_name=topic_name))
 
             else:
-                # Valid existing topics needed for re-render
-                all_topics = get_all_topics()
-                start = 0
-                end = per_page
-                paginated_items = all_topics[start:end]
-                pagination = MockPagination(paginated_items, 1, per_page, len(all_topics))
-
-                topics_data = []
-                for t in paginated_items:
-                     topics_data.append({'name': t, 'has_plan': True})
-
                 return render_template(
                     'index.html',
-                    topics=topics_data,
-                    pagination=pagination,
-                    per_page=per_page,
+                    topics=recent_topics,
                     error=f"Mode {mode} not available")
 
+    return render_template('index.html', topics=recent_topics)
 
+
+@main_bp.route('/topics')
+@login_required
+def saved_topics():
+    """Render the full saved topics page."""
     from app.common.storage import get_topics_metadata
-    all_topics_meta = get_topics_metadata()
 
-    total = len(all_topics_meta)
-    start = (page - 1) * per_page
-    end = start + per_page
-    paginated_items = all_topics_meta[start:end]
-
-    pagination = MockPagination(paginated_items, page, per_page, total)
-
-    return render_template('index.html', topics=paginated_items, pagination=pagination, per_page=per_page)
+    return render_template('saved_topics.html', topics=get_topics_metadata())
 
 
 @main_bp.route('/favicon.ico')

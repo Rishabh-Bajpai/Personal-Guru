@@ -7,6 +7,7 @@ from flask_login import LoginManager
 from flasgger import Swagger
 import logging
 import os
+import secrets
 import sys
 
 csrf = CSRFProtect()
@@ -28,6 +29,14 @@ def create_app(config_class=Config):
     """
     app = Flask(__name__, template_folder='core/templates')
     app.config.from_object(config_class)
+
+    live_secret_key = os.environ.get('SECRET_KEY') or app.config.get('SECRET_KEY')
+    if not live_secret_key:
+        live_secret_key = secrets.token_hex(32)
+        logging.getLogger(__name__).warning(
+            'SECRET_KEY was not set; using an ephemeral development key for this process.'
+        )
+    app.config['SECRET_KEY'] = live_secret_key
 
     # Register Custom Filters
     from app.common.utils import sanitize_html
@@ -65,7 +74,7 @@ def create_app(config_class=Config):
     Swagger(app, config=swagger_config)
 
     # Initialize Telemetry Log Capture
-    if app.config.get('ENABLE_TELEMETRY_LOGGING', True) and not app.config.get('TESTING'):
+    if app.config.get('ENABLE_TELEMETRY', True) and app.config.get('ENABLE_TELEMETRY_LOGGING', True) and not app.config.get('TESTING'):
         from app.common.log_capture import LogCapture
         LogCapture(app)
 
@@ -313,6 +322,9 @@ def create_app(config_class=Config):
     if os.environ.get('SKIP_BACKGROUND_TASKS') == 'True':
         should_start_sync = False
 
+    if not app.config.get('ENABLE_TELEMETRY', True):
+        should_start_sync = False
+
     # DEBUG: Trace startup logic
     print("=== STARTUP DEBUG ===")
     print(f"is_frozen: {is_frozen}")
@@ -320,6 +332,7 @@ def create_app(config_class=Config):
     print(f"WERKZEUG_RUN_MAIN: {run_main_env}")
     print(f"should_start_sync: {should_start_sync} (Background Manager)")
     print(f"OFFLINE_MODE: {os.getenv('OFFLINE_MODE', 'False')}")
+    print(f"ENABLE_TELEMETRY: {app.config.get('ENABLE_TELEMETRY', True)}")
     print("=====================")
 
     if should_start_sync:

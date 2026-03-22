@@ -1,0 +1,74 @@
+{% if topics %}
+{% if show_controls %}
+<div class="topics-controls-toolbar">
+    <div class="topics-search-wrapper">
+        <input type="text" id="topic-search" placeholder="🔍 Search topics..." autocomplete="off">
+    </div>
+    <div class="topics-pagination-controls">
+        <span id="topics-count" class="topics-count"></span>
+        <select id="topics-page-size" class="page-size-select" title="Items per page">
+            <option value="5">5 per page</option>
+            <option value="10" selected>10 per page</option>
+            <option value="20">20 per page</option>
+            <option value="all">Show All</option>
+        </select>
+    </div>
+</div>
+{% endif %}
+
+<div class="topics-list">
+    <ul>
+        {% for topic in topics %}
+        <li title="Select a mode to continue">
+            <span class="topic-name"><strong>{{ topic.name }}</strong></span>
+
+            <div class="mode-buttons">
+                <span class="modes-label">Guru Modes:</span>
+
+                <a href="{{ url_for('chapter.mode', topic_name=topic.name) }}"
+                    onclick="showLoader('Drafting your chapter...')"
+                    class="button {% if not topic.has_plan %}secondary{% endif %}" title="Study Guide">
+                    <i class="fas fa-book-open"></i> Chapter
+                </a>
+
+                <a href="{{ url_for('chat.mode', topic_name=topic.name) }}"
+                    onclick="showLoader('Summoning AI Tutor...')"
+                    class="button {% if not topic.has_chat %}secondary{% endif %}" title="Chat with AI">
+                    <i class="fas fa-comments"></i> Chat
+                </a>
+
+                <a href="{{ url_for('quiz.mode', topic_name=topic.name) }}"
+                    onclick="showLoader('Curating your quiz...')"
+                    class="button {% if not topic.has_quiz %}secondary{% endif %}" title="Take Quiz">
+                    <i class="fas fa-question-circle"></i> Quiz
+                </a>
+
+                <a href="{{ url_for('flashcard.mode', topic_name=topic.name) }}"
+                    onclick="showLoader('Creating flashcards...')"
+                    class="button {% if not topic.has_flashcards %}secondary{% endif %}" title="Review Flashcards">
+                    <i class="fas fa-clone"></i> Flashcard
+                </a>
+
+                <a href="{{ url_for('reel.mode', topic_name=topic.name) }}"
+                    onclick="showLoader('Preparing reel...')"
+                    class="button {% if not topic.has_reels %}secondary{% endif %}"
+                    title="Experimental feature: usage may be unstable">
+                    <i class="fas fa-play-circle"></i> Reel
+                </a>
+                <a href="{{ url_for('main.notes_view', topic_name=topic.name) }}"
+                    class="button secondary" title="Open Notes">
+                    📝 Notes
+                </a>
+                <a href="{{ url_for('main.delete_topic_route', topic_name=topic.name) }}" class="btn btn-sm btn-outline-danger" title="Delete Topic" onclick="return confirm('Are you sure you want to delete this topic?');" style="color: #dc3545 !important; border-color: #dc3545 !important;"><i class="fas fa-trash-alt"></i></a>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+
+    {% if show_controls %}
+    <div id="topics-pagination" class="pagination-container"></div>
+    {% endif %}
+</div>
+{% else %}
+<p>{{ empty_message|default("You don't have any saved topics yet.") }}</p>
+{% endif %}

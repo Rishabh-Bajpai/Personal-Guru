@@ -71,6 +71,7 @@ class Config:
 
     # App Settings
     USER_BACKGROUND = os.environ.get('USER_BACKGROUND', 'a beginner')
+    ENABLE_TELEMETRY = os.environ.get('ENABLE_TELEMETRY', 'True').lower() == 'true'
     ENABLE_TELEMETRY_LOGGING = os.environ.get('ENABLE_TELEMETRY_LOGGING', 'True').lower() == 'true'
     SANDBOX_PATH = os.environ.get('SANDBOX_PATH') or os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data', 'sandbox')
 

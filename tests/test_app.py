@@ -15,7 +15,7 @@ pytestmark = pytest.mark.unit
 def test_home_page(auth_client, mocker, logger):
     """Test that the home page loads correctly."""
     logger.section("test_home_page")
-    mocker.patch('app.core.routes.get_all_topics', return_value=[])
+    mocker.patch('app.common.storage.get_topics_metadata', return_value=[])
     response = auth_client.get('/')
     logger.step("GET /")
     assert response.status_code == 200
@@ -38,7 +38,6 @@ def test_full_learning_flow(auth_client, mocker, logger):
     })
 
     # Mock storage functions
-    mocker.patch('app.core.routes.load_topic', return_value=None)
     mocker.patch('app.modes.chapter.routes.load_topic', return_value=None)
     mocker.patch('app.modes.chapter.routes.save_topic', return_value=None)
     mocker.patch('app.core.routes.get_all_topics', return_value=[])
@@ -160,6 +159,52 @@ def test_delete_topic(auth_client, mocker, logger):
     mocker.patch('app.common.storage.get_topics_metadata', return_value=[])
     response = auth_client.get('/')
     assert bytes(topic_name, 'utf-8') not in response.data
+
+def test_home_page_shows_only_five_recent_topics(auth_client, mocker, logger):
+    """Test that the homepage only shows the five most recent topics."""
+    logger.section("test_home_page_shows_only_five_recent_topics")
+    topic_metadata = [
+        {'name': f'topic-{index}', 'has_plan': True, 'has_chat': False,
+         'has_quiz': False, 'has_flashcards': False, 'has_reels': False}
+        for index in range(1, 7)
+    ]
+    mocker.patch('app.common.storage.get_topics_metadata', return_value=topic_metadata)
+
+    response = auth_client.get('/')
+
+    assert response.status_code == 200
+    for index in range(1, 6):
+        assert f'topic-{index}'.encode() in response.data
+    assert b'topic-6' not in response.data
+    assert b'View all saved topics' in response.data
+
+def test_saved_topics_page_shows_all_topics(auth_client, mocker, logger):
+    """Test that the dedicated saved topics page renders the full list."""
+    logger.section("test_saved_topics_page_shows_all_topics")
+    topic_metadata = [
+        {'name': f'topic-{index}', 'has_plan': True, 'has_chat': False,
+         'has_quiz': False, 'has_flashcards': False, 'has_reels': False}
+        for index in range(1, 7)
+    ]
+    mocker.patch('app.common.storage.get_topics_metadata', return_value=topic_metadata)
+
+    response = auth_client.get('/topics')
+
+    assert response.status_code == 200
+    for index in range(1, 7):
+        assert f'topic-{index}'.encode() in response.data
+    assert b'id="topic-search"' in response.data
+    assert b'topics-manager.js' in response.data
+
+def test_saved_topics_nav_points_to_dedicated_page(auth_client, mocker, logger):
+    """Test that the navigation points to the dedicated saved topics page."""
+    logger.section("test_saved_topics_nav_points_to_dedicated_page")
+    mocker.patch('app.common.storage.get_topics_metadata', return_value=[])
+
+    response = auth_client.get('/')
+
+    assert response.status_code == 200
+    assert b'href="/topics"' in response.data
 
 def test_chat_route(auth_client, mocker, logger):
     """Test the chat functionality."""

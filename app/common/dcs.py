@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 DCS_BASE_URL = os.getenv("DCS_BASE_URL", "https://telemetry2.samosa-ai.com")
 OFFLINE_MODE = os.getenv("OFFLINE_MODE", "False").lower() == "true"
+ENABLE_TELEMETRY = os.getenv("ENABLE_TELEMETRY", "True").lower() == "true"
 
 class DCSClient:
     """Client for communicating with the Data Collection Server (DCS)."""
@@ -37,6 +38,10 @@ class DCSClient:
         Registers the device with the DCS.
         If already registered (ID exists in DB), verifies or updates details.
         """
+        if not ENABLE_TELEMETRY:
+            logger.info("Telemetry disabled. Skipping device registration.")
+            return True
+
         from app.common.utils import get_system_info
         from sqlalchemy.exc import OperationalError
         import uuid
@@ -117,6 +122,9 @@ class DCSClient:
 
     def update_device_details(self):
         """Send updated device details to DCS server."""
+        if not ENABLE_TELEMETRY:
+            return True
+
         if OFFLINE_MODE:
             return True
 
@@ -140,6 +148,10 @@ class DCSClient:
         """
         Gathers unsynced data and sends it to DCS.
         """
+        if not ENABLE_TELEMETRY:
+            logger.debug("Telemetry disabled. Skipping sync.")
+            return
+
         if OFFLINE_MODE:
             logger.debug("Offline mode enabled. Skipping sync.")
             return
@@ -403,6 +415,9 @@ class DCSClient:
 
     def get_notifications(self):
         """Fetch active system notifications from DCS."""
+        if not ENABLE_TELEMETRY:
+            return []
+
         try:
             resp = requests.get(f"{self.base_url}/api/notifications", timeout=5)
             if resp.status_code == 200:
