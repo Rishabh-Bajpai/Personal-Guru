@@ -1,4 +1,5 @@
 import os
+import tempfile
 from dotenv import load_dotenv
 
 def load_environment_variables():
@@ -52,7 +53,7 @@ class Config:
     # Server-side sessions: LLM responses exceed the 4KB cookie limit,
     # so we store session data on the filesystem instead
     SESSION_TYPE = 'filesystem'
-    SESSION_FILE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'flask_session')
+    SESSION_FILE_DIR = os.environ.get('SESSION_FILE_DIR') or os.path.join(tempfile.gettempdir(), f'personal-guru-flask-session-{os.getuid()}')
     SESSION_PERMANENT = False
     SESSION_USE_SIGNER = True
 
