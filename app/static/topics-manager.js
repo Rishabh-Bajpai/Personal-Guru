@@ -38,6 +38,12 @@ class TopicsManager {
             name: el.querySelector('.topic-name').textContent.toLowerCase().trim()
         }));
 
+        if (this.pageSizeSelect) {
+            this.pageSize = this.pageSizeSelect.value === 'all'
+                ? this.items.length
+                : parseInt(this.pageSizeSelect.value, 10);
+        }
+
         // Initial Filter (shows all)
         this.filter('');
 
