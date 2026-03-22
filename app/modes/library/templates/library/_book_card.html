@@ -17,8 +17,8 @@
     </div>
     <div class="book-card-body">
         <h3 style="margin: 0 0 0.5rem;">{{ book.title }}</h3>
-        <p style="color: #a6adc8; font-size: 0.85rem; line-height: 1.4;">{{ book.description | truncate(100) }}</p>
-        <div class="alert alert-warning mb-2" style="padding: 0.4rem 0.6rem; font-size: 0.8rem; background: rgba(250, 179, 135, 0.1); border-color: rgba(250, 179, 135, 0.2); color: #fab387;">
+        <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.4;">{{ book.description | truncate(100) }}</p>
+        <div class="alert alert-warning mb-2" style="padding: 0.4rem 0.6rem; font-size: 0.8rem; background: var(--warning-bg); border-color: var(--warning-border); color: var(--warning-color);">
             <i class="fas fa-exclamation-triangle"></i> Incomplete content
         </div>
         <button class="btn btn-primary w-100" onclick="startBookGeneration({{ book.id }}, event)">
@@ -27,7 +27,7 @@
     </div>
     <div class="flat-actions">
         <a href="{{ url_for('library.edit_book', book_id=book.id) }}" class="btn btn-sm btn-warning" onclick="event.stopPropagation()"><i class="fas fa-edit"></i> Edit</a>
-        <button class="btn btn-sm btn-danger" onclick="deleteBook({{ book.id }}, event)"><i class="fas fa-trash"></i> Delete</button>
+        <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteBook({{ book.id }}, event)"><i class="fas fa-trash"></i> Delete</button>
     </div>
 </div>
 
@@ -36,14 +36,14 @@
 <div class="flip-card" id="book-card-{{ book.id }}">
     <div class="flip-card-inner">
         <!-- FRONT: Cover + Title -->
-        <div class="flip-card-front" onclick="flipCard(this.closest('.flip-card'), event)">
+        <div class="flip-card-front" onclick="flipCard(this.closest('.flip-card'), event)" role="button" tabindex="0" onkeydown="if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') { if (event.key !== 'Enter') event.preventDefault(); flipCard(this.closest('.flip-card'), event); }">
             <span class="flip-hint"><i class="fas fa-sync-alt"></i> Tap to flip</span>
             <!-- Adding timestamp as cache buster for newly generated covers -->
-            <img src="{{ url_for('library.serve_cover', book_id=book.id) }}?t={{ book.modified_at.timestamp() | int }}" alt="{{ book.title }}" class="cover-img">
+            <img src="{{ url_for('library.serve_cover', book_id=book.id) }}?t={{ ((book.modified_at or book.created_at).timestamp() if (book.modified_at or book.created_at) else 0) | int }}" alt="{{ book.title }}" class="cover-img">
             <div class="cover-title">{{ book.title }}</div>
         </div>
         <!-- BACK: Details + Actions -->
-        <div class="flip-card-back" onclick="flipCard(this.closest('.flip-card'), event)">
+        <div class="flip-card-back" onclick="flipCard(this.closest('.flip-card'), event)" role="button" tabindex="0" onkeydown="if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') { if (event.key !== 'Enter') event.preventDefault(); flipCard(this.closest('.flip-card'), event); }">
             <h3>{{ book.title }}</h3>
             <div class="book-desc">{{ book.description | truncate(200) }}</div>
             <div class="card-actions">
@@ -72,13 +72,13 @@
 {% else %}
 <!-- === FLAT CARD: no cover === -->
 <div class="book-card" id="book-card-{{ book.id }}">
-    <div class="mini-placeholder" onclick="retryBookCover({{ book.id }}, event)" title="Click to generate cover">
+    <div class="mini-placeholder" onclick="retryBookCover({{ book.id }}, event)" onkeydown="if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') { if (event.key !== 'Enter') event.preventDefault(); retryBookCover({{ book.id }}, event); }" title="Click to generate cover" role="button" tabindex="0" aria-label="Generate cover for {{ book.title }}">
         <i class="fas fa-image"></i>
         <span>Generate cover</span>
     </div>
     <div class="book-card-body">
         <h3 style="margin: 0 0 0.5rem;">{{ book.title }}</h3>
-        <p style="color: #a6adc8; font-size: 0.85rem; margin-bottom: 0.5rem; line-height: 1.4;">{{ book.description | truncate(140) }}</p>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem; line-height: 1.4;">{{ book.description | truncate(140) }}</p>
         <div class="d-flex justify-content-between align-items-center mb-2">
             <small style="font-size: 0.75rem;">{{ book.book_topics | length }} Topics</small>
             <span class="badge {{ 'bg-success' if book.is_shared else 'bg-secondary' }}" style="font-size: 0.7rem;">
@@ -89,7 +89,7 @@
     <div class="flat-actions">
         <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); openBookWithLoader({{ book.id }}, this.closest('.book-card'))"><i class="fas fa-book-open"></i> Read</button>
         <a href="{{ url_for('library.edit_book', book_id=book.id) }}" class="btn btn-sm btn-warning" onclick="event.stopPropagation()"><i class="fas fa-edit"></i> Edit</a>
-        <button class="btn btn-sm btn-danger" onclick="deleteBook({{ book.id }}, event)"><i class="fas fa-trash"></i> Delete</button>
+        <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteBook({{ book.id }}, event)"><i class="fas fa-trash"></i> Delete</button>
     </div>
 </div>
 {% endif %}

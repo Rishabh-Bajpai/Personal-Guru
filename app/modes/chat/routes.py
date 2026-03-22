@@ -1,3 +1,5 @@
+import logging
+
 from flask import render_template, request, redirect, url_for
 from . import chat_bp
 from app.common.storage import load_topic, save_chat_history, save_topic
@@ -5,6 +7,8 @@ from app.common.agents import PlannerAgent
 from app.common.utils import summarize_text
 from app.modes.chat.agent import ChatModeMainChatAgent, ChatModeChatPopupAgent
 from app.modes.chapter.agent import ChapterModeChatAgent
+
+logger = logging.getLogger(__name__)
 
 chat_agent = ChatModeMainChatAgent()
 chapter_agent = ChapterModeChatAgent()
@@ -31,12 +35,14 @@ def mode(topic_name):
 
         # 1. Generate Plan if missing
         if not topic_data or not topic_data.get("plan"):
-            planner = PlannerAgent()
             try:
+                planner = PlannerAgent()
                 plan_steps = planner.generate_study_plan(topic_name, user_background)
-            except Exception:
-                # Error will be caught by global handler
-                raise
+            except Exception as error:
+                logger.exception(
+                    "Failed to generate study plan for chat topic %s", topic_name
+                )
+                return render_template("error.html", error=str(error))
 
             # Save plan
             if not topic_data:
@@ -395,7 +401,7 @@ def chat(topic_name, step_index):
     if time_spent:
         current_step_data["time_spent"] = (
             current_step_data.get("time_spent", 0) or 0
-        ) + int(time_spent)
+        ) + time_spent
     # We must save the whole topic to persist the step update
     save_topic(topic_name, topic_data)
 

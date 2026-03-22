@@ -14,7 +14,7 @@ csrf = CSRFProtect()
 sess = Session()
 
 login_manager = LoginManager()
-login_manager.login_view = 'main.login'
+login_manager.login_view = "main.login"
 
 
 def create_app(config_class=Config):
@@ -27,20 +27,32 @@ def create_app(config_class=Config):
     Returns:
         Configured Flask application instance.
     """
-    app = Flask(__name__, template_folder='core/templates')
+    app = Flask(__name__, template_folder="core/templates")
     app.config.from_object(config_class)
 
-    live_secret_key = os.environ.get('SECRET_KEY') or app.config.get('SECRET_KEY')
+    live_secret_key = os.environ.get("SECRET_KEY") or app.config.get("SECRET_KEY")
     if not live_secret_key:
+        app_env = (
+            os.environ.get("APP_ENV")
+            or os.environ.get("FLASK_ENV")
+            or app.config.get("ENV")
+            or ""
+        ).lower()
+        if app_env == "production":
+            raise RuntimeError(
+                "SECRET_KEY must be set in production. Configure SECRET_KEY before starting the application."
+            )
+
         live_secret_key = secrets.token_hex(32)
         logging.getLogger(__name__).warning(
-            'SECRET_KEY was not set; using an ephemeral development key for this process.'
+            "SECRET_KEY was not set; using an ephemeral development key for this process."
         )
-    app.config['SECRET_KEY'] = live_secret_key
+    app.config["SECRET_KEY"] = live_secret_key
 
     # Register Custom Filters
     from app.common.utils import sanitize_html
-    app.jinja_env.filters['sanitize_html'] = sanitize_html
+
+    app.jinja_env.filters["sanitize_html"] = sanitize_html
 
     # Initialize Flask extensions
     db.init_app(app)
@@ -54,6 +66,7 @@ def create_app(config_class=Config):
     with app.app_context():
         # Import models to register them with SQLAlchemy before create_all
         from app.core import models  # noqa: F401
+
         db.create_all()
 
     # Initialize Swagger
@@ -61,24 +74,30 @@ def create_app(config_class=Config):
         "headers": [],
         "specs": [
             {
-                "endpoint": 'apispec_1',
-                "route": '/apispec_1.json',
+                "endpoint": "apispec_1",
+                "route": "/apispec_1.json",
                 "rule_filter": lambda rule: True,  # all in
                 "model_filter": lambda tag: True,  # all in
             }
         ],
         "static_url_path": "/flasgger_static",
         "swagger_ui": True,
-        "specs_route": "/apidocs/"
+        "specs_route": "/apidocs/",
     }
     Swagger(app, config=swagger_config)
 
     # Initialize Telemetry Log Capture
-    if app.config.get('ENABLE_TELEMETRY', True) and app.config.get('ENABLE_TELEMETRY_LOGGING', True) and not app.config.get('TESTING'):
+    if (
+        app.config.get("ENABLE_TELEMETRY", False)
+        and app.config.get("ENABLE_TELEMETRY_LOGGING", True)
+        and not app.config.get("TESTING")
+    ):
         from app.common.log_capture import LogCapture
+
         LogCapture(app)
 
     from app.core.models import Login
+
     @login_manager.user_loader
     def load_user(userid):
         return Login.query.get(userid)
@@ -91,34 +110,38 @@ def create_app(config_class=Config):
     from app.modes.chat import chat_bp
     from app.common import common_bp
 
-    app.register_blueprint(chapter_bp, url_prefix='/chapter')
-    app.register_blueprint(quiz_bp, url_prefix='/quiz')
-    app.register_blueprint(flashcard_bp, url_prefix='/flashcards')
-    app.register_blueprint(reel_bp, url_prefix='/reels')
-    app.register_blueprint(chat_bp, url_prefix='/chat')
-    app.register_blueprint(common_bp, url_prefix='/common')
+    app.register_blueprint(chapter_bp, url_prefix="/chapter")
+    app.register_blueprint(quiz_bp, url_prefix="/quiz")
+    app.register_blueprint(flashcard_bp, url_prefix="/flashcards")
+    app.register_blueprint(reel_bp, url_prefix="/reels")
+    app.register_blueprint(chat_bp, url_prefix="/chat")
+    app.register_blueprint(common_bp, url_prefix="/common")
 
     from app.modes.library import library_bp
-    app.register_blueprint(library_bp, url_prefix='/library')
+
+    app.register_blueprint(library_bp, url_prefix="/library")
 
     # Global Routes (Home, Background, etc.)
     # Global Routes (Home, Background, etc.)
 
     from .core.routes import main_bp
+
     app.register_blueprint(main_bp)
 
     @app.before_request
     def require_login():
         from flask_login import current_user
+
         if not current_user.is_authenticated:
             # List of endpoints accessible without login
             # 'main.login', 'main.signup', 'static'
-            if request.endpoint and request.endpoint not in [
-                'main.login',
-                'main.signup',
-                'main.submit_feedback',
-                    'static'] and not request.endpoint.startswith('static'):
-                return redirect(url_for('main.login'))
+            if (
+                request.endpoint
+                and request.endpoint
+                not in ["main.login", "main.signup", "main.submit_feedback", "static"]
+                and not request.endpoint.startswith("static")
+            ):
+                return redirect(url_for("main.login"))
 
     # ========================================================================
     # Global Error Handlers
@@ -130,15 +153,18 @@ def create_app(config_class=Config):
         AuthenticationError,
         ResourceNotFoundError,
         DatabaseError,
-        LLMError
+        LLMError,
     )
 
     logger = logging.getLogger(__name__)
 
     def is_json_request():
         """Check if the request expects a JSON response."""
-        return request.is_json or request.path.startswith(
-            '/api/') or 'application/json' in request.headers.get('Accept', '')
+        return (
+            request.is_json
+            or request.path.startswith("/api/")
+            or "application/json" in request.headers.get("Accept", "")
+        )
 
     @app.errorhandler(PersonalGuruException)
     def handle_app_exception(error):
@@ -147,18 +173,20 @@ def create_app(config_class=Config):
         error.log(logger, endpoint=request.endpoint or request.path)
 
         if is_json_request():
-            return jsonify({
-                'error': error.user_message,
-                'error_code': error.error_code,
-                'status': 'error'
-            }), error.http_status
+            return jsonify(
+                {
+                    "error": error.user_message,
+                    "error_code": error.error_code,
+                    "status": "error",
+                }
+            ), error.http_status
         else:
             # Render error template with user-friendly message
             return render_template(
-                'error.html',
+                "error.html",
                 error_code=error.error_code,
                 error_message=error.user_message,
-                http_status=error.http_status
+                http_status=error.http_status,
             ), error.http_status
 
     @app.errorhandler(ValidationError)
@@ -167,18 +195,20 @@ def create_app(config_class=Config):
         error.log(logger, endpoint=request.endpoint or request.path)
 
         if is_json_request():
-            return jsonify({
-                'error': error.user_message,
-                'error_code': error.error_code,
-                'field': error.debug_info.get('field'),
-                'status': 'validation_error'
-            }), 400
+            return jsonify(
+                {
+                    "error": error.user_message,
+                    "error_code": error.error_code,
+                    "field": error.debug_info.get("field"),
+                    "status": "validation_error",
+                }
+            ), 400
         else:
             return render_template(
-                'error.html',
+                "error.html",
                 error_code=error.error_code,
                 error_message=error.user_message,
-                http_status=400
+                http_status=400,
             ), 400
 
     @app.errorhandler(AuthenticationError)
@@ -187,14 +217,16 @@ def create_app(config_class=Config):
         error.log(logger, endpoint=request.endpoint or request.path)
 
         if is_json_request():
-            return jsonify({
-                'error': error.user_message,
-                'error_code': error.error_code,
-                'status': 'unauthorized'
-            }), 401
+            return jsonify(
+                {
+                    "error": error.user_message,
+                    "error_code": error.error_code,
+                    "status": "unauthorized",
+                }
+            ), 401
         else:
             # Redirect to login page
-            return redirect(url_for('main.login'))
+            return redirect(url_for("main.login"))
 
     @app.errorhandler(ResourceNotFoundError)
     def handle_not_found(error):
@@ -202,17 +234,19 @@ def create_app(config_class=Config):
         error.log(logger, endpoint=request.endpoint or request.path)
 
         if is_json_request():
-            return jsonify({
-                'error': error.user_message,
-                'error_code': error.error_code,
-                'status': 'not_found'
-            }), 404
+            return jsonify(
+                {
+                    "error": error.user_message,
+                    "error_code": error.error_code,
+                    "status": "not_found",
+                }
+            ), 404
         else:
             return render_template(
-                'error.html',
+                "error.html",
                 error_code=error.error_code,
                 error_message=error.user_message,
-                http_status=404
+                http_status=404,
             ), 404
 
     @app.errorhandler(DatabaseError)
@@ -221,19 +255,21 @@ def create_app(config_class=Config):
         error.log(logger, endpoint=request.endpoint or request.path)
 
         if is_json_request():
-            return jsonify({
-                'error': error.user_message,
-                'error_code': error.error_code,
-                'status': 'database_error',
-                'retry': error.should_retry
-            }), 500
+            return jsonify(
+                {
+                    "error": error.user_message,
+                    "error_code": error.error_code,
+                    "status": "database_error",
+                    "retry": error.should_retry,
+                }
+            ), 500
         else:
             return render_template(
-                'error.html',
+                "error.html",
                 error_code=error.error_code,
                 error_message=error.user_message,
                 can_retry=error.should_retry,
-                http_status=500
+                http_status=500,
             ), 500
 
     @app.errorhandler(LLMError)
@@ -242,19 +278,21 @@ def create_app(config_class=Config):
         error.log(logger, endpoint=request.endpoint or request.path)
 
         if is_json_request():
-            return jsonify({
-                'error': error.user_message,
-                'error_code': error.error_code,
-                'status': 'service_unavailable',
-                'retry': error.should_retry
-            }), 503
+            return jsonify(
+                {
+                    "error": error.user_message,
+                    "error_code": error.error_code,
+                    "status": "service_unavailable",
+                    "retry": error.should_retry,
+                }
+            ), 503
         else:
             return render_template(
-                'error.html',
+                "error.html",
                 error_code=error.error_code,
                 error_message=error.user_message,
                 can_retry=error.should_retry,
-                http_status=503
+                http_status=503,
             ), 503
 
     @app.errorhandler(404)
@@ -263,16 +301,18 @@ def create_app(config_class=Config):
         logger.warning(f"404 Not Found: {request.path}")
 
         if is_json_request():
-            return jsonify({
-                'error': 'The requested resource was not found.',
-                'status': 'not_found'
-            }), 404
+            return jsonify(
+                {
+                    "error": "The requested resource was not found.",
+                    "status": "not_found",
+                }
+            ), 404
         else:
             return render_template(
-                'error.html',
-                error_code='404',
-                error_message='The page you are looking for does not exist.',
-                http_status=404
+                "error.html",
+                error_code="404",
+                error_message="The page you are looking for does not exist.",
+                http_status=404,
             ), 404
 
     @app.errorhandler(500)
@@ -281,16 +321,18 @@ def create_app(config_class=Config):
         logger.error(f"500 Internal Server Error: {str(error)}", exc_info=True)
 
         if is_json_request():
-            return jsonify({
-                'error': 'An internal server error occurred. Please try again later.',
-                'status': 'error'
-            }), 500
+            return jsonify(
+                {
+                    "error": "An internal server error occurred. Please try again later.",
+                    "status": "error",
+                }
+            ), 500
         else:
             return render_template(
-                'error.html',
-                error_code='500',
-                error_message='We encountered a technical problem. Please try again later.',
-                http_status=500
+                "error.html",
+                error_code="500",
+                error_message="We encountered a technical problem. Please try again later.",
+                http_status=500,
             ), 500
 
     # Initialize Background Sync
@@ -299,8 +341,8 @@ def create_app(config_class=Config):
     # We skip starting in the parent (where WERKZEUG_RUN_MAIN is not set but reloader is active)
     # to avoid double initialization and incorrect config.
     # In production (without reloader), WERKZEUG_RUN_MAIN won't be set, so we also start.
-    run_main_env = os.environ.get('WERKZEUG_RUN_MAIN')
-    is_frozen = getattr(sys, 'frozen', False)  # PyInstaller sets this
+    run_main_env = os.environ.get("WERKZEUG_RUN_MAIN")
+    is_frozen = getattr(sys, "frozen", False)  # PyInstaller sets this
 
     # Start sync if:
     # 1. We're in the reloader child process (WERKZEUG_RUN_MAIN='true')
@@ -310,19 +352,16 @@ def create_app(config_class=Config):
     if is_frozen:
         should_start_sync = True
     elif app.debug:
-        should_start_sync = (run_main_env == 'true')
+        should_start_sync = run_main_env == "true"
     else:
         # Not frozen, not debug. Likely Docker or production run.
         should_start_sync = True
 
     # Do not start sync in TESTING mode
-    if app.config.get('TESTING'):
+    if app.config.get("TESTING"):
         should_start_sync = False
 
-    if os.environ.get('SKIP_BACKGROUND_TASKS') == 'True':
-        should_start_sync = False
-
-    if not app.config.get('ENABLE_TELEMETRY', True):
+    if os.environ.get("SKIP_BACKGROUND_TASKS") == "True":
         should_start_sync = False
 
     # DEBUG: Trace startup logic
@@ -332,13 +371,32 @@ def create_app(config_class=Config):
     print(f"WERKZEUG_RUN_MAIN: {run_main_env}")
     print(f"should_start_sync: {should_start_sync} (Background Manager)")
     print(f"OFFLINE_MODE: {os.getenv('OFFLINE_MODE', 'False')}")
-    print(f"ENABLE_TELEMETRY: {app.config.get('ENABLE_TELEMETRY', True)}")
+    print(f"ENABLE_TELEMETRY: {app.config.get('ENABLE_TELEMETRY', False)}")
     print("=====================")
+
+    should_bootstrap_installation = (
+        not app.config.get("TESTING")
+        and not should_start_sync
+        and os.environ.get("SKIP_BACKGROUND_TASKS") != "True"
+        and (not app.debug or run_main_env == "true")
+    )
+
+    if should_bootstrap_installation:
+        try:
+            with app.app_context():
+                from app.common.dcs import DCSClient
+                from app.core.models import Installation
+
+                if not Installation.query.first():
+                    DCSClient().register_device()
+        except Exception as e:
+            logger.error(f"Failed to bootstrap installation: {e}")
 
     if should_start_sync:
         # Main server process - start background services
         try:
             from app.common.dcs import SyncManager
+
             sync_manager = SyncManager(app)
             sync_manager.start()
         except Exception as e:
@@ -347,6 +405,7 @@ def create_app(config_class=Config):
         # Initialize Shared Sandbox for code execution
         try:
             from app.common.sandbox import ensure_shared_sandbox
+
             ensure_shared_sandbox()
         except Exception as e:
             logger.error(f"Failed to initialize shared sandbox: {e}")
@@ -354,6 +413,7 @@ def create_app(config_class=Config):
         # Initialize Audio Services (TTS/STT)
         try:
             from app.common.audio_service import init_audio_services
+
             init_audio_services()
         except Exception as e:
             logger.warning(f"Audio services initialization failed: {e}")

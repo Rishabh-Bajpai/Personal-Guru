@@ -4,15 +4,30 @@ Book Cover Generation Service using ComfyUI.
 Connects to a ComfyUI server via websockets to generate
 AI book cover images from a workflow JSON template.
 """
+
 import json
 import logging
 import os
 import random
+import time
 import urllib.parse
 import urllib.request
 import uuid
 
 logger = logging.getLogger(__name__)
+POSITIVE_PROMPT_NODE_ID = 45
+
+
+def _widget_value(node, index, default=None, required=False, field_name=None):
+    values = node.get("widgets_values", [])
+    if len(values) > index:
+        return values[index]
+    if required:
+        label = field_name or f"widgets_values[{index}]"
+        raise ValueError(
+            f"Workflow node {node.get('id')} ({node.get('type')}) is missing required {label}"
+        )
+    return default
 
 
 class BookCoverService:
@@ -26,9 +41,11 @@ class BookCoverService:
     def _queue_prompt(self, prompt):
         """Submit a prompt to the ComfyUI queue."""
         p = {"prompt": prompt, "client_id": self.client_id}
-        data = json.dumps(p).encode('utf-8')
+        data = json.dumps(p).encode("utf-8")
         req = urllib.request.Request(
-            f"http://{self.server_address}/prompt", data=data
+            f"http://{self.server_address}/prompt",
+            data=data,
+            headers={"Content-Type": "application/json"},
         )
         return json.loads(urllib.request.urlopen(req, timeout=30).read())
 
@@ -43,7 +60,7 @@ class BookCoverService:
 
     def _load_workflow(self):
         """Load the ComfyUI workflow JSON from file."""
-        with open(self.workflow_path) as f:
+        with open(self.workflow_path, mode="r", encoding="utf-8") as f:
             return json.load(f)
 
     def _build_prompt_api(self, workflow_json, refined_prompt):
@@ -67,51 +84,82 @@ class BookCoverService:
                             if link[0] == link_id:
                                 origin_node_id = str(link[1])
                                 origin_slot = link[2]
-                                inputs[input_item["name"]] = [origin_node_id, origin_slot]
+                                inputs[input_item["name"]] = [
+                                    origin_node_id,
+                                    origin_slot,
+                                ]
                                 break
 
             # Skip non-functional nodes
             if class_type == "MarkdownNote":
                 continue
-            # WORKFLOW_DEPENDENCY: Node 45 is the positive prompt node in the
-            # default workflow (scripts/example_workflow.json). If using a
-            # different workflow, this may need adjustment.
-            POSITIVE_PROMPT_NODE_ID = 45
-
             # Map widgets_values to inputs based on node type
             if class_type == "CLIPTextEncode":
                 inputs["text"] = (
                     refined_prompt
                     if node["id"] == POSITIVE_PROMPT_NODE_ID
-                    else node.get("widgets_values", [""])[0]
+                    else _widget_value(node, 0, default="")
                 )
             elif class_type == "CLIPLoader":
-                inputs["clip_name"] = node["widgets_values"][0]
-                inputs["type"] = node["widgets_values"][1]
-                inputs["device"] = node["widgets_values"][2]
+                clip_name = _widget_value(
+                    node, 0, required=True, field_name="clip_name"
+                )
+                clip_type = _widget_value(node, 1, field_name="type")
+                clip_device = _widget_value(node, 2, field_name="device")
+                inputs["clip_name"] = clip_name
+                if clip_type is not None:
+                    inputs["type"] = clip_type
+                if clip_device is not None:
+                    inputs["device"] = clip_device
             elif class_type == "VAELoader":
-                inputs["vae_name"] = node["widgets_values"][0]
+                inputs["vae_name"] = _widget_value(
+                    node, 0, required=True, field_name="vae_name"
+                )
             elif class_type == "UNETLoader":
-                inputs["unet_name"] = node["widgets_values"][0]
-                inputs["weight_dtype"] = node["widgets_values"][1]
+                inputs["unet_name"] = _widget_value(
+                    node, 0, required=True, field_name="unet_name"
+                )
+                weight_dtype = _widget_value(node, 1, field_name="weight_dtype")
+                if weight_dtype is not None:
+                    inputs["weight_dtype"] = weight_dtype
             elif class_type == "ModelSamplingAuraFlow":
-                inputs["shift"] = node["widgets_values"][0]
+                shift = _widget_value(node, 0, field_name="shift")
+                if shift is not None:
+                    inputs["shift"] = shift
             elif class_type == "EmptySD3LatentImage":
                 # User requested 278:398 aspect ratio.
                 # Scaling up to 834x1194 for quality.
                 inputs["width"] = 834
                 inputs["height"] = 1194
-                inputs["batch_size"] = node["widgets_values"][2]
+                inputs["batch_size"] = _widget_value(
+                    node, 2, default=1, field_name="batch_size"
+                )
             elif class_type == "KSampler":
                 inputs["seed"] = random.randint(1, 2**53)
-                inputs["control_after_generate"] = node["widgets_values"][1]
-                inputs["steps"] = node["widgets_values"][2]
-                inputs["cfg"] = node["widgets_values"][3]
-                inputs["sampler_name"] = node["widgets_values"][4]
-                inputs["scheduler"] = node["widgets_values"][5]
-                inputs["denoise"] = node["widgets_values"][6]
+                control_after_generate = _widget_value(
+                    node, 1, field_name="control_after_generate"
+                )
+                steps = _widget_value(node, 2, field_name="steps")
+                cfg = _widget_value(node, 3, field_name="cfg")
+                sampler_name = _widget_value(node, 4, field_name="sampler_name")
+                scheduler = _widget_value(node, 5, field_name="scheduler")
+                denoise = _widget_value(node, 6, field_name="denoise")
+                if control_after_generate is not None:
+                    inputs["control_after_generate"] = control_after_generate
+                if steps is not None:
+                    inputs["steps"] = steps
+                if cfg is not None:
+                    inputs["cfg"] = cfg
+                if sampler_name is not None:
+                    inputs["sampler_name"] = sampler_name
+                if scheduler is not None:
+                    inputs["scheduler"] = scheduler
+                if denoise is not None:
+                    inputs["denoise"] = denoise
             elif class_type == "SaveImage":
-                inputs["filename_prefix"] = node["widgets_values"][0]
+                inputs["filename_prefix"] = _widget_value(
+                    node, 0, default="book_cover", field_name="filename_prefix"
+                )
 
             prompt_api[node_id] = {
                 "inputs": inputs,
@@ -120,7 +168,9 @@ class BookCoverService:
 
         return prompt_api
 
-    def generate_cover(self, book_title, book_description, output_path, refined_prompt=None):
+    def generate_cover(
+        self, book_title, book_description, output_path, refined_prompt=None
+    ):
         """
         Generate a book cover image and save it to output_path.
 
@@ -172,7 +222,19 @@ class BookCoverService:
 
             # Wait for completion
             output_images = {}
+            deadline = time.time() + 180
+            iteration_count = 0
+            max_iterations = 1000
             while True:
+                if time.time() > deadline or iteration_count >= max_iterations:
+                    ws.close()
+                    logger.error(
+                        "Timed out waiting for ComfyUI book cover generation for prompt %s. Partial images: %s",
+                        prompt_id,
+                        bool(output_images),
+                    )
+                    return False, "Timed out waiting for book cover generation"
+                iteration_count += 1
                 out = ws.recv()
                 if isinstance(out, str):
                     message = json.loads(out)
@@ -195,7 +257,9 @@ class BookCoverService:
                 return False, "No images were generated"
 
             # Ensure output directory exists
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            dirpath = os.path.dirname(output_path)
+            if dirpath:
+                os.makedirs(dirpath, exist_ok=True)
 
             for _node_id, images in output_images.items():
                 for image_info in images:
@@ -212,7 +276,12 @@ class BookCoverService:
             return False, "Failed to download generated image"
 
         except ImportError:
-            return False, "websocket-client package not installed. Install with: pip install websocket-client"
+            return (
+                False,
+                "websocket-client package not installed. Install with: pip install websocket-client",
+            )
         except Exception as e:
-            logger.error(f"Book cover generation failed for '{book_title}': {e}", exc_info=True)
+            logger.error(
+                f"Book cover generation failed for '{book_title}': {e}", exc_info=True
+            )
             return False, str(e)

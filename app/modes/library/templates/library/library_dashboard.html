@@ -408,8 +408,20 @@
             const data = await res.json();
             if (data.success) {
                 // Refresh grid and switch to My Books tab instead of leaving dashboard
-                await refreshMyBooksGrid();
-                switchTab('my-books');
+                try {
+                    const refreshed = await refreshMyBooksGrid();
+                    if (!refreshed) {
+                        alert('Book was created, but the dashboard could not refresh. Reloading the page.');
+                        window.location.reload();
+                        return;
+                    }
+                    switchTab('my-books');
+                } catch (refreshErr) {
+                    console.error('Failed to refresh My Books grid:', refreshErr);
+                    alert('Book was created, but the dashboard could not refresh. Reloading the page.');
+                    window.location.reload();
+                    return;
+                }
             }
         } catch (err) {
             alert("Error saving book.");
@@ -430,35 +442,58 @@
 
     async function refreshMyBooksGrid() {
         const grid = document.getElementById('my-books-grid');
+        if (!grid) {
+            console.error('My Books grid not found.');
+            return false;
+        }
         try {
             const res = await fetch('/library/my-books-fragment');
+            if (!res.ok) {
+                console.error('Failed to refresh grid:', res.status);
+                return false;
+            }
             const html = await res.text();
             grid.innerHTML = html;
             executeScripts(grid);
+            return true;
         } catch (e) {
             console.error("Failed to refresh grid:", e);
+            return false;
         }
     }
 
     async function refreshBookCard(bookId) {
         const card = document.getElementById('book-card-' + bookId);
-        if (!card) return;
+        if (!card) {
+            throw new Error('Book card not found');
+        }
         try {
             const res = await fetch(`/library/card/${bookId}`);
+            if (!res.ok) {
+                throw new Error(`Failed to refresh card: ${res.status}`);
+            }
             const html = await res.text();
+            if (!html.trim()) {
+                throw new Error('Failed to refresh card: empty HTML response');
+            }
 
             // Create a temporary container
             const temp = document.createElement('div');
             temp.innerHTML = html;
             const newCard = temp.firstElementChild;
+            if (!newCard) {
+                throw new Error('Failed to refresh card: invalid HTML response');
+            }
 
             // Replace the old card
             card.replaceWith(newCard);
 
             // Re-execute scripts so dynamic components start up
             executeScripts(newCard);
+            return true;
         } catch (e) {
             console.error("Failed to refresh card:", e);
+            throw e;
         }
     }
 
@@ -550,7 +585,11 @@
                             progressDiv.innerText = "Complete! Refreshing...";
 
                             // Refresh the card so it shows as complete/flip-card
-                            await refreshBookCard(bookId);
+                            try {
+                                await refreshBookCard(bookId);
+                            } catch (refreshErr) {
+                                console.error('Failed to refresh completed book card:', refreshErr);
+                            }
 
                             // Optionally redirect if this was a fresh generation from the AI tab
                             if (element.id === 'generate-progress-container') {
@@ -648,7 +687,16 @@
 
             if (data.status === 'generating' || data.status === 'pending') {
                 // Refresh the card state
-                await refreshBookCard(bookId);
+                try {
+                    const refreshed = await refreshBookCard(bookId);
+                    if (!refreshed) {
+                        throw new Error('Could not refresh book card');
+                    }
+                } catch (refreshErr) {
+                    console.error('Failed to refresh book card after starting generation:', refreshErr);
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fas fa-play"></i> Retry Generation';
+                }
             } else if (data.status === 'ready') {
                 // Book is already complete, open it
                 window.location.href = data.redirect || `/library/${bookId}/page/1`;

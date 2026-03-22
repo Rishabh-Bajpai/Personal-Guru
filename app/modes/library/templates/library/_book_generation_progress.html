@@ -270,7 +270,15 @@
 
             // If on the dashboard, refresh the whole card to show the flip-card/cover
             if (typeof refreshBookCard === 'function') {
-                refreshBookCard(bookId);
+                setTimeout(function() {
+                    try {
+                        refreshBookCard(bookId).catch(function(error) {
+                            console.error('Failed to refresh completed book card:', error);
+                        });
+                    } catch (error) {
+                        console.error('Failed to refresh completed book card:', error);
+                    }
+                }, 2000);
             } else {
                 // Otherwise fallback to redirect
                 setTimeout(function() {
