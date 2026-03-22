@@ -50,11 +50,11 @@ if __name__ == '__main__':
     else:
         print(f"No SSL Certificates found. Running on HTTP port {port}.")
 
-    # Ensure flask_session directory exists to prevent cachelib FileNotFoundError
-    # Docker containers often mount volumes where this directory doesn't exist initially.
-    session_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'flask_session')
+    # Ensure configured session directory exists to prevent cachelib FileNotFoundError
+    session_dir = app.config.get('SESSION_FILE_DIR')
     try:
-        os.makedirs(session_dir, exist_ok=True)
+        if session_dir:
+            os.makedirs(session_dir, exist_ok=True)
     except Exception as e:
         print(f"Warning: Could not create session directory {session_dir}: {e}")
 

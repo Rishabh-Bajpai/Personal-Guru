@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Saved Topics{% endblock %}
+
+{% block content %}
+<section id="saved-topics">
+    <h1>Your Saved Topics</h1>
+    <p class="text-muted">Search across every saved topic and jump back into any mode.</p>
+    {% with show_controls=True, empty_message="You don't have any saved topics yet. Start learning a topic to see it here." %}
+    {% include "_saved_topics_list.html" %}
+    {% endwith %}
+</section>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='mode-buttons-refined.css') }}">
+
+<script src="{{ url_for('static', filename='topics-manager.js') }}"></script>
+{% endblock %}
