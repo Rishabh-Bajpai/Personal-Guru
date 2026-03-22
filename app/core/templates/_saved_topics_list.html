@@ -2,11 +2,11 @@
 {% if show_controls %}
 <div class="topics-controls-toolbar">
     <div class="topics-search-wrapper">
-        <input type="text" id="topic-search" placeholder="🔍 Search topics..." autocomplete="off">
+        <input type="text" id="topic-search" placeholder="🔍 Search topics..." autocomplete="off" aria-label="Search topics">
     </div>
     <div class="topics-pagination-controls">
         <span id="topics-count" class="topics-count"></span>
-        <select id="topics-page-size" class="page-size-select" title="Items per page">
+        <select id="topics-page-size" class="page-size-select" title="Items per page" aria-label="Items per page">
             <option value="5">5 per page</option>
             <option value="10" selected>10 per page</option>
             <option value="20">20 per page</option>
@@ -59,7 +59,11 @@
                     class="button secondary" title="Open Notes">
                     📝 Notes
                 </a>
-                <a href="{{ url_for('main.delete_topic_route', topic_name=topic.name) }}" class="btn btn-sm btn-outline-danger" title="Delete Topic" onclick="return confirm('Are you sure you want to delete this topic?');" style="color: #dc3545 !important; border-color: #dc3545 !important;"><i class="fas fa-trash-alt"></i></a>
+                <form method="post" action="{{ url_for('main.delete_topic_route', topic_name=topic.name) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this topic?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="jwe_token" value="{{ jwe_token|default('', true) }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger btn-delete-topic" title="Delete Topic" aria-label="Delete topic"><i class="fas fa-trash-alt"></i></button>
+                </form>
             </div>
         </li>
         {% endfor %}

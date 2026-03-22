@@ -2,6 +2,11 @@
 
 {% block title %}Saved Topics{% endblock %}
 
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='mode-buttons-refined.css') }}">
+{% endblock %}
+
 {% block content %}
 <section id="saved-topics">
     <h1>Your Saved Topics</h1>
@@ -10,9 +15,8 @@
     {% include "_saved_topics_list.html" %}
     {% endwith %}
 </section>
+{% endblock %}
 
-<link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='mode-buttons-refined.css') }}">
-
+{% block scripts %}
 <script src="{{ url_for('static', filename='topics-manager.js') }}"></script>
 {% endblock %}

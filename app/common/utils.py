@@ -36,7 +36,7 @@ from app.core.exceptions import (
     LLMResponseError,
     LLMTimeoutError,
     QuizValidationError,
-    STTError
+    STTError,
 )
 
 logger = logging.getLogger(__name__)
@@ -78,14 +78,14 @@ def call_llm(prompt_or_messages, is_json=False):
         raise MissingConfigError(
             "LLM configuration missing",
             missing_vars=[
-                v for v in [
-                    'LLM_BASE_URL',
-                    'LLM_MODEL_NAME'] if not os.getenv(v)],
-            error_code="CFG010")
+                v for v in ["LLM_BASE_URL", "LLM_MODEL_NAME"] if not os.getenv(v)
+            ],
+            error_code="CFG010",
+        )
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {LLM_API_KEY}"
+        "Authorization": f"Bearer {LLM_API_KEY}",
     }
 
     # Ensure the endpoint targets the chat completion path if not provided
@@ -96,8 +96,8 @@ def call_llm(prompt_or_messages, is_json=False):
     # We append /chat/completions.
 
     # However, to be robust against trailing slashes:
-    base_url = LLM_BASE_URL.rstrip('/')
-    if not base_url.endswith('/v1'):
+    base_url = LLM_BASE_URL.rstrip("/")
+    if not base_url.endswith("/v1"):
         # some users might just put the host.
         # For ollama: http://localhost:11434/v1/chat/completions is valid.
         # IF user put http://localhost:11434, we might need to append /v1 if it's missing?
@@ -133,23 +133,19 @@ def call_llm(prompt_or_messages, is_json=False):
             # data["response_format"] = {"type": "json_object"}
             pass
 
-        response = requests.post(
-            api_url,
-            headers=headers,
-            json=data,
-            timeout=300)
+        response = requests.post(api_url, headers=headers, json=data, timeout=300)
 
         # Check specifically for model not found (404 from Ollama often means this)
         if response.status_code == 404:
             try:
                 err_body = response.json()
-                if "model" in err_body.get('error', {}).get('message', '').lower():
+                if "model" in err_body.get("error", {}).get("message", "").lower():
                     logger.error(f"Model not found: {LLM_MODEL_NAME}")
                     raise LLMConnectionError(
                         f"Model '{LLM_MODEL_NAME}' not found. Please pull it first.",
                         endpoint=api_url,
-                        error_code="LLM015", # New code for Model Not Found
-                        debug_info={"model": LLM_MODEL_NAME}
+                        error_code="LLM015",  # New code for Model Not Found
+                        debug_info={"model": LLM_MODEL_NAME},
                     )
             except (json.JSONDecodeError, AttributeError):
                 pass
@@ -157,31 +153,36 @@ def call_llm(prompt_or_messages, is_json=False):
         response.raise_for_status()
 
         response_json = response.json()
-        content = response_json['choices'][0]['message']['content']
+        content = response_json["choices"][0]["message"]["content"]
 
         # Calculate latency
         end_time = time.time()
         latency_ms = int((end_time - start_time) * 1000)
 
         # Extract token usage if available
-        usage = response_json.get('usage', {})
-        input_tokens = usage.get('prompt_tokens', 0)
-        output_tokens = usage.get('completion_tokens', 0)
+        usage = response_json.get("usage", {})
+        input_tokens = usage.get("prompt_tokens", 0)
+        output_tokens = usage.get("completion_tokens", 0)
 
-        logger.debug(f"LLM Response received: {len(content)} characters. Latency: {latency_ms}ms")
+        logger.debug(
+            f"LLM Response received: {len(content)} characters. Latency: {latency_ms}ms"
+        )
 
         # Database Logging Hook
         try:
             # Only log if we're in a request context and user is authenticated
             # In background threads, current_user is not available
-            if flask.has_request_context() and flask_login.current_user and flask_login.current_user.is_authenticated:
+            if (
+                flask.has_request_context()
+                and flask_login.current_user.is_authenticated
+            ):
                 perf_log = models.AIModelPerformance(
                     user_id=flask_login.current_user.userid,
-                    model_type='LLM',
+                    model_type="LLM",
                     model_name=LLM_MODEL_NAME,
                     latency_ms=latency_ms,
                     input_tokens=input_tokens,
-                    output_tokens=output_tokens
+                    output_tokens=output_tokens,
                 )
                 extensions.db.session.add(perf_log)
                 extensions.db.session.commit()
@@ -207,10 +208,11 @@ def call_llm(prompt_or_messages, is_json=False):
             except json.JSONDecodeError:
                 # If that fails, try to find a JSON object embedded in the text
                 logger.warning(
-                    "Failed to parse content directly, attempting to extract JSON object.")
+                    "Failed to parse content directly, attempting to extract JSON object."
+                )
                 try:
                     # Regex to find a JSON object within the text.
-                    match = re.search(r'\{.*\}', content, re.DOTALL)
+                    match = re.search(r"\{.*\}", content, re.DOTALL)
                     if match:
                         json_str = match.group(0)
                         return json.loads(json_str)
@@ -221,7 +223,7 @@ def call_llm(prompt_or_messages, is_json=False):
                 raise LLMResponseError(
                     "Failed to parse JSON from LLM response",
                     error_code="LLM010",
-                    debug_info={"content_preview": content[:200]}
+                    debug_info={"content_preview": content[:200]},
                 )
 
         return content
@@ -232,7 +234,7 @@ def call_llm(prompt_or_messages, is_json=False):
             "Request to LLM timed out after 300 seconds",
             timeout=300,
             error_code="LLM011",
-            debug_info={"endpoint": api_url}
+            debug_info={"endpoint": api_url},
         )
     except requests.exceptions.ConnectionError as e:
         logger.error(f"Cannot connect to LLM: {e}")
@@ -241,25 +243,27 @@ def call_llm(prompt_or_messages, is_json=False):
             "Unable to connect to LLM service",
             endpoint=api_url,
             error_code="LLM012",
-            debug_info={"original_error": str(e)}
+            debug_info={"original_error": str(e)},
         )
     except requests.exceptions.RequestException as e:
         logger.error(f"LLM request failed: {e}")
 
-        status_code = getattr(e.response, 'status_code', None) if hasattr(e, 'response') else None
+        status_code = (
+            getattr(e.response, "status_code", None) if hasattr(e, "response") else None
+        )
 
         raise LLMConnectionError(
             f"LLM request failed: {str(e)}",
             endpoint=api_url,
             error_code="LLM013",
-            debug_info={"status_code": status_code}
+            debug_info={"status_code": status_code},
         )
     except (KeyError, IndexError) as e:
         logger.error(f"Invalid LLM response structure: {e}")
         raise LLMResponseError(
             "LLM response has unexpected structure",
             error_code="LLM014",
-            debug_info={"error": str(e)}
+            debug_info={"error": str(e)},
         )
 
 
@@ -270,40 +274,44 @@ def validate_quiz_structure(quiz_data):
     Raises:
         QuizValidationError: If quiz structure is invalid
     """
-    if not quiz_data or "questions" not in quiz_data or not isinstance(
-            quiz_data["questions"], list) or not quiz_data["questions"]:
+    if (
+        not quiz_data
+        or "questions" not in quiz_data
+        or not isinstance(quiz_data["questions"], list)
+        or not quiz_data["questions"]
+    ):
         raise QuizValidationError(
             "Invalid quiz format: missing or empty questions list",
             error_code="QUIZ001",
             debug_info={
                 "has_data": bool(quiz_data),
-                "has_questions_key": "questions" in quiz_data if quiz_data else False})
+                "has_questions_key": "questions" in quiz_data if quiz_data else False,
+            },
+        )
 
     for i, q in enumerate(quiz_data["questions"]):
         if not isinstance(q, dict):
             raise QuizValidationError(
                 f"Question {i} is not a dictionary",
                 error_code="QUIZ002",
-                debug_info={"question_index": i, "type": type(q).__name__}
+                debug_info={"question_index": i, "type": type(q).__name__},
             )
 
         if not all(k in q for k in ["question", "options", "correct_answer"]):
             missing_keys = [
-                k for k in [
-                    "question",
-                    "options",
-                    "correct_answer"] if k not in q]
+                k for k in ["question", "options", "correct_answer"] if k not in q
+            ]
             raise QuizValidationError(
                 f"Question {i} missing required keys: {missing_keys}",
                 error_code="QUIZ003",
-                debug_info={"question_index": i, "missing_keys": missing_keys}
+                debug_info={"question_index": i, "missing_keys": missing_keys},
             )
 
         if not isinstance(q["question"], str) or not q["question"].strip():
             raise QuizValidationError(
                 f"Question {i} has empty text",
                 error_code="QUIZ004",
-                debug_info={"question_index": i}
+                debug_info={"question_index": i},
             )
 
         if not isinstance(q["options"], list) or len(q["options"]) != 4:
@@ -312,33 +320,31 @@ def validate_quiz_structure(quiz_data):
                 error_code="QUIZ005",
                 debug_info={
                     "question_index": i,
-                    "options_count": len(
-                        q["options"]) if isinstance(
-                        q.get("options"),
-                        list) else 0})
+                    "options_count": len(q["options"])
+                    if isinstance(q.get("options"), list)
+                    else 0,
+                },
+            )
 
-        if not all(isinstance(opt, str) and opt.strip()
-                   for opt in q["options"]):
+        if not all(isinstance(opt, str) and opt.strip() for opt in q["options"]):
             raise QuizValidationError(
                 f"Question {i} has one or more empty options",
                 error_code="QUIZ006",
-                debug_info={"question_index": i}
+                debug_info={"question_index": i},
             )
 
         correct_answer = q.get("correct_answer", "")
-        if not isinstance(
-                correct_answer,
-                str) or correct_answer.upper() not in [
-                'A',
-                'B',
-                'C',
-                'D']:
+        if not isinstance(correct_answer, str) or correct_answer.upper() not in [
+            "A",
+            "B",
+            "C",
+            "D",
+        ]:
             raise QuizValidationError(
                 f"Question {i} has invalid correct_answer: must be A, B, C, or D",
                 error_code="QUIZ007",
-                debug_info={
-                    "question_index": i,
-                    "correct_answer": correct_answer})
+                debug_info={"question_index": i, "correct_answer": correct_answer},
+            )
 
 
 def chunk_text(text, max_chars=300):
@@ -347,7 +353,7 @@ def chunk_text(text, max_chars=300):
     Used to avoid TTS limits (e.g., Kokoro ~500 tokens).
     """
     chunks = []
-    sentences = re.split(r'([.!?]+)', text)
+    sentences = re.split(r"([.!?]+)", text)
     current_chunk = ""
 
     for i in range(0, len(sentences) - 1, 2):
@@ -379,7 +385,7 @@ def generate_audio(text, step_index):
     Handles long text by chunking and merging.
     """
     start_time = time.time()
-    static_dir = os.path.join(os.getcwd(), 'app', 'static')
+    static_dir = os.path.join(os.getcwd(), "app", "static")
     if not os.path.exists(static_dir):
         os.makedirs(static_dir)
 
@@ -414,7 +420,7 @@ def generate_audio(text, step_index):
 
             if isinstance(result, bytes):
                 # Docker/OpenAI mode: result is bytes (usually mp3 or wav depending on model, let's assume valid audio bytes)
-                with open(temp_path, 'wb') as f:
+                with open(temp_path, "wb") as f:
                     f.write(result)
             else:
                 # Local/Kokoro mode: result is numpy array
@@ -441,7 +447,7 @@ def generate_audio(text, step_index):
         else:
             # multiple files, merge
             list_file_fd, list_file_path = tempfile.mkstemp(suffix=".txt")
-            with os.fdopen(list_file_fd, 'w') as f:
+            with os.fdopen(list_file_fd, "w") as f:
                 for tf in temp_files:
                     # Escape paths for ffmpeg concat demuxer
                     # Normalizing paths for ffmpeg concat compatibility (forward slashes are safer across platforms)
@@ -450,34 +456,38 @@ def generate_audio(text, step_index):
 
             cmd = [
                 "ffmpeg",
-                "-f", "concat",
-                "-safe", "0",
-                "-i", list_file_path,
-                "-c", "copy",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                list_file_path,
+                "-c",
+                "copy",
                 "-y",
-                output_filename
+                output_filename,
             ]
 
             try:
                 merge_result = subprocess.run(
-                    cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE
+                    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
                 )
                 if merge_result.returncode != 0:
                     # Fallback to simple concatenation if ffmpeg fails (mostly for simple formats)
-                    logger.warning(f"ffmpeg merge failed: {merge_result.stderr.decode()}. Trying direct concatenation.")
-                    with open(output_filename, 'wb') as outfile:
+                    logger.warning(
+                        f"ffmpeg merge failed: {merge_result.stderr.decode()}. Trying direct concatenation."
+                    )
+                    with open(output_filename, "wb") as outfile:
                         for tf in temp_files:
-                            with open(tf, 'rb') as infile:
+                            with open(tf, "rb") as infile:
                                 outfile.write(infile.read())
 
                 os.remove(list_file_path)
             except (OSError, FileNotFoundError):
-                 # FFmpeg not installed, fallback to concat
-                with open(output_filename, 'wb') as outfile:
+                # FFmpeg not installed, fallback to concat
+                with open(output_filename, "wb") as outfile:
                     for tf in temp_files:
-                        with open(tf, 'rb') as infile:
+                        with open(tf, "rb") as infile:
                             outfile.write(infile.read())
 
         # Cleanup temp files
@@ -489,14 +499,17 @@ def generate_audio(text, step_index):
         try:
             end_time = time.time()
             latency_ms = int((end_time - start_time) * 1000)
-            if flask.has_request_context() and flask_login.current_user and flask_login.current_user.is_authenticated:
+            if (
+                flask.has_request_context()
+                and flask_login.current_user.is_authenticated
+            ):
                 perf_log = models.AIModelPerformance(
                     user_id=flask_login.current_user.userid,
-                    model_type='TTS',
+                    model_type="TTS",
                     model_name=TTS_MODEL,
                     latency_ms=latency_ms,
                     input_tokens=len(text),
-                    output_tokens=0
+                    output_tokens=0,
                 )
                 extensions.db.session.add(perf_log)
                 extensions.db.session.commit()
@@ -539,15 +552,15 @@ def reconcile_plan_steps(current_steps, current_plan, new_plan):
             step_data = step_content_map[step_text]
 
             # Ensure title is populated from plan if missing in data (e.g. placeholder)
-            if not step_data.get('title'):
-                step_data['title'] = step_text
+            if not step_data.get("title"):
+                step_data["title"] = step_text
 
             # Update step_index to match new position
-            step_data['step_index'] = i
+            step_data["step_index"] = i
             new_steps.append(step_data)
         else:
             # New step, empty content with correct index
-            new_steps.append({'step_index': i, 'title': step_text})
+            new_steps.append({"step_index": i, "title": step_text})
 
     return new_steps
 
@@ -559,7 +572,10 @@ def get_user_context():
     """
 
     try:
-        if flask_login.current_user.is_authenticated and flask_login.current_user.user_profile:
+        if (
+            flask_login.current_user.is_authenticated
+            and flask_login.current_user.user_profile
+        ):
             context = flask_login.current_user.user_profile.to_context_string()
             if context.strip():
                 return context
@@ -587,7 +603,7 @@ def parse_podcast_script(transcript):
     # (.*)        -> Capture group 2: The actual dialogue text
     pattern = re.compile(r"^\**([^:]+)\**\s*:\s*(.*)", re.IGNORECASE)
 
-    for line in transcript.strip().split('\n'):
+    for line in transcript.strip().split("\n"):
         line = line.strip()
         if not line:
             continue
@@ -596,13 +612,13 @@ def parse_podcast_script(transcript):
         if match:
             speaker = match.group(1).strip()
             # Remove markdown bolding or quotes from the speaker name
-            speaker = speaker.replace('*', '').replace('"', '').replace("'", "")
+            speaker = speaker.replace("*", "").replace('"', "").replace("'", "")
             # Remove parentheticals like "Jamie (Host)"
-            speaker = re.sub(r'\(.*?\)', '', speaker).strip()
+            speaker = re.sub(r"\(.*?\)", "", speaker).strip()
 
             content = match.group(2).strip()
             # Clean content: remove surrounding quotes and extra asterisks
-            content = content.strip('"').strip('*').strip()
+            content = content.strip('"').strip("*").strip()
 
             if content:
                 # Strictly filter allowed speakers
@@ -643,14 +659,23 @@ def generate_podcast_audio(transcript, output_filename):
     available_voices = [
         TTS_VOICE_PODCAST_HOST,
         TTS_VOICE_PODCAST_GUEST,
-        'af_heart', 'af_sarah', 'af_nicole', 'af_sky',
-        'am_adam', 'am_michael', 'am_michael',
-        'bf_emma', 'bf_isabella',
-        'bm_george', 'bm_lewis'
+        "af_heart",
+        "af_sarah",
+        "af_nicole",
+        "af_sky",
+        "am_adam",
+        "am_michael",
+        "am_michael",
+        "bf_emma",
+        "bf_isabella",
+        "bm_george",
+        "bm_lewis",
     ]
     available_voices = list(dict.fromkeys(available_voices))
-    voice_map = {speaker: available_voices[i % len(available_voices)]
-                 for i, speaker in enumerate(unique_speakers)}
+    voice_map = {
+        speaker: available_voices[i % len(available_voices)]
+        for i, speaker in enumerate(unique_speakers)
+    }
 
     # 4. Generate Audio Segments
     temp_files = []
@@ -671,13 +696,15 @@ def generate_podcast_audio(transcript, output_filename):
                     continue
 
                 result, sr = tts.generate(chunk, voice=voice)
-                print(f"DEBUG: TTS Result Type: {type(result)}, chunk len: {len(chunk)}")
+                print(
+                    f"DEBUG: TTS Result Type: {type(result)}, chunk len: {len(chunk)}"
+                )
 
                 if isinstance(result, bytes):
                     # Docker/OpenAI mode - save to temp file for ffmpeg merge
                     fd, temp_path = tempfile.mkstemp(suffix=".mp3")
                     os.close(fd)
-                    with open(temp_path, 'wb') as f:
+                    with open(temp_path, "wb") as f:
                         f.write(result)
                     temp_files.append(temp_path)
                 else:
@@ -705,34 +732,42 @@ def generate_podcast_audio(transcript, output_filename):
                 return False, "Failed to generate any audio content"
 
             list_file_fd, list_file_path = tempfile.mkstemp(suffix=".txt")
-            with os.fdopen(list_file_fd, 'w') as f:
+            with os.fdopen(list_file_fd, "w") as f:
                 for tf in temp_files:
                     f.write(f"file '{tf}'\n")
 
             print("Merging audio files using ffmpeg...")
             cmd = [
                 "ffmpeg",
-                "-f", "concat",
-                "-safe", "0",
-                "-i", list_file_path,
-                "-c", "copy",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                list_file_path,
+                "-c",
+                "copy",
                 "-y",
-                output_filename
+                output_filename,
             ]
 
             try:
-                merge_result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                merge_result = subprocess.run(
+                    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                )
 
                 if merge_result.returncode != 0:
                     print(f"ffmpeg error: {merge_result.stderr.decode()}")
                     raise OSError("ffmpeg failed")
 
             except (OSError, FileNotFoundError):
-                print("ffmpeg not found or failed, falling back to direct concatenation...")
+                print(
+                    "ffmpeg not found or failed, falling back to direct concatenation..."
+                )
                 # Fallback: Simple concatenation (works for MP3 often)
-                with open(output_filename, 'wb') as outfile:
+                with open(output_filename, "wb") as outfile:
                     for tf in temp_files:
-                        with open(tf, 'rb') as infile:
+                        with open(tf, "rb") as infile:
                             outfile.write(infile.read())
 
             # Clean up list file
@@ -745,14 +780,17 @@ def generate_podcast_audio(transcript, output_filename):
             # Calculate approx input length from lines
             total_chars = sum(len(txt) for _, txt in lines)
 
-            if flask.has_request_context() and flask_login.current_user and flask_login.current_user.is_authenticated:
+            if (
+                flask.has_request_context()
+                and flask_login.current_user.is_authenticated
+            ):
                 perf_log = models.AIModelPerformance(
                     user_id=flask_login.current_user.userid,
-                    model_type='TTS',
+                    model_type="TTS",
                     model_name=TTS_MODEL,
                     latency_ms=latency_ms,
                     input_tokens=total_chars,
-                    output_tokens=0
+                    output_tokens=0,
                 )
                 extensions.db.session.add(perf_log)
                 extensions.db.session.commit()
@@ -792,14 +830,17 @@ def transcribe_audio(audio_file_path):
             latency_ms = int((end_time - start_time) * 1000)
             output_len = len(transcript) if transcript else 0
 
-            if flask.has_request_context() and flask_login.current_user and flask_login.current_user.is_authenticated:
+            if (
+                flask.has_request_context()
+                and flask_login.current_user.is_authenticated
+            ):
                 perf_log = models.AIModelPerformance(
                     user_id=flask_login.current_user.userid,
-                    model_type='STT',
+                    model_type="STT",
                     model_name=STT_MODEL,
                     latency_ms=latency_ms,
                     input_tokens=0,
-                    output_tokens=output_len
+                    output_tokens=output_len,
                 )
                 extensions.db.session.add(perf_log)
                 extensions.db.session.commit()
@@ -840,7 +881,9 @@ Text to summarize:
         return text[:300] + "..." if len(text) > 300 else text
 
 
-def log_telemetry(event_type: str, triggers: dict, payload: dict, installation_id: str = None) -> None:
+def log_telemetry(
+    event_type: str, triggers: dict, payload: dict, installation_id: str = None
+) -> None:
     """
     Logs a telemetry event to the database.
     Fails silently on errors to avoid disrupting the user experience.
@@ -854,13 +897,13 @@ def log_telemetry(event_type: str, triggers: dict, payload: dict, installation_i
     if os.getenv("OFFLINE_MODE", "False").lower() == "true":
         return
 
-    if os.getenv("ENABLE_TELEMETRY", "True").lower() != "true":
+    if os.getenv("ENABLE_TELEMETRY", "False").lower() != "true":
         return
 
     try:
         # Resolve User ID (Nullable)
         user_id = None
-        if flask.has_request_context() and flask_login.current_user and flask_login.current_user.is_authenticated:
+        if flask.has_request_context() and flask_login.current_user.is_authenticated:
             user_id = flask_login.current_user.userid
             # If installation_id not provided, try to get from user
             if not installation_id:
@@ -878,11 +921,12 @@ def log_telemetry(event_type: str, triggers: dict, payload: dict, installation_i
             logger.debug(f"Skipping telemetry {event_type}: No installation_id found.")
             return
 
-        # Ensure session_id exists
-        if 'telemetry_session_id' not in flask.session:
-            flask.session['telemetry_session_id'] = str(uuid.uuid4())
-
-        session_id = flask.session['telemetry_session_id']
+        if flask.has_request_context():
+            if "telemetry_session_id" not in flask.session:
+                flask.session["telemetry_session_id"] = str(uuid.uuid4())
+            session_id = flask.session["telemetry_session_id"]
+        else:
+            session_id = str(uuid.uuid4())
 
         log_entry = models.TelemetryLog(
             user_id=user_id,
@@ -890,7 +934,7 @@ def log_telemetry(event_type: str, triggers: dict, payload: dict, installation_i
             session_id=session_id,
             event_type=event_type,
             triggers=triggers,
-            payload=payload
+            payload=payload,
         )
 
         extensions.db.session.add(log_entry)
@@ -908,16 +952,16 @@ def get_system_info():
     Returns a dict with cpu_cores, ram_gb, gpu_model, os_version, install_method.
     """
     info = {
-        'cpu_cores': os.cpu_count(),
-        'ram_gb': round(psutil.virtual_memory().total / (1024**3)),
-        'os_version': platform.platform(),
-        'install_method': 'local',  # Default
-        'gpu_model': 'Unknown'
+        "cpu_cores": os.cpu_count(),
+        "ram_gb": round(psutil.virtual_memory().total / (1024**3)),
+        "os_version": platform.platform(),
+        "install_method": "local",  # Default
+        "gpu_model": "Unknown",
     }
 
     # Check for Docker
-    if os.path.exists('/.dockerenv'):
-        info['install_method'] = 'docker'
+    if os.path.exists("/.dockerenv"):
+        info["install_method"] = "docker"
 
     # GPU Detection (cross-platform, multi-vendor)
     gpu_detected = False
@@ -925,9 +969,11 @@ def get_system_info():
     # Try NVIDIA (nvidia-smi)
     if not gpu_detected:
         try:
-            result = subprocess.run(['nvidia-smi', '-L'], capture_output=True, text=True, timeout=5)
+            result = subprocess.run(
+                ["nvidia-smi", "-L"], capture_output=True, text=True, timeout=5
+            )
             if result.returncode == 0 and result.stdout.strip():
-                info['gpu_model'] = result.stdout.strip().split('\n')[0]
+                info["gpu_model"] = result.stdout.strip().split("\n")[0]
                 gpu_detected = True
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
@@ -935,47 +981,56 @@ def get_system_info():
     # Try AMD (rocm-smi)
     if not gpu_detected:
         try:
-            result = subprocess.run(['rocm-smi', '--showproductname'], capture_output=True, text=True, timeout=5)
+            result = subprocess.run(
+                ["rocm-smi", "--showproductname"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
             if result.returncode == 0 and result.stdout.strip():
-                model_name = result.stdout.strip().split('\n')[0]
-                info['gpu_model'] = f"AMD {model_name}"
+                model_name = result.stdout.strip().split("\n")[0]
+                info["gpu_model"] = f"AMD {model_name}"
                 gpu_detected = True
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
 
     # Try Intel (Linux)
-    if not gpu_detected and platform.system() == 'Linux':
+    if not gpu_detected and platform.system() == "Linux":
         try:
-            result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
+            result = subprocess.run(
+                ["lspci"], capture_output=True, text=True, timeout=5
+            )
             if result.returncode == 0:
-                for line in result.stdout.split('\n'):
-                    if 'VGA' in line or 'Display' in line or '3D' in line:
-                        if 'Intel' in line:
-                            info['gpu_model'] = line.split(':')[-1].strip()
+                for line in result.stdout.split("\n"):
+                    if "VGA" in line or "Display" in line or "3D" in line:
+                        if "Intel" in line:
+                            info["gpu_model"] = line.split(":")[-1].strip()
                             gpu_detected = True
                             break
-                        elif 'AMD' in line or 'ATI' in line:
-                            info['gpu_model'] = line.split(':')[-1].strip()
+                        elif "AMD" in line or "ATI" in line:
+                            info["gpu_model"] = line.split(":")[-1].strip()
                             gpu_detected = True
                             break
-                        elif 'NVIDIA' in line:
-                            info['gpu_model'] = line.split(':')[-1].strip()
+                        elif "NVIDIA" in line:
+                            info["gpu_model"] = line.split(":")[-1].strip()
                             gpu_detected = True
                             break
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
 
     # Try macOS (Apple Silicon / discrete GPU)
-    if not gpu_detected and platform.system() == 'Darwin':
+    if not gpu_detected and platform.system() == "Darwin":
         try:
             result = subprocess.run(
-                ['system_profiler', 'SPDisplaysDataType'],
-                capture_output=True, text=True, timeout=10
+                ["system_profiler", "SPDisplaysDataType"],
+                capture_output=True,
+                text=True,
+                timeout=10,
             )
             if result.returncode == 0:
-                for line in result.stdout.split('\n'):
-                    if 'Chipset Model:' in line or 'Chip:' in line:
-                        info['gpu_model'] = line.split(':')[-1].strip()
+                for line in result.stdout.split("\n"):
+                    if "Chipset Model:" in line or "Chip:" in line:
+                        info["gpu_model"] = line.split(":")[-1].strip()
                         gpu_detected = True
                         break
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
@@ -985,10 +1040,7 @@ def get_system_info():
 
 
 # Cache for update check (simple in-memory cache)
-_update_cache = {
-    "last_checked": None,
-    "data": None
-}
+_update_cache = {"last_checked": None, "data": None}
 
 
 def check_for_updates(current_version):
@@ -1028,7 +1080,7 @@ def _fetch_github_release():
             "tag_name": data.get("tag_name"),
             "html_url": data.get("html_url"),
             "published_at": data.get("published_at"),
-            "name": data.get("name")
+            "name": data.get("name"),
         }
     return None
 
@@ -1048,7 +1100,7 @@ def _compare_versions(current_ver, release_data):
             "title": f"New Update Available: {release_data['tag_name']}",
             "message": f"A new version ({release_data['tag_name']}) is available on GitHub.",
             "notification_type": "info",
-            "url": release_data["html_url"]
+            "url": release_data["html_url"],
         }
     return None
 
@@ -1062,21 +1114,53 @@ def sanitize_html(content):
         return ""
 
     allowed_tags = [
-        'p', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'ul', 'ol', 'li', 'dl', 'dt', 'dd',
-        'b', 'i', 'strong', 'em', 'u', 's', 'strike',
-        'code', 'pre', 'blockquote',
-        'table', 'thead', 'tbody', 'tr', 'th', 'td',
-        'span', 'div', 'img', 'a', 'hr',
-        'sup', 'sub'
+        "p",
+        "br",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "ul",
+        "ol",
+        "li",
+        "dl",
+        "dt",
+        "dd",
+        "b",
+        "i",
+        "strong",
+        "em",
+        "u",
+        "s",
+        "strike",
+        "code",
+        "pre",
+        "blockquote",
+        "table",
+        "thead",
+        "tbody",
+        "tr",
+        "th",
+        "td",
+        "span",
+        "div",
+        "img",
+        "a",
+        "hr",
+        "sup",
+        "sub",
     ]
 
     allowed_attributes = {
-        '*': ['class', 'title', 'id'],
-        'a': ['href', 'rel', 'target'],
-        'img': ['src', 'alt', 'width', 'height'],
-        'pre': ['data-lang'],
-        'code': ['class']
+        "*": ["class", "title", "id"],
+        "a": ["href", "rel", "target"],
+        "img": ["src", "alt", "width", "height"],
+        "pre": ["data-lang"],
+        "code": ["class"],
     }
 
-    return bleach.clean(content, tags=allowed_tags, attributes=allowed_attributes, strip=True)
+    return bleach.clean(
+        content, tags=allowed_tags, attributes=allowed_attributes, strip=True
+    )

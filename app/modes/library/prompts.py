@@ -83,7 +83,7 @@ def get_librarian_generate_prompt(query, user_background):
     return f"""
         You are an AI Librarian. The user wants to generate a new book to learn about: "{query}"
         User Background: "{user_background}"
-        Note: Use users query seriously.
+        Note: Use user's query seriously.
 
         Design a comprehensive, structured book consisting of 2 to 6 sequential topics (chapters).
         The topics should progressively build knowledge from fundamentals to advanced concepts.

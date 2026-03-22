@@ -3,15 +3,49 @@ import requests
 import logging
 import threading
 import time
+import hashlib
+from urllib.parse import urlparse
 from sqlalchemy.orm import joinedload
 from app.core.extensions import db
-from app.core.models import Installation, Topic, ChatMode, ChapterMode, QuizMode, FlashcardMode, User, TelemetryLog, Feedback, AIModelPerformance, PlanRevision, SyncLog
+from app.core.models import (
+    Installation,
+    Topic,
+    ChatMode,
+    ChapterMode,
+    QuizMode,
+    FlashcardMode,
+    User,
+    TelemetryLog,
+    Feedback,
+    AIModelPerformance,
+    PlanRevision,
+    SyncLog,
+)
 
 logger = logging.getLogger(__name__)
 
 DCS_BASE_URL = os.getenv("DCS_BASE_URL", "https://telemetry2.samosa-ai.com")
 OFFLINE_MODE = os.getenv("OFFLINE_MODE", "False").lower() == "true"
-ENABLE_TELEMETRY = os.getenv("ENABLE_TELEMETRY", "True").lower() == "true"
+ENABLE_TELEMETRY = os.getenv("ENABLE_TELEMETRY", "False").lower() == "true"
+
+
+def _has_telemetry_consent(user):
+    """Return explicit consent when available, otherwise allow legacy users."""
+    for attr_name in ("telemetry_consent", "analytics_consent", "consent_to_telemetry"):
+        if hasattr(user, attr_name):
+            return bool(getattr(user, attr_name))
+    return True
+
+
+def _anonymize_login_id(login_id):
+    """Return a deterministic one-way hash for user identifiers."""
+    return hashlib.sha256(str(login_id).encode("utf-8")).hexdigest()
+
+
+def _is_secure_dcs_url(url):
+    parsed = urlparse(url)
+    return parsed.scheme == "https"
+
 
 class DCSClient:
     """Client for communicating with the Data Collection Server (DCS)."""
@@ -26,6 +60,7 @@ class DCSClient:
         """Load installation ID from database if available."""
         try:
             from app.core.models import Installation
+
             inst = Installation.query.first()
             if inst:
                 self.installation_id = inst.installation_id
@@ -51,12 +86,16 @@ class DCSClient:
             inst = Installation.query.first()
             if inst:
                 self.installation_id = inst.installation_id
-                logger.info(f"Device already registered with ID: {self.installation_id}")
+                logger.info(
+                    f"Device already registered with ID: {self.installation_id}"
+                )
                 # Optionally update details
                 self.update_device_details()
                 return True
         except OperationalError as e:
-            logger.warning(f"Database tables not ready yet: {e}. Retrying registration later.")
+            logger.warning(
+                f"Database tables not ready yet: {e}. Retrying registration later."
+            )
             return False
         except Exception as e:
             logger.error(f"Error checking registration: {e}")
@@ -71,17 +110,24 @@ class DCSClient:
             sys_info = get_system_info()
             new_inst = Installation(
                 installation_id=new_id,
-                cpu_cores=sys_info['cpu_cores'],
-                ram_gb=sys_info['ram_gb'],
-                gpu_model=sys_info['gpu_model'],
-                os_version=sys_info['os_version'],
-                install_method=sys_info['install_method']
+                cpu_cores=sys_info["cpu_cores"],
+                ram_gb=sys_info["ram_gb"],
+                gpu_model=sys_info["gpu_model"],
+                os_version=sys_info["os_version"],
+                install_method=sys_info["install_method"],
             )
             db.session.add(new_inst)
             db.session.commit()
 
             logger.info(f"Device registered locally: {new_id}")
             return True
+
+        if not _is_secure_dcs_url(self.base_url):
+            logger.warning(
+                "Telemetry disabled for registration because DCS_BASE_URL is not HTTPS: %s",
+                self.base_url,
+            )
+            return False
 
         logger.info("Registering device with DCS...")
         try:
@@ -101,11 +147,11 @@ class DCSClient:
             sys_info = get_system_info()
             new_inst = Installation(
                 installation_id=new_id,
-                cpu_cores=sys_info['cpu_cores'],
-                ram_gb=sys_info['ram_gb'],
-                gpu_model=sys_info['gpu_model'],
-                os_version=sys_info['os_version'],
-                install_method=sys_info['install_method']
+                cpu_cores=sys_info["cpu_cores"],
+                ram_gb=sys_info["ram_gb"],
+                gpu_model=sys_info["gpu_model"],
+                os_version=sys_info["os_version"],
+                install_method=sys_info["install_method"],
             )
             db.session.add(new_inst)
             db.session.commit()
@@ -123,21 +169,32 @@ class DCSClient:
     def update_device_details(self):
         """Send updated device details to DCS server."""
         if not ENABLE_TELEMETRY:
+            logger.debug("Telemetry disabled. Skipping device registration.")
             return True
 
         if OFFLINE_MODE:
             return True
 
+        if not _is_secure_dcs_url(self.base_url):
+            logger.warning(
+                "Telemetry disabled for device update because DCS_BASE_URL is not HTTPS: %s",
+                self.base_url,
+            )
+            return False
+
         if not self.installation_id:
             return False
 
         from app.common.utils import get_system_info
+
         sys_info = get_system_info()
         payload = sys_info.copy()
-        payload['installation_id'] = self.installation_id
+        payload["installation_id"] = self.installation_id
 
         try:
-            resp = requests.post(f"{self.base_url}/api/register/update", json=payload, timeout=10)
+            resp = requests.post(
+                f"{self.base_url}/api/register/update", json=payload, timeout=10
+            )
             resp.raise_for_status()
             return True
         except Exception as e:
@@ -155,6 +212,11 @@ class DCSClient:
         if OFFLINE_MODE:
             logger.debug("Offline mode enabled. Skipping sync.")
             return
+        if not _is_secure_dcs_url(self.base_url):
+            logger.warning(
+                "Skipping sync because DCS_BASE_URL is not HTTPS: %s", self.base_url
+            )
+            return
         if not self.installation_id:
             logger.warning("Cannot sync: No installation_id")
             return
@@ -171,7 +233,7 @@ class DCSClient:
             "plan_revisions": [],
             "ai_performances": [],
             "telemetry_events": [],
-            "feedback": []
+            "feedback": [],
         }
 
         BATCH_SIZE = 50
@@ -183,35 +245,52 @@ class DCSClient:
         def add_topic_to_payload(topic):
             if topic.id in included_topic_ids:
                 return
-            payload["topics"].append({
-                "id": topic.id,
-                "user_id": topic.user_id,
-                "name": topic.name,
-                "study_plan": topic.study_plan,
-                "notes": topic.notes,
-                "created_at": topic.created_at.isoformat(),
-                "modified_at": topic.modified_at.isoformat()
-            })
+            payload["topics"].append(
+                {
+                    "id": topic.id,
+                    "user_id": topic.user_id,
+                    "name": topic.name,
+                    "study_plan": topic.study_plan,
+                    "notes": topic.notes,
+                    "created_at": topic.created_at.isoformat(),
+                    "modified_at": topic.modified_at.isoformat(),
+                }
+            )
             included_topic_ids.add(topic.id)
 
         try:
             # 0. Installations (Pending)
-            installations = Installation.query.filter((Installation.sync_status == 'pending') | (Installation.sync_status is None)).limit(BATCH_SIZE).all()
+            installations = (
+                Installation.query.filter(
+                    (Installation.sync_status == "pending")
+                    | Installation.sync_status.is_(None)
+                )
+                .limit(BATCH_SIZE)
+                .all()
+            )
             for inst in installations:
-                payload["installations"].append({
-                    "installation_id": inst.installation_id,
-                    "cpu_cores": inst.cpu_cores,
-                    "ram_gb": inst.ram_gb,
-                    "gpu_model": inst.gpu_model,
-                    "os_version": inst.os_version,
-                    "install_method": inst.install_method,
-                    "created_at": inst.created_at.isoformat(),
-                    "modified_at": inst.modified_at.isoformat()
-                })
+                payload["installations"].append(
+                    {
+                        "installation_id": inst.installation_id,
+                        "cpu_cores": inst.cpu_cores,
+                        "ram_gb": inst.ram_gb,
+                        "gpu_model": inst.gpu_model,
+                        "os_version": inst.os_version,
+                        "install_method": inst.install_method,
+                        "created_at": inst.created_at.isoformat(),
+                        "modified_at": inst.modified_at.isoformat(),
+                    }
+                )
                 objects_to_update.append(inst)
 
             # 1. Topics (Pending)
-            topics = Topic.query.filter((Topic.sync_status == 'pending') | (Topic.sync_status is None)).limit(BATCH_SIZE).all()
+            topics = (
+                Topic.query.filter(
+                    (Topic.sync_status == "pending") | Topic.sync_status.is_(None)
+                )
+                .limit(BATCH_SIZE)
+                .all()
+            )
             for t in topics:
                 add_topic_to_payload(t)
                 objects_to_update.append(t)
@@ -219,159 +298,243 @@ class DCSClient:
             # 2. Child Objects - Ensure Parent Topic is Included
 
             # ChatMode
-            chats = ChatMode.query.options(joinedload(ChatMode.topic)).filter((ChatMode.sync_status == 'pending') | (ChatMode.sync_status is None)).limit(BATCH_SIZE).all()
+            chats = (
+                ChatMode.query.options(joinedload(ChatMode.topic))
+                .filter(
+                    (ChatMode.sync_status == "pending") | ChatMode.sync_status.is_(None)
+                )
+                .limit(BATCH_SIZE)
+                .all()
+            )
             for c in chats:
-                payload["chat_modes"].append({
-                    "topic_id": c.topic_id,
-                    "user_id": c.user_id,
-                    "history": c.history,
-                    "history_summary": c.history_summary,
-                    "popup_chat_history": c.popup_chat_history,
-                    "time_spent": c.time_spent,
-                    "created_at": c.created_at.isoformat(),
-                    "modified_at": c.modified_at.isoformat()
-                })
+                payload["chat_modes"].append(
+                    {
+                        "topic_id": c.topic_id,
+                        "user_id": c.user_id,
+                        "history": c.history,
+                        "history_summary": c.history_summary,
+                        "popup_chat_history": c.popup_chat_history,
+                        "time_spent": c.time_spent,
+                        "created_at": c.created_at.isoformat(),
+                        "modified_at": c.modified_at.isoformat(),
+                    }
+                )
                 objects_to_update.append(c)
                 # Ensure parent topic is added
                 if c.topic and c.topic.id not in included_topic_ids:
                     add_topic_to_payload(c.topic)
 
             # ChapterMode
-            chapters = ChapterMode.query.options(joinedload(ChapterMode.topic)).filter((ChapterMode.sync_status == 'pending') | (ChapterMode.sync_status is None)).limit(BATCH_SIZE).all()
+            chapters = (
+                ChapterMode.query.options(joinedload(ChapterMode.topic))
+                .filter(
+                    (ChapterMode.sync_status == "pending")
+                    | ChapterMode.sync_status.is_(None)
+                )
+                .limit(BATCH_SIZE)
+                .all()
+            )
             for c in chapters:
-                payload["chapter_modes"].append({
-                    "topic_id": c.topic_id,
-                    "user_id": c.user_id,
-                    "step_index": c.step_index,
-                    "title": c.title,
-                    "content": c.content,
-                    "podcast_audio_path": c.podcast_audio_path,
-                    "questions": c.questions,
-                    "user_answers": c.user_answers,
-                    "score": c.score,
-                    "popup_chat_history": c.popup_chat_history,
-                    "time_spent": c.time_spent or 0,
-                    "created_at": c.created_at.isoformat(),
-                    "modified_at": c.modified_at.isoformat()
-                })
+                payload["chapter_modes"].append(
+                    {
+                        "topic_id": c.topic_id,
+                        "user_id": c.user_id,
+                        "step_index": c.step_index,
+                        "title": c.title,
+                        "content": c.content,
+                        "podcast_audio_path": c.podcast_audio_path,
+                        "questions": c.questions,
+                        "user_answers": c.user_answers,
+                        "score": c.score,
+                        "popup_chat_history": c.popup_chat_history,
+                        "time_spent": c.time_spent or 0,
+                        "created_at": c.created_at.isoformat(),
+                        "modified_at": c.modified_at.isoformat(),
+                    }
+                )
                 objects_to_update.append(c)
                 if c.topic and c.topic.id not in included_topic_ids:
                     add_topic_to_payload(c.topic)
 
             # QuizMode
-            quizzes = QuizMode.query.options(joinedload(QuizMode.topic)).filter((QuizMode.sync_status == 'pending') | (QuizMode.sync_status is None)).limit(BATCH_SIZE).all()
+            quizzes = (
+                QuizMode.query.options(joinedload(QuizMode.topic))
+                .filter(
+                    (QuizMode.sync_status == "pending") | QuizMode.sync_status.is_(None)
+                )
+                .limit(BATCH_SIZE)
+                .all()
+            )
             for q in quizzes:
-                payload["quiz_modes"].append({
-                    "topic_id": q.topic_id,
-                    "user_id": q.user_id,
-                    "questions": q.questions,
-                    "score": q.score,
-                    "result": q.result,
-                    "time_spent": q.time_spent or 0,
-                    "created_at": q.created_at.isoformat(),
-                    "modified_at": q.modified_at.isoformat()
-                })
+                payload["quiz_modes"].append(
+                    {
+                        "topic_id": q.topic_id,
+                        "user_id": q.user_id,
+                        "questions": q.questions,
+                        "score": q.score,
+                        "result": q.result,
+                        "time_spent": q.time_spent or 0,
+                        "created_at": q.created_at.isoformat(),
+                        "modified_at": q.modified_at.isoformat(),
+                    }
+                )
                 objects_to_update.append(q)
                 if q.topic and q.topic.id not in included_topic_ids:
                     add_topic_to_payload(q.topic)
 
             # FlashcardMode
-            flashcards = FlashcardMode.query.options(joinedload(FlashcardMode.topic)).filter((FlashcardMode.sync_status == 'pending') | (FlashcardMode.sync_status is None)).limit(BATCH_SIZE).all()
+            flashcards = (
+                FlashcardMode.query.options(joinedload(FlashcardMode.topic))
+                .filter(
+                    (FlashcardMode.sync_status == "pending")
+                    | FlashcardMode.sync_status.is_(None)
+                )
+                .limit(BATCH_SIZE)
+                .all()
+            )
             for f in flashcards:
-                payload["flashcard_modes"].append({
-                    "topic_id": f.topic_id,
-                    "user_id": f.user_id,
-                    "term": f.term,
-                    "definition": f.definition,
-                    "time_spent": f.time_spent,
-                    "created_at": f.created_at.isoformat(),
-                    "modified_at": f.modified_at.isoformat()
-                })
+                payload["flashcard_modes"].append(
+                    {
+                        "topic_id": f.topic_id,
+                        "user_id": f.user_id,
+                        "term": f.term,
+                        "definition": f.definition,
+                        "time_spent": f.time_spent,
+                        "created_at": f.created_at.isoformat(),
+                        "modified_at": f.modified_at.isoformat(),
+                    }
+                )
                 objects_to_update.append(f)
                 if f.topic and f.topic.id not in included_topic_ids:
                     add_topic_to_payload(f.topic)
 
             # User Profile
-            users = User.query.filter((User.sync_status == 'pending') | (User.sync_status is None)).limit(BATCH_SIZE).all()
+            users = (
+                User.query.filter(
+                    (User.sync_status == "pending") | User.sync_status.is_(None)
+                )
+                .limit(BATCH_SIZE)
+                .all()
+            )
             for u in users:
-                payload["user_profiles"].append({
-                    "login_id": u.login_id,
-                    "age": u.age,
-                    "country": u.country,
-                    "languages": u.languages,
-                    "education_level": u.education_level,
-                    "field_of_study": u.field_of_study,
-                    "occupation": u.occupation,
-                    "learning_goals": u.learning_goals,
-                    "prior_knowledge": u.prior_knowledge,
-                    "learning_style": u.learning_style,
-                    "time_commitment": u.time_commitment,
-                    "preferred_format": u.preferred_format,
-                    "created_at": u.created_at.isoformat(),
-                    "modified_at": u.modified_at.isoformat()
-                })
+                if not _has_telemetry_consent(u):
+                    logger.debug(
+                        "Skipping user profile sync for user %s: telemetry consent not granted.",
+                        u.login_id,
+                    )
+                    u.sync_status = "skipped_no_consent"
+                    continue
+
+                payload["user_profiles"].append(
+                    {
+                        "anonymized_id": _anonymize_login_id(u.login_id),
+                        "learning_style": u.learning_style,
+                        "time_commitment": u.time_commitment,
+                        "preferred_format": u.preferred_format,
+                        "created_at": u.created_at.isoformat(),
+                        "modified_at": u.modified_at.isoformat(),
+                    }
+                )
                 objects_to_update.append(u)
 
             # Telemetry
-            logs = TelemetryLog.query.filter((TelemetryLog.sync_status == 'pending') | (TelemetryLog.sync_status is None)).limit(BATCH_SIZE * 2).all()
+            logs = (
+                TelemetryLog.query.filter(
+                    (TelemetryLog.sync_status == "pending")
+                    | TelemetryLog.sync_status.is_(None)
+                )
+                .limit(BATCH_SIZE * 2)
+                .all()
+            )
             for log_event in logs:
-                payload["telemetry_events"].append({
-                    "session_id": log_event.session_id,
-                    "user_id": log_event.user_id,
-                    "timestamp": log_event.timestamp.isoformat(),
-                    "event_type": log_event.event_type,
-                    "triggers": log_event.triggers,
-                    "payload": log_event.payload,
-                    "created_at": log_event.created_at.isoformat(),
-                    "modified_at": log_event.modified_at.isoformat()
-                })
+                payload["telemetry_events"].append(
+                    {
+                        "session_id": log_event.session_id,
+                        "user_id": _anonymize_login_id(log_event.user_id)
+                        if log_event.user_id
+                        else None,
+                        "timestamp": log_event.timestamp.isoformat(),
+                        "event_type": log_event.event_type,
+                        "triggers": log_event.triggers,
+                        "payload": log_event.payload,
+                        "created_at": log_event.created_at.isoformat(),
+                        "modified_at": log_event.modified_at.isoformat(),
+                    }
+                )
                 objects_to_update.append(log_event)
 
             # Feedback
-            feedbacks = Feedback.query.filter((Feedback.sync_status == 'pending') | (Feedback.sync_status is None)).limit(BATCH_SIZE).all()
+            feedbacks = (
+                Feedback.query.filter(
+                    (Feedback.sync_status == "pending") | Feedback.sync_status.is_(None)
+                )
+                .limit(BATCH_SIZE)
+                .all()
+            )
             for f in feedbacks:
-                payload["feedback"].append({
-                    "user_id": f.user_id,
-                    "feedback_type": f.feedback_type,
-                    "content_reference": f.content_reference,
-                    "rating": f.rating or 0, # Ensure integer
-                    "comment": f.comment,
-                    "created_at": f.created_at.isoformat(),
-                    "modified_at": f.modified_at.isoformat()
-                })
+                payload["feedback"].append(
+                    {
+                        "user_id": f.user_id,
+                        "feedback_type": f.feedback_type,
+                        "content_reference": f.content_reference,
+                        "rating": f.rating or 0,  # Ensure integer
+                        "comment": f.comment,
+                        "created_at": f.created_at.isoformat(),
+                        "modified_at": f.modified_at.isoformat(),
+                    }
+                )
                 objects_to_update.append(f)
 
             # PlanRevision
-            plans = PlanRevision.query.options(joinedload(PlanRevision.topic)).filter((PlanRevision.sync_status == 'pending') | (PlanRevision.sync_status is None)).limit(BATCH_SIZE).all()
+            plans = (
+                PlanRevision.query.options(joinedload(PlanRevision.topic))
+                .filter(
+                    (PlanRevision.sync_status == "pending")
+                    | PlanRevision.sync_status.is_(None)
+                )
+                .limit(BATCH_SIZE)
+                .all()
+            )
             for pr in plans:
-                payload["plan_revisions"].append({
-                    "topic_id": pr.topic_id,
-                    "user_id": pr.user_id,
-                    "reason": pr.reason,
-                    "old_plan_json": pr.old_plan_json,
-                    "new_plan_json": pr.new_plan_json,
-                    "created_at": pr.created_at.isoformat(),
-                    "modified_at": pr.modified_at.isoformat()
-                })
+                payload["plan_revisions"].append(
+                    {
+                        "topic_id": pr.topic_id,
+                        "user_id": pr.user_id,
+                        "reason": pr.reason,
+                        "old_plan_json": pr.old_plan_json,
+                        "new_plan_json": pr.new_plan_json,
+                        "created_at": pr.created_at.isoformat(),
+                        "modified_at": pr.modified_at.isoformat(),
+                    }
+                )
                 objects_to_update.append(pr)
                 # Ensure parent topic is added
                 if pr.topic and pr.topic.id not in included_topic_ids:
                     add_topic_to_payload(pr.topic)
 
             # AIModelPerformance
-            perfs = AIModelPerformance.query.filter((AIModelPerformance.sync_status == 'pending') | (AIModelPerformance.sync_status is None)).limit(BATCH_SIZE).all()
+            perfs = (
+                AIModelPerformance.query.filter(
+                    (AIModelPerformance.sync_status == "pending")
+                    | AIModelPerformance.sync_status.is_(None)
+                )
+                .limit(BATCH_SIZE)
+                .all()
+            )
             for p in perfs:
-                payload["ai_performances"].append({
-                    "user_id": p.user_id,
-                    "model_type": p.model_type,
-                    "model_name": p.model_name,
-                    "latency_ms": p.latency_ms,
-                    "input_tokens": p.input_tokens,
-                    "output_tokens": p.output_tokens,
-                    "timestamp": p.timestamp.isoformat(),
-                    "created_at": p.created_at.isoformat(),
-                    "modified_at": p.modified_at.isoformat()
-                })
+                payload["ai_performances"].append(
+                    {
+                        "user_id": p.user_id,
+                        "model_type": p.model_type,
+                        "model_name": p.model_name,
+                        "latency_ms": p.latency_ms,
+                        "input_tokens": p.input_tokens,
+                        "output_tokens": p.output_tokens,
+                        "timestamp": p.timestamp.isoformat(),
+                        "created_at": p.created_at.isoformat(),
+                        "modified_at": p.modified_at.isoformat(),
+                    }
+                )
                 objects_to_update.append(p)
 
             # Check if we have anything to send
@@ -387,13 +550,13 @@ class DCSClient:
 
             # Update status on success
             for obj in objects_to_update:
-                obj.sync_status = 'synced'
+                obj.sync_status = "synced"
 
             # Log success
             log_entry = SyncLog(
                 installation_id=self.installation_id,
-                status='success',
-                details={'items_count': total_items}
+                status="success",
+                details={"items_count": total_items},
             )
             db.session.add(log_entry)
             db.session.commit()
@@ -405,8 +568,8 @@ class DCSClient:
             try:
                 log_entry = SyncLog(
                     installation_id=self.installation_id,
-                    status='failed',
-                    details={'error': str(e)}
+                    status="failed",
+                    details={"error": str(e)},
                 )
                 db.session.add(log_entry)
                 db.session.commit()
@@ -426,6 +589,7 @@ class DCSClient:
         except Exception as e:
             logger.warning(f"Failed to fetch notifications: {e}")
             return []
+
 
 class SyncManager:
     """Background manager that periodically syncs data with DCS."""
@@ -453,11 +617,15 @@ class SyncManager:
         """Main sync loop that runs in background thread."""
         with self.app.app_context():
             # DEBUG: Check DB Config
-            logger.info(f"SyncManager App Config DB: {self.app.config.get('SQLALCHEMY_DATABASE_URI')}")
+            logger.info(
+                f"SyncManager App Config DB: {self.app.config.get('SQLALCHEMY_DATABASE_URI')}"
+            )
 
             # Ensure registration first thing in the thread if not done
             while not self.client.register_device():
-                logger.warning("Could not register device yet. Retrying in 10 seconds...")
+                logger.warning(
+                    "Could not register device yet. Retrying in 10 seconds..."
+                )
                 time.sleep(10)
                 if self.stop_event.is_set():
                     return

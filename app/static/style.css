@@ -23,6 +23,9 @@
     --primary-blue: #1A5CBF;
     --primary-purple: #9027A1;
     --primary-gradient: linear-gradient(135deg, #1A5CBF 0%, #9027A1 100%);
+    --warning-color: #fab387;
+    --warning-bg: rgba(250, 179, 135, 0.1);
+    --warning-border: rgba(250, 179, 135, 0.2);
 }
 
 /* Dark Mode (Deep Indigo) */
@@ -34,6 +37,11 @@ body.dark-mode {
     --shadow: 0 8px 32px 0 rgba(144, 39, 161, 0.15);
     --nav-glass: rgba(13, 17, 23, 0.7);
     --border-subtle: rgba(255, 255, 255, 0.05);
+}
+
+.btn-delete-topic {
+    color: #dc3545;
+    border-color: #dc3545;
 }
 
 /* General Body Styles */

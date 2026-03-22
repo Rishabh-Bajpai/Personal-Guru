@@ -53,7 +53,6 @@ def test_full_learning_flow(auth_client, mocker, logger):
     # Mock storage functions
     mocker.patch("app.modes.chapter.routes.load_topic", return_value=None)
     mocker.patch("app.modes.chapter.routes.save_topic", return_value=None)
-    mocker.patch("app.core.routes.get_all_topics", return_value=[])
 
     # 1. User submits a new topic
     logger.step("1. User submits a new topic")
@@ -204,7 +203,7 @@ def test_delete_topic(auth_client, mocker, logger):
     # Delete the topic
     logger.step(f"Deleting topic: {topic_name}")
     mocker.patch("app.common.storage.delete_topic", return_value=None)
-    response = auth_client.get(f"/delete/{topic_name}")
+    response = auth_client.post(f"/delete/{topic_name}")
     assert response.status_code == 302
     assert response.headers["Location"] == "/"
 
@@ -228,11 +227,14 @@ def test_home_page_shows_only_five_recent_topics(auth_client, mocker, logger):
         }
         for index in range(1, 7)
     ]
-    mocker.patch("app.common.storage.get_topics_metadata", return_value=topic_metadata)
+    mock_get_topics_metadata = mocker.patch(
+        "app.common.storage.get_topics_metadata", return_value=topic_metadata[:5]
+    )
 
     response = auth_client.get("/")
 
     assert response.status_code == 200
+    mock_get_topics_metadata.assert_called_once_with(limit=5)
     for index in range(1, 6):
         assert f"topic-{index}".encode() in response.data
     assert b"topic-6" not in response.data
@@ -412,7 +414,6 @@ def test_suggestions_agent_error(auth_client, mocker, logger):
     assert response.status_code == 500
     data = response.get_json()
 
-    logger.step(f"Received error: {data}")
     logger.step(f"Received error: {data}")
     assert "error" in data
     assert data["error"] == error_message

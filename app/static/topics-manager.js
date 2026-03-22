@@ -20,6 +20,19 @@ class TopicsManager {
         this.init();
     }
 
+    getPageSize(value) {
+        if (value === 'all') {
+            return Math.max(1, this.items.length);
+        }
+
+        const parsedValue = parseInt(value, 10);
+        if (Number.isNaN(parsedValue) || parsedValue < 1) {
+            return 1;
+        }
+
+        return parsedValue;
+    }
+
     init() {
         // Cache DOM elements
         this.listContainer = document.querySelector(`.${this.listId} ul`);
@@ -39,9 +52,7 @@ class TopicsManager {
         }));
 
         if (this.pageSizeSelect) {
-            this.pageSize = this.pageSizeSelect.value === 'all'
-                ? this.items.length
-                : parseInt(this.pageSizeSelect.value, 10);
+            this.pageSize = this.getPageSize(this.pageSizeSelect.value);
         }
 
         // Initial Filter (shows all)
@@ -57,7 +68,7 @@ class TopicsManager {
 
         if (this.pageSizeSelect) {
             this.pageSizeSelect.addEventListener('change', (e) => {
-                this.pageSize = e.target.value === 'all' ? this.items.length : parseInt(e.target.value);
+                this.pageSize = this.getPageSize(e.target.value);
                 this.currentPage = 1;
                 this.render();
             });

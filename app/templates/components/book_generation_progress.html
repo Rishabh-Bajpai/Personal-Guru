@@ -287,12 +287,18 @@
     }
 
     async function pollProgress() {
+        pollProgress.failureCount = pollProgress.failureCount || 0;
         try {
             const res = await fetch(`/library/${bookId}/progress`);
             if (!res.ok) {
+                pollProgress.failureCount += 1;
                 console.error('Progress poll failed:', res.status);
+                if (pollProgress.failureCount >= 3 && pollInterval) {
+                    clearInterval(pollInterval);
+                }
                 return;
             }
+            pollProgress.failureCount = 0;
             const data = await res.json();
             updateProgress(data);
 
