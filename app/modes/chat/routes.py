@@ -11,7 +11,7 @@ chapter_agent = ChapterModeChatAgent()
 popup_agent = ChatModeChatPopupAgent()
 
 
-@chat_bp.route('/<topic_name>')
+@chat_bp.route("/<topic_name>")
 def mode(topic_name):
     """Render the main chat interface for a topic."""
     # Try to load from DB first
@@ -21,19 +21,19 @@ def mode(topic_name):
         save_topic(topic_name, topic_data)
         topic_data = load_topic(topic_name)
 
-    chat_history = topic_data.get('chat_history', []) if topic_data else []
+    chat_history = topic_data.get("chat_history", []) if topic_data else []
 
     if not chat_history:
         # Generate welcome message if chat is new
         from app.common.utils import get_user_context
+
         user_background = get_user_context()
 
         # 1. Generate Plan if missing
-        if not topic_data or not topic_data.get('plan'):
+        if not topic_data or not topic_data.get("plan"):
             planner = PlannerAgent()
             try:
-                plan_steps = planner.generate_study_plan(
-                    topic_name, user_background)
+                plan_steps = planner.generate_study_plan(topic_name, user_background)
             except Exception:
                 # Error will be caught by global handler
                 raise
@@ -41,21 +41,24 @@ def mode(topic_name):
             # Save plan
             if not topic_data:
                 topic_data = {"name": topic_name}
-            topic_data['plan'] = plan_steps
-            # Initialize empty steps list to match plan length (required by
-            # storage logic). Include step_index to avoid duplicate assignment.
-            topic_data['steps'] = [{'step_index': i} for i in range(len(plan_steps))]
+            topic_data["plan"] = plan_steps
+            # Initialize steps to match plan length and preserve chapter titles.
+            topic_data["steps"] = [
+                {"step_index": i, "title": step_title}
+                for i, step_title in enumerate(plan_steps)
+            ]
             save_topic(topic_name, topic_data)
             # Reload to ensure consistency
             topic_data = load_topic(topic_name)
 
-        plan = topic_data.get('plan', []) if topic_data else []
+        plan = topic_data.get("plan", []) if topic_data else []
         try:
             welcome_message = chat_agent.get_welcome_message(
-                topic_name, user_background, plan)
+                topic_name, user_background, plan
+            )
         except Exception as error:
             # Handle error appropriately using a proper error template
-            return render_template('error.html', error=str(error))
+            return render_template("error.html", error=str(error))
 
         chat_history.append({"role": "assistant", "content": welcome_message})
 
@@ -64,36 +67,36 @@ def mode(topic_name):
 
     # Always load plan to pass to the template
     topic_data = load_topic(topic_name)
-    plan = topic_data.get('plan', []) if topic_data else []
+    plan = topic_data.get("plan", []) if topic_data else []
 
     return render_template(
-        'chat/mode.html',
-        topic_name=topic_name,
-        chat_history=chat_history,
-        plan=plan)
+        "chat/mode.html", topic_name=topic_name, chat_history=chat_history, plan=plan
+    )
 
 
-@chat_bp.route('/<topic_name>/update_plan', methods=['POST'])
+@chat_bp.route("/<topic_name>/update_plan", methods=["POST"])
 def update_plan(topic_name):
     """Handle study plan modification requests from user feedback."""
-    comment = request.form.get('comment')
+    comment = request.form.get("comment")
     if not comment or not comment.strip():
-        return redirect(url_for('chat.mode', topic_name=topic_name))
+        return redirect(url_for("chat.mode", topic_name=topic_name))
 
     topic_data = load_topic(topic_name)
     if not topic_data:
         # Handle case where topic doesn't exist
-        return redirect(url_for('chat.mode', topic_name=topic_name))
+        return redirect(url_for("chat.mode", topic_name=topic_name))
 
-    current_plan = topic_data.get('plan', [])
+    current_plan = topic_data.get("plan", [])
     from app.common.utils import get_user_context
+
     user_background = get_user_context()
 
     planner = PlannerAgent()
     # Call agent to get a new plan
     try:
         new_plan = planner.update_study_plan(
-            topic_name, user_background, current_plan, comment)
+            topic_name, user_background, current_plan, comment
+        )
     except Exception:
         # Error will be caught by global handler
         raise
@@ -101,58 +104,60 @@ def update_plan(topic_name):
     from app.common.utils import reconcile_plan_steps
 
     # Save the new plan
-    topic_data['plan'] = new_plan
+    topic_data["plan"] = new_plan
 
     # Sync steps with new plan
-    current_steps = topic_data.get('steps', [])
+    current_steps = topic_data.get("steps", [])
     # Note: Chat mode might not have loaded 'steps' if it wasn't accessed via load_topic deeply?
     # load_topic DOES load steps.
 
-    topic_data['steps'] = reconcile_plan_steps(
-        current_steps, current_plan, new_plan)
+    topic_data["steps"] = reconcile_plan_steps(current_steps, current_plan, new_plan)
 
     save_topic(topic_name, topic_data)
 
     # Add a system message to the chat
     # Reload history from DB to be safe
     topic_data = load_topic(topic_name)
-    chat_history = topic_data.get('chat_history', [])
+    chat_history = topic_data.get("chat_history", [])
 
     system_message = "Based on your feedback, I've updated the study plan."
     chat_history.append({"role": "assistant", "content": system_message})
     save_chat_history(topic_name, chat_history)
 
     # Redirect back to the chat interface
-    return redirect(url_for('chat.mode', topic_name=topic_name))
+    return redirect(url_for("chat.mode", topic_name=topic_name))
 
 
-@chat_bp.route('/<topic_name>/send', methods=['POST'])
+@chat_bp.route("/<topic_name>/send", methods=["POST"])
 def send_message(topic_name):
     """Process and respond to a user chat message."""
-    user_message = request.form.get('message')
+    user_message = request.form.get("message")
     try:
-        time_spent = int(request.form.get('time_spent', 0))
+        time_spent = int(request.form.get("time_spent", 0))
     except (ValueError, TypeError):
         time_spent = 0
 
     # Prevent empty or whitespace-only messages from being processed
     if not user_message or not user_message.strip():
-        return redirect(url_for('chat.mode', topic_name=topic_name))
+        return redirect(url_for("chat.mode", topic_name=topic_name))
 
     topic_data = load_topic(topic_name)
     if topic_data:
-        context = topic_data.get('description', f'The topic is {topic_name}')
-        plan = topic_data.get('plan', [])
+        context = topic_data.get("description", f"The topic is {topic_name}")
+        plan = topic_data.get("plan", [])
     else:
-        context = f'The topic is {topic_name}. No additional details are available yet.'
+        context = f"The topic is {topic_name}. No additional details are available yet."
         plan = []
 
     from app.common.utils import get_user_context
+
     user_background = get_user_context()
 
     # Load history from DB
-    chat_history = topic_data.get('chat_history', []) if topic_data else []
-    chat_history_summary = topic_data.get('chat_history_summary', []) if topic_data else []
+    chat_history = topic_data.get("chat_history", []) if topic_data else []
+    chat_history_summary = (
+        topic_data.get("chat_history_summary", []) if topic_data else []
+    )
 
     # Initialize summary if missing (for backward compatibility)
     if chat_history and not chat_history_summary:
@@ -181,11 +186,12 @@ def send_message(topic_name):
     # Get answer from agent
     try:
         answer = chat_agent.get_answer(
-            user_message, # passed for logic, but agent should use full history from msg
-            messages_for_llm, # Passing constructed history
+            user_message,  # passed for logic, but agent should use full history from msg
+            messages_for_llm,  # Passing constructed history
             context,
             user_background,
-            plan)
+            plan,
+        )
 
         # Append full answer to full history
         chat_history.append({"role": "assistant", "content": answer})
@@ -205,34 +211,43 @@ def send_message(topic_name):
         chat_history.append({"role": "assistant", "content": answer})
         chat_history_summary.append({"role": "assistant", "content": answer})
 
-    save_chat_history(topic_name, chat_history, history_summary=chat_history_summary, time_spent=time_spent)
+    save_chat_history(
+        topic_name,
+        chat_history,
+        history_summary=chat_history_summary,
+        time_spent=time_spent,
+    )
 
     # Check for AJAX request (JSON accepted or X-Requested-With header)
-    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
-              (request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html)
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or (
+        request.accept_mimetypes.accept_json
+        and not request.accept_mimetypes.accept_html
+    )
 
     if is_ajax:
         return {"answer": answer}
 
-    return redirect(url_for('chat.mode', topic_name=topic_name))
+    return redirect(url_for("chat.mode", topic_name=topic_name))
 
-@chat_bp.route('/<topic_name>/update_time', methods=['POST'])
+
+@chat_bp.route("/<topic_name>/update_time", methods=["POST"])
 def update_time(topic_name):
     """Update time spent on chat session."""
     try:
-        time_spent = int(request.form.get('time_spent', 0))
+        time_spent = int(request.form.get("time_spent", 0))
     except (ValueError, TypeError):
         time_spent = 0
 
     if time_spent > 0:
         topic_data = load_topic(topic_name)
         if topic_data:
-            chat_history = topic_data.get('chat_history', [])
+            chat_history = topic_data.get("chat_history", [])
             save_chat_history(topic_name, chat_history, time_spent=time_spent)
 
-    return '', 204
+    return "", 204
 
-@chat_bp.route('/<topic_name>/<int:step_index>', methods=['GET', 'POST'])
+
+@chat_bp.route("/<topic_name>/<int:step_index>", methods=["GET", "POST"])
 def chat(topic_name, step_index):
     """
     Handle popup chat messages within chapter steps.
@@ -289,25 +304,27 @@ def chat(topic_name, step_index):
         return {"error": "Topic not found"}, 400
 
     # HANDLE GET REQUEST: Return History
-    if request.method == 'GET':
+    if request.method == "GET":
         if step_index == 9999:
             # Chat Mode Popup History
-            history = topic_data.get('popup_chat_history', [])
+            history = topic_data.get("popup_chat_history", [])
             return {"history": history}
 
-        if 'chapter_mode' not in topic_data:
-             return {"history": []}
+        if "chapter_mode" not in topic_data:
+            return {"history": []}
 
-        if step_index < 0 or step_index >= len(topic_data['chapter_mode']):
-             return {"error": "Step index out of range"}, 400
+        if step_index < 0 or step_index >= len(topic_data["chapter_mode"]):
+            return {"error": "Step index out of range"}, 400
 
-        step_history = topic_data['chapter_mode'][step_index].get('popup_chat_history', [])
+        step_history = topic_data["chapter_mode"][step_index].get(
+            "popup_chat_history", []
+        )
         return {"history": step_history}
 
     # HANDLE POST REQUEST: Process Message
-    user_question = request.json.get('question')
+    user_question = request.json.get("question")
     try:
-        time_spent = int(request.json.get('time_spent', 0))
+        time_spent = int(request.json.get("time_spent", 0))
     except (ValueError, TypeError):
         time_spent = 0
 
@@ -316,44 +333,44 @@ def chat(topic_name, step_index):
 
     if step_index == 9999:
         # Chat Mode Popup Logic
-        popup_history = topic_data.get('popup_chat_history') or []
+        popup_history = topic_data.get("popup_chat_history") or []
         popup_history.append({"role": "user", "content": user_question})
 
         from app.common.utils import get_user_context
+
         user_background = get_user_context()
 
         # Context for Chat Mode popup is general topic context
-        context = topic_data.get('description', f'The topic is {topic_name}')
-        plan = topic_data.get('plan', [])
+        context = topic_data.get("description", f"The topic is {topic_name}")
+        plan = topic_data.get("plan", [])
 
         try:
             answer = popup_agent.get_answer(
-                user_question,
-                popup_history,
-                context,
-                user_background,
-                plan
+                user_question, popup_history, context, user_background, plan
             )
         except Exception as error:
             return {"error": str(error)}, 500
 
         popup_history.append({"role": "assistant", "content": answer})
-        save_chat_history(topic_name, topic_data.get('chat_history', []), popup_history=popup_history)
+        save_chat_history(
+            topic_name, topic_data.get("chat_history", []), popup_history=popup_history
+        )
         return {"answer": answer}
 
-    if 'chapter_mode' not in topic_data:
+    if "chapter_mode" not in topic_data:
         return {"error": "Topic has no steps defined"}, 400
 
-    if step_index < 0 or step_index >= len(topic_data['chapter_mode']):
+    if step_index < 0 or step_index >= len(topic_data["chapter_mode"]):
         return {"error": "Step index out of range"}, 400
-    current_step_data = topic_data['chapter_mode'][step_index]
-    teaching_material = current_step_data.get('teaching_material', '')
+    current_step_data = topic_data["chapter_mode"][step_index]
+    teaching_material = current_step_data.get("teaching_material", "")
 
     # Load step-specific chat history
-    step_history = current_step_data.get('popup_chat_history') or []
+    step_history = current_step_data.get("popup_chat_history") or []
     step_history.append({"role": "user", "content": user_question})
 
     from app.common.utils import get_user_context
+
     current_background = get_user_context()
 
     # Pass the history to the agent.
@@ -374,9 +391,11 @@ def chat(topic_name, step_index):
     step_history.append({"role": "assistant", "content": answer})
 
     # Save back to topic data
-    current_step_data['popup_chat_history'] = step_history
+    current_step_data["popup_chat_history"] = step_history
     if time_spent:
-         current_step_data['time_spent'] = (current_step_data.get('time_spent', 0) or 0) + int(time_spent)
+        current_step_data["time_spent"] = (
+            current_step_data.get("time_spent", 0) or 0
+        ) + int(time_spent)
     # We must save the whole topic to persist the step update
     save_topic(topic_name, topic_data)
 

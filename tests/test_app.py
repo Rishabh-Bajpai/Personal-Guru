@@ -315,6 +315,47 @@ def test_chat_route(auth_client, mocker, logger):
     assert b"This is the answer." in response.data
 
 
+def test_chat_new_topic_initializes_chapter_titles(auth_client, mocker, logger):
+    """Test that chat-created topics save titled chapter placeholders."""
+    logger.section("test_chat_new_topic_initializes_chapter_titles")
+    topic_name = "chat_plan_titles"
+
+    mocker.patch(
+        "app.modes.chat.routes.load_topic",
+        side_effect=[
+            None,
+            {"name": topic_name},
+            {"name": topic_name, "plan": ["Step 1", "Step 2"]},
+            {"name": topic_name, "plan": ["Step 1", "Step 2"], "chat_history": []},
+        ],
+    )
+    mocker.patch(
+        "app.common.agents.PlannerAgent.generate_study_plan",
+        return_value=["Step 1", "Step 2"],
+    )
+    mocker.patch(
+        "app.modes.chat.agent.ChatModeMainChatAgent.get_welcome_message",
+        return_value="Welcome to the chat!",
+    )
+    mock_save_topic = mocker.patch("app.modes.chat.routes.save_topic")
+    mocker.patch("app.modes.chat.routes.save_chat_history")
+
+    logger.step("GET /chat/<topic> for a new topic")
+    response = auth_client.get(f"/chat/{topic_name}")
+
+    assert response.status_code == 200
+    assert mock_save_topic.called
+    saved_payloads = [call.args[1] for call in mock_save_topic.call_args_list]
+    assert {
+        "name": topic_name,
+        "plan": ["Step 1", "Step 2"],
+        "steps": [
+            {"step_index": 0, "title": "Step 1"},
+            {"step_index": 1, "title": "Step 2"},
+        ],
+    } in saved_payloads
+
+
 def test_suggestions_unauthorized(client):
     """Test that the suggestions endpoint requires login."""
     response = client.get("/api/suggest-topics")
