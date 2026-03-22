@@ -147,21 +147,34 @@ def update_database():
             # Get existing columns in DB
             existing_columns = inspector.get_columns(table_name)
             existing_col_map = {col["name"]: col for col in existing_columns}
+            has_username = table_name == "users" and "username" in existing_col_map
+            has_id = table_name == "users" and "id" in existing_col_map
 
             # Special check for Topic model migration
             if table_name == "topics":
                 has_user_id = "user_id" in existing_col_map
                 if not has_user_id:
                     logger.warning(
-                        " !! Detected old 'topics' table schema (missing user_id). Dropping table to recreate with proper constraints."
+                        " !! Detected old 'topics' table schema (missing user_id). Adding column in place to avoid data loss."
                     )
-                    # Drop table
-                    sql = text('DROP TABLE "topics" CASCADE')
-                    db.session.execute(sql)
-                    db.session.commit()
-                    logger.info("    -> Table dropped. Re-running create_all...")
-                    db.create_all()
-                    db.create_all()
+                    try:
+                        sql = text(
+                            'ALTER TABLE "topics" ADD COLUMN user_id VARCHAR(100)'
+                        )
+                        db.session.execute(sql)
+                        db.session.commit()
+                        existing_col_map["user_id"] = {
+                            "name": "user_id",
+                            "nullable": True,
+                        }
+                        logger.info(
+                            "    -> user_id column added; manual backfill may still be required."
+                        )
+                    except Exception:
+                        logger.exception(
+                            "    -> FAILED to add user_id column to topics"
+                        )
+                        db.session.rollback()
                     continue  # Skip column inspection for this pass
 
             # Special check for 'chat_history' and 'last_quiz_result' column removal in Topics
@@ -319,6 +332,11 @@ def update_database():
             # Special check for deprecated 'name' and 'password_hash' columns in User table
             if table_name == "users":
                 for deprecated_col in ["name", "password_hash"]:
+                    if has_username and not has_id:
+                        logger.info(
+                            "  [.] Skipping deprecated column drop until legacy users migration completes."
+                        )
+                        break
                     if deprecated_col in existing_col_map:
                         logger.info(
                             f"  [-] Dropping deprecated column from users: {deprecated_col}"
@@ -383,9 +401,6 @@ def update_database():
                         db.session.rollback()
             if table_name == "users":
                 # Special check for User model change (username -> id/login_id)
-                has_username = "username" in existing_col_map
-                has_id = "id" in existing_col_map
-
                 if has_username and not has_id:
                     logger.warning(
                         " !! Detected old 'users' table schema (username PK). Migrating data to new schema..."

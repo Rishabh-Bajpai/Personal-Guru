@@ -189,7 +189,7 @@ def signup():
         return redirect(url_for("main.index"))
 
     if request.method == "POST":
-        username = request.form["username"]
+        username = request.form["username"].strip()
         password = request.form["password"]
 
         from app.core.models import User, Login, Installation
@@ -738,9 +738,10 @@ def submit_feedback():
 
         return jsonify({"success": True, "message": "Feedback submitted successfully"})
 
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.exception("Failed to submit feedback")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @main_bp.route("/notes/<topic_name>")

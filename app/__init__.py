@@ -364,9 +364,6 @@ def create_app(config_class=Config):
     if os.environ.get("SKIP_BACKGROUND_TASKS") == "True":
         should_start_sync = False
 
-    if not app.config.get("ENABLE_TELEMETRY", False):
-        should_start_sync = False
-
     # DEBUG: Trace startup logic
     print("=== STARTUP DEBUG ===")
     print(f"is_frozen: {is_frozen}")
@@ -380,6 +377,7 @@ def create_app(config_class=Config):
     should_bootstrap_installation = (
         not app.config.get("TESTING")
         and not should_start_sync
+        and os.environ.get("SKIP_BACKGROUND_TASKS") != "True"
         and (not app.debug or run_main_env == "true")
     )
 

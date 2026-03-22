@@ -306,7 +306,11 @@
                 if (pollInterval) clearInterval(pollInterval);
             }
         } catch (e) {
-            console.error('Error polling progress:', e);
+            pollProgress.failureCount = (pollProgress.failureCount || 0) + 1;
+            console.error('Error polling progress:', e, 'failureCount=', pollProgress.failureCount);
+            if (pollProgress.failureCount >= 3 && pollInterval) {
+                clearInterval(pollInterval);
+            }
         }
     }
 

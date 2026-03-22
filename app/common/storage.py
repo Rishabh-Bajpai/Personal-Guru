@@ -51,7 +51,7 @@ def save_topic(topic_name, data):
         topic.study_plan = data.get("plan", [])
 
         # Explicitly update modified_at when saving
-        topic.modified_at = datetime.datetime.now(datetime.timezone.utc)
+        topic.modified_at = datetime.datetime.utcnow()
 
         # --- Handle Chapter Mode (Steps) ---
         incoming_msg_data = data.get("chapter_mode", [])
@@ -443,7 +443,7 @@ def load_topic(topic_name, update_timestamp=False):
 
     if update_timestamp:
         try:
-            topic.modified_at = datetime.datetime.now(datetime.timezone.utc)
+            topic.modified_at = datetime.datetime.utcnow()
             db.session.commit()
         except Exception as e:
             logging.warning(f"Failed to update modify time for {topic_name}: {e}")

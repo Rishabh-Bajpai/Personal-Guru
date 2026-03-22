@@ -390,7 +390,7 @@ def get_generation_progress(book_id):
     elif progress.status == "generating" and progress.modified_at:
         # Check for stale background threads (stuck or crashed)
         time_since_update = (now - progress.modified_at).total_seconds()
-        if time_since_update > 60:
+        if time_since_update > 300:
             if needs_generation:
                 logger.warning(
                     f"Book {book_id} generation appears stale ({time_since_update}s), resetting to pending"

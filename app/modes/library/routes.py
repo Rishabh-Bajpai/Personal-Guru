@@ -320,13 +320,13 @@ def init_book(book_id):
     if book.user_id != current_user.userid and not book.is_shared:
         return jsonify({"status": "error", "message": "Unauthorized"}), 403
 
-    from app.common.utils import get_user_context
     from app.modes.library.agent import start_book_generation, get_generation_progress
-
-    user_background = get_user_context()
 
     # Check current progress
     progress_data = get_generation_progress(book_id)
+
+    if request.method == "GET":
+        return jsonify(progress_data)
 
     if progress_data["status"] == "completed":
         return jsonify(
@@ -338,6 +338,13 @@ def init_book(book_id):
 
     if progress_data["status"] == "generating":
         return jsonify(progress_data)
+
+    if book.user_id != current_user.userid:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 403
+
+    from app.common.utils import get_user_context
+
+    user_background = get_user_context()
 
     # Status is 'pending' or 'error' - start/restart generation
     if progress_data["status"] in ["pending", "error"]:

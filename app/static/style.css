@@ -37,11 +37,25 @@ body.dark-mode {
     --shadow: 0 8px 32px 0 rgba(144, 39, 161, 0.15);
     --nav-glass: rgba(13, 17, 23, 0.7);
     --border-subtle: rgba(255, 255, 255, 0.05);
+    --warning-color: #f2b08a;
+    --warning-bg: rgba(242, 176, 138, 0.12);
+    --warning-border: rgba(242, 176, 138, 0.24);
 }
 
 .btn-delete-topic {
     color: #dc3545;
     border-color: #dc3545;
+}
+
+body.dark-mode .btn-delete-topic {
+    color: #ff8f96;
+    border-color: #ff8f96;
+}
+
+body.dark-mode .btn-delete-topic:hover {
+    color: #0D1117;
+    background-color: #ff8f96;
+    border-color: #ff8f96;
 }
 
 /* General Body Styles */

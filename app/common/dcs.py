@@ -42,6 +42,11 @@ def _anonymize_login_id(login_id):
     return hashlib.sha256(str(login_id).encode("utf-8")).hexdigest()
 
 
+def _anonymize_user_id(user_id):
+    """Return a deterministic one-way hash for synced user ids."""
+    return _anonymize_login_id(user_id) if user_id else None
+
+
 def _is_secure_dcs_url(url):
     parsed = urlparse(url)
     return parsed.scheme == "https"
@@ -129,10 +134,10 @@ class DCSClient:
 
         if not _is_secure_dcs_url(self.base_url):
             logger.warning(
-                "Telemetry disabled for registration because DCS_BASE_URL is not HTTPS: %s",
+                "DCS_BASE_URL is not HTTPS; using local installation bootstrap instead: %s",
                 self.base_url,
             )
-            return False
+            return self._create_local_installation("Insecure DCS URL configured.")
 
         logger.info("Registering device with DCS...")
         try:
@@ -255,7 +260,7 @@ class DCSClient:
             payload["topics"].append(
                 {
                     "id": topic.id,
-                    "user_id": topic.user_id,
+                    "user_id": _anonymize_user_id(topic.user_id),
                     "name": topic.name,
                     "study_plan": topic.study_plan,
                     "notes": topic.notes,
@@ -317,7 +322,7 @@ class DCSClient:
                 payload["chat_modes"].append(
                     {
                         "topic_id": c.topic_id,
-                        "user_id": c.user_id,
+                        "user_id": _anonymize_user_id(c.user_id),
                         "history": c.history,
                         "history_summary": c.history_summary,
                         "popup_chat_history": c.popup_chat_history,
@@ -345,7 +350,7 @@ class DCSClient:
                 payload["chapter_modes"].append(
                     {
                         "topic_id": c.topic_id,
-                        "user_id": c.user_id,
+                        "user_id": _anonymize_user_id(c.user_id),
                         "step_index": c.step_index,
                         "title": c.title,
                         "content": c.content,
@@ -376,7 +381,7 @@ class DCSClient:
                 payload["quiz_modes"].append(
                     {
                         "topic_id": q.topic_id,
-                        "user_id": q.user_id,
+                        "user_id": _anonymize_user_id(q.user_id),
                         "questions": q.questions,
                         "score": q.score,
                         "result": q.result,
@@ -403,7 +408,7 @@ class DCSClient:
                 payload["flashcard_modes"].append(
                     {
                         "topic_id": f.topic_id,
-                        "user_id": f.user_id,
+                        "user_id": _anonymize_user_id(f.user_id),
                         "term": f.term,
                         "definition": f.definition,
                         "time_spent": f.time_spent,
@@ -457,9 +462,7 @@ class DCSClient:
                 payload["telemetry_events"].append(
                     {
                         "session_id": log_event.session_id,
-                        "user_id": _anonymize_login_id(log_event.user_id)
-                        if log_event.user_id
-                        else None,
+                        "user_id": _anonymize_user_id(log_event.user_id),
                         "timestamp": log_event.timestamp.isoformat(),
                         "event_type": log_event.event_type,
                         "triggers": log_event.triggers,
@@ -481,7 +484,7 @@ class DCSClient:
             for f in feedbacks:
                 payload["feedback"].append(
                     {
-                        "user_id": f.user_id,
+                        "user_id": _anonymize_user_id(f.user_id),
                         "feedback_type": f.feedback_type,
                         "content_reference": f.content_reference,
                         "rating": f.rating or 0,  # Ensure integer
@@ -506,7 +509,7 @@ class DCSClient:
                 payload["plan_revisions"].append(
                     {
                         "topic_id": pr.topic_id,
-                        "user_id": pr.user_id,
+                        "user_id": _anonymize_user_id(pr.user_id),
                         "reason": pr.reason,
                         "old_plan_json": pr.old_plan_json,
                         "new_plan_json": pr.new_plan_json,
@@ -531,7 +534,7 @@ class DCSClient:
             for p in perfs:
                 payload["ai_performances"].append(
                     {
-                        "user_id": p.user_id,
+                        "user_id": _anonymize_user_id(p.user_id),
                         "model_type": p.model_type,
                         "model_name": p.model_name,
                         "latency_ms": p.latency_ms,

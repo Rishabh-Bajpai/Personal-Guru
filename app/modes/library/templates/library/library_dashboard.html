@@ -464,17 +464,17 @@
 
     async function refreshBookCard(bookId) {
         const card = document.getElementById('book-card-' + bookId);
-        if (!card) return;
+        if (!card) {
+            throw new Error('Book card not found');
+        }
         try {
             const res = await fetch(`/library/card/${bookId}`);
             if (!res.ok) {
-                console.error('Failed to refresh card:', res.status);
-                return false;
+                throw new Error(`Failed to refresh card: ${res.status}`);
             }
             const html = await res.text();
             if (!html.trim()) {
-                console.error('Failed to refresh card: empty HTML response');
-                return false;
+                throw new Error('Failed to refresh card: empty HTML response');
             }
 
             // Create a temporary container
@@ -482,8 +482,7 @@
             temp.innerHTML = html;
             const newCard = temp.firstElementChild;
             if (!newCard) {
-                console.error('Failed to refresh card: invalid HTML response');
-                return false;
+                throw new Error('Failed to refresh card: invalid HTML response');
             }
 
             // Replace the old card
@@ -494,7 +493,7 @@
             return true;
         } catch (e) {
             console.error("Failed to refresh card:", e);
-            return false;
+            throw e;
         }
     }
 
