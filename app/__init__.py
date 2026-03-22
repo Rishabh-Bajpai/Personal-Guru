@@ -377,6 +377,23 @@ def create_app(config_class=Config):
     print(f"ENABLE_TELEMETRY: {app.config.get('ENABLE_TELEMETRY', False)}")
     print("=====================")
 
+    should_bootstrap_installation = (
+        not app.config.get("TESTING")
+        and not should_start_sync
+        and (not app.debug or run_main_env == "true")
+    )
+
+    if should_bootstrap_installation:
+        try:
+            with app.app_context():
+                from app.common.dcs import DCSClient
+                from app.core.models import Installation
+
+                if not Installation.query.first():
+                    DCSClient().register_device()
+        except Exception as e:
+            logger.error(f"Failed to bootstrap installation: {e}")
+
     if should_start_sync:
         # Main server process - start background services
         try:

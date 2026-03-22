@@ -355,7 +355,10 @@ def get_generation_progress(book_id):
             }
 
     # Determine if progress needs to be reconciled or updated
-    now = datetime.datetime.now(datetime.timezone.utc)
+    if progress.modified_at and progress.modified_at.tzinfo is None:
+        now = datetime.datetime.utcnow()
+    else:
+        now = datetime.datetime.now(datetime.timezone.utc)
     needs_update = False
 
     # Sequential state transitions (if/elif ensures only one transition per check)

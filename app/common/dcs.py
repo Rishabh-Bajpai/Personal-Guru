@@ -68,18 +68,36 @@ class DCSClient:
             # DB might not be ready
             pass
 
+    def _create_local_installation(self, reason):
+        """Create a local installation record without contacting DCS."""
+        from app.common.utils import get_system_info
+        import uuid
+
+        logger.info("%s Generating local installation ID.", reason)
+        new_id = str(uuid.uuid4())
+        self.installation_id = new_id
+
+        sys_info = get_system_info()
+        new_inst = Installation(
+            installation_id=new_id,
+            cpu_cores=sys_info["cpu_cores"],
+            ram_gb=sys_info["ram_gb"],
+            gpu_model=sys_info["gpu_model"],
+            os_version=sys_info["os_version"],
+            install_method=sys_info["install_method"],
+        )
+        db.session.add(new_inst)
+        db.session.commit()
+
+        logger.info("Device registered locally: %s", new_id)
+        return True
+
     def register_device(self):
         """
         Registers the device with the DCS.
         If already registered (ID exists in DB), verifies or updates details.
         """
-        if not ENABLE_TELEMETRY:
-            logger.info("Telemetry disabled. Skipping device registration.")
-            return True
-
-        from app.common.utils import get_system_info
         from sqlalchemy.exc import OperationalError
-        import uuid
 
         # Check if already registered
         try:
@@ -101,26 +119,13 @@ class DCSClient:
             logger.error(f"Error checking registration: {e}")
             return False
 
-        if OFFLINE_MODE:
-            logger.info("Offline mode enabled. Generating local installation ID.")
-            new_id = str(uuid.uuid4())
-            self.installation_id = new_id
-
-            # Save to DB
-            sys_info = get_system_info()
-            new_inst = Installation(
-                installation_id=new_id,
-                cpu_cores=sys_info["cpu_cores"],
-                ram_gb=sys_info["ram_gb"],
-                gpu_model=sys_info["gpu_model"],
-                os_version=sys_info["os_version"],
-                install_method=sys_info["install_method"],
+        if not ENABLE_TELEMETRY:
+            return self._create_local_installation(
+                "Telemetry disabled. Skipping remote device registration."
             )
-            db.session.add(new_inst)
-            db.session.commit()
 
-            logger.info(f"Device registered locally: {new_id}")
-            return True
+        if OFFLINE_MODE:
+            return self._create_local_installation("Offline mode enabled.")
 
         if not _is_secure_dcs_url(self.base_url):
             logger.warning(
@@ -131,6 +136,8 @@ class DCSClient:
 
         logger.info("Registering device with DCS...")
         try:
+            from app.common.utils import get_system_info
+
             # Step 1: Request Identity
             resp = requests.post(f"{self.base_url}/api/register", json={}, timeout=10)
             resp.raise_for_status()

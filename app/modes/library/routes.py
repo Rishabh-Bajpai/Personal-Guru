@@ -1,4 +1,4 @@
-from flask import render_template, request, jsonify, redirect, url_for
+from flask import current_app, render_template, request, jsonify, redirect, url_for
 from flask_login import login_required, current_user
 from app.core.extensions import db
 from app.core.models import Book, BookTopic, Topic, ChapterMode
@@ -11,11 +11,16 @@ from markdown_it import MarkdownIt
 
 logger = logging.getLogger(__name__)
 md = MarkdownIt()
-BOOK_COVER_DIR = os.path.realpath(os.path.join(os.getcwd(), "data", "book_cover"))
 
 # A global/in-memory VectorDB for searching user's topics
 # In a real setup, this would be persisted or re-indexed efficiently
 vector_db_cache = {}
+
+
+def _get_book_cover_dir():
+    """Return the trusted book cover directory used by generation and serving."""
+    data_root = current_app.config.get("DATA_DIR") or current_app.root_path
+    return os.path.realpath(os.path.join(data_root, "data", "book_cover"))
 
 
 def get_user_vector_db(user_id):
@@ -67,18 +72,19 @@ def _resolve_cover_path(candidate_path):
     if not candidate_path:
         return None
 
+    book_cover_dir = _get_book_cover_dir()
     target_path = candidate_path
     if os.path.isabs(target_path) and not os.path.exists(target_path):
         filename = os.path.basename(target_path)
-        fallback_path = os.path.join(BOOK_COVER_DIR, filename)
+        fallback_path = os.path.join(book_cover_dir, filename)
         if os.path.exists(fallback_path):
             target_path = fallback_path
 
     if not os.path.isabs(target_path):
-        target_path = os.path.join(os.getcwd(), target_path)
+        target_path = os.path.join(current_app.root_path, target_path)
 
     target_realpath = os.path.realpath(os.path.abspath(os.path.normpath(target_path)))
-    if os.path.commonpath([BOOK_COVER_DIR, target_realpath]) != BOOK_COVER_DIR:
+    if os.path.commonpath([book_cover_dir, target_realpath]) != book_cover_dir:
         return None
 
     return target_realpath
