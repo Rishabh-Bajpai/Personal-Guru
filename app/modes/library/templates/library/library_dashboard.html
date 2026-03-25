@@ -566,8 +566,22 @@
         progressDiv.innerText = "Initializing Book...";
 
         try {
-            const res = await fetch(`/library/${bookId}/init`);
-            const data = await res.json();
+            const initRes = await fetch(`/library/${bookId}/init`);
+            const initData = await initRes.json();
+
+            let data = initData;
+
+            if (initData.status === 'pending') {
+                const startRes = await fetch(`/library/${bookId}/init`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'X-JWE-Token': document.querySelector('meta[name="jwe-token"]').getAttribute('content')
+                    }
+                });
+                data = await startRes.json();
+            }
 
             if (data.status === 'ready') {
                 window.location.href = data.redirect || `/library/${bookId}/page/1`;
@@ -580,7 +594,7 @@
                         const pollRes = await fetch(`/library/${bookId}/progress`);
                         const pollData = await pollRes.json();
 
-                        if (pollData.status === 'ready') {
+                        if (pollData.status === 'ready' || pollData.status === 'completed') {
                             clearInterval(pollInterval);
                             progressDiv.innerText = "Complete! Refreshing...";
 

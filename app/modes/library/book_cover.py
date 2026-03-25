@@ -10,12 +10,26 @@ import logging
 import os
 import random
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
 
 logger = logging.getLogger(__name__)
 POSITIVE_PROMPT_NODE_ID = 45
+
+
+def _normalize_server_address(server_address):
+    """Normalize ComfyUI address to host[:port] without scheme or trailing slash."""
+    normalized = (server_address or "").strip()
+    if not normalized:
+        return "localhost:8188"
+
+    if "://" in normalized:
+        parsed = urllib.parse.urlparse(normalized)
+        normalized = parsed.netloc or parsed.path
+
+    return normalized.rstrip("/")
 
 
 def _widget_value(node, index, default=None, required=False, field_name=None):
@@ -34,7 +48,7 @@ class BookCoverService:
     """Generates book cover images via ComfyUI API."""
 
     def __init__(self, server_address, workflow_path):
-        self.server_address = server_address
+        self.server_address = _normalize_server_address(server_address)
         self.workflow_path = workflow_path
         self.client_id = str(uuid.uuid4())
 

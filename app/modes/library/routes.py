@@ -19,7 +19,9 @@ vector_db_cache = {}
 
 def _get_book_cover_dir():
     """Return the trusted book cover directory used by generation and serving."""
-    data_root = current_app.config.get("DATA_DIR") or current_app.root_path
+    data_root = current_app.config.get("DATA_DIR") or os.path.abspath(
+        os.path.join(current_app.root_path, "..")
+    )
     return os.path.realpath(os.path.join(data_root, "data", "book_cover"))
 
 
@@ -81,7 +83,11 @@ def _resolve_cover_path(candidate_path):
             target_path = fallback_path
 
     if not os.path.isabs(target_path):
-        target_path = os.path.join(current_app.root_path, target_path)
+        target_path = os.path.join(
+            current_app.config.get("DATA_DIR")
+            or os.path.abspath(os.path.join(current_app.root_path, "..")),
+            target_path,
+        )
 
     target_realpath = os.path.realpath(os.path.abspath(os.path.normpath(target_path)))
     if os.path.commonpath([book_cover_dir, target_realpath]) != book_cover_dir:
@@ -325,16 +331,17 @@ def init_book(book_id):
     # Check current progress
     progress_data = get_generation_progress(book_id)
 
+    if progress_data["status"] == "completed":
+        ready_response = {
+            "status": "ready",
+            "redirect": url_for("library.read_book", book_id=book.id, page_num=1),
+        }
+        if request.method == "GET":
+            return jsonify(ready_response)
+        return jsonify(ready_response)
+
     if request.method == "GET":
         return jsonify(progress_data)
-
-    if progress_data["status"] == "completed":
-        return jsonify(
-            {
-                "status": "ready",
-                "redirect": url_for("library.read_book", book_id=book.id, page_num=1),
-            }
-        )
 
     if progress_data["status"] == "generating":
         return jsonify(progress_data)
