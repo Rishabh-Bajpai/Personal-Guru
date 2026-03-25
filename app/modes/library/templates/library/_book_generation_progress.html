@@ -222,20 +222,21 @@
         let currentStage = 1;
         let percent = 0;
         let message = data.message || 'Processing...';
+        const phase = data.phase || 'structuring';
 
         if (data.status === 'pending') {
             currentStage = 1;
             percent = 10;
             message = 'Order received, preparing...';
         } else if (data.status === 'generating') {
-            if (data.total_chapters === 0 || data.current_topic_index === 0) {
+            if (phase === 'structuring') {
                 currentStage = 2;
                 percent = 25;
                 const stage2Desc = document.getElementById('stage-2-desc-' + bookId);
                 if (stage2Desc) stage2Desc.textContent = message;
             } else {
                 currentStage = 3;
-                const progress = data.completed_chapters / data.total_chapters;
+                const progress = data.total_chapters > 0 ? data.completed_chapters / data.total_chapters : 0;
                 percent = 25 + (progress * 65);
                 const stage3Desc = document.getElementById('stage-3-desc-' + bookId);
                 if (stage3Desc) {

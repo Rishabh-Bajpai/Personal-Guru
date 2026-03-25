@@ -25,23 +25,28 @@ _generation_lock = Lock()
 
 
 def _utcnow():
+    """Return the current timezone-aware UTC datetime."""
     return datetime.datetime.now(datetime.timezone.utc)
 
 
 def _get_data_root():
+    """Return the project data root used for generated assets."""
     return current_app.config.get("DATA_DIR") or os.path.abspath(
         os.path.join(current_app.root_path, "..")
     )
 
 
 def _create_generation_state(book_id, user_id, total_topics):
+    """Build the initial in-memory progress state for a book run."""
     now = _utcnow()
     return {
         "book_id": book_id,
         "user_id": user_id,
         "status": "pending",
+        "phase": "structuring",
         "total_topics": total_topics,
         "current_topic_index": 0,
+        "planned_total_chapters": 0,
         "message": "Initializing generation...",
         "error": None,
         "started_at": now,
@@ -51,6 +56,7 @@ def _create_generation_state(book_id, user_id, total_topics):
 
 
 def _set_generation_state(book_id, **updates):
+    """Update an existing in-memory generation state and bump its timestamp."""
     with _generation_lock:
         state = _generation_progress.get(book_id)
         if state is None:
@@ -61,17 +67,20 @@ def _set_generation_state(book_id, **updates):
 
 
 def _get_generation_state(book_id):
+    """Return a copy of the in-memory generation state for a book."""
     with _generation_lock:
         state = _generation_progress.get(book_id)
         return dict(state) if state else None
 
 
 def _clear_generation_state(book_id):
+    """Remove a book's in-memory generation state if present."""
     with _generation_lock:
         _generation_progress.pop(book_id, None)
 
 
 def _prune_generation_state(book_id, state=None):
+    """Drop stale in-memory generation state and return the live value."""
     state = state or _get_generation_state(book_id)
     if not state:
         return None
@@ -88,6 +97,7 @@ def _prune_generation_state(book_id, state=None):
 
 
 def _compute_book_completion_counts(book):
+    """Calculate persisted chapter totals and completion counts for a book."""
     needs_generation = False
     total_chapters = 0
     completed_chapters = 0
@@ -117,32 +127,45 @@ def _compute_book_completion_counts(book):
 
 
 def _build_progress_response(book, state=None):
+    """Build the API payload for current book generation progress."""
     counts = _compute_book_completion_counts(book)
     state = _prune_generation_state(book.id, state)
 
     if state and state["status"] == "generating":
-        total_chapters = max(counts["total_chapters"], 0)
-        completed_chapters = min(counts["completed_chapters"], total_chapters)
+        phase = state.get("phase", "structuring")
+        if phase == "printing":
+            total_chapters = max(state.get("planned_total_chapters", 0), 0)
+            completed_chapters = min(counts["completed_chapters"], total_chapters)
+            progress_percent = int(
+                (completed_chapters / total_chapters * 100) if total_chapters else 0
+            )
+        else:
+            total_chapters = 0
+            completed_chapters = 0
+            progress_percent = 0
+
         return {
             "book_id": book.id,
             "status": "generating",
+            "phase": phase,
             "total_topics": state["total_topics"],
             "current_topic_index": state["current_topic_index"],
             "total_chapters": total_chapters,
             "completed_chapters": completed_chapters,
             "message": state["message"],
             "error": None,
-            "progress_percent": int(
-                (completed_chapters / total_chapters * 100) if total_chapters else 0
-            ),
+            "progress_percent": progress_percent,
         }
 
     if state and state["status"] == "error" and counts["needs_generation"]:
-        total_chapters = max(counts["total_chapters"], 0)
+        total_chapters = max(
+            state.get("planned_total_chapters", counts["total_chapters"]), 0
+        )
         completed_chapters = min(counts["completed_chapters"], total_chapters)
         return {
             "book_id": book.id,
             "status": "error",
+            "phase": state.get("phase", "structuring"),
             "total_topics": state["total_topics"],
             "current_topic_index": state["current_topic_index"],
             "total_chapters": total_chapters,
@@ -157,6 +180,7 @@ def _build_progress_response(book, state=None):
     if counts["needs_generation"]:
         return {
             "status": "pending",
+            "phase": "structuring",
             "message": "Ready to generate",
             "book_id": book.id,
             "total_topics": len(book.book_topics),
@@ -174,6 +198,7 @@ def _build_progress_response(book, state=None):
     _clear_generation_state(book.id)
     return {
         "status": "completed",
+        "phase": "completed",
         "message": "Already generated",
         "book_id": book.id,
         "total_topics": len(book.book_topics),
@@ -229,7 +254,11 @@ def generate_book_content_background(app_context, book_id, user_id, user_backgro
                 return
 
             _set_generation_state(
-                book_id, status="generating", message="Starting generation..."
+                book_id,
+                status="generating",
+                phase="structuring",
+                planned_total_chapters=0,
+                message="Starting generation...",
             )
 
             book = Book.query.get(book_id)
@@ -241,35 +270,15 @@ def generate_book_content_background(app_context, book_id, user_id, user_backgro
 
             total_topics = len(book.book_topics)
 
-            total_chapters = 0
-            completed_chapters = 0
-            topics_without_plans = 0
-
-            for bt in book.book_topics:
-                topic = bt.topic
-                chapters = ChapterMode.query.filter_by(topic_id=topic.id).all()
-                if chapters:
-                    total_chapters += len(chapters)
-                    # Count completed chapters
-                    for ch in chapters:
-                        if ch.content:
-                            completed_chapters += 1
-                else:
-                    total_chapters += 5
-                    topics_without_plans += 1
-
             _set_generation_state(
                 book_id,
                 total_topics=total_topics,
                 current_topic_index=0,
-                message="Preparing generation...",
+                phase="structuring",
+                planned_total_chapters=0,
+                message="Preparing book structure...",
             )
 
-            logger.info(
-                f"Book {book_id}: Starting generation - {total_chapters} total chapters ({topics_without_plans} topics need plans), {completed_chapters} already complete"
-            )
-
-            # Generate content for each topic
             for idx, bt in enumerate(
                 sorted(book.book_topics, key=lambda x: x.order_index)
             ):
@@ -277,6 +286,7 @@ def generate_book_content_background(app_context, book_id, user_id, user_backgro
                 _set_generation_state(
                     book_id,
                     current_topic_index=idx,
+                    phase="structuring",
                     message=f"Processing topic {idx + 1}/{total_topics}: {topic.name}",
                 )
 
@@ -329,6 +339,29 @@ def generate_book_content_background(app_context, book_id, user_id, user_backgro
                         )
                         continue
 
+            final_structure_counts = _compute_book_completion_counts(book)
+            _set_generation_state(
+                book_id,
+                current_topic_index=0,
+                phase="printing",
+                planned_total_chapters=final_structure_counts["total_chapters"],
+                message="Book structured. Generating chapters...",
+            )
+
+            logger.info(
+                f"Book {book_id}: Structure ready with {final_structure_counts['total_chapters']} total chapters and {final_structure_counts['completed_chapters']} already complete"
+            )
+
+            for idx, bt in enumerate(
+                sorted(book.book_topics, key=lambda x: x.order_index)
+            ):
+                topic = bt.topic
+                chapters = (
+                    ChapterMode.query.filter_by(topic_id=topic.id)
+                    .order_by(ChapterMode.step_index)
+                    .all()
+                )
+
                 for ch_idx, chapter in enumerate(chapters):
                     if chapter.content:
                         logger.debug(
@@ -338,6 +371,8 @@ def generate_book_content_background(app_context, book_id, user_id, user_backgro
 
                     _set_generation_state(
                         book_id,
+                        current_topic_index=idx,
+                        phase="printing",
                         message=f"Writing {topic.name}: Chapter {ch_idx + 1}/{len(chapters)}",
                     )
 
