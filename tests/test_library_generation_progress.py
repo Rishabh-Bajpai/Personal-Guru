@@ -131,13 +131,15 @@ def test_init_get_returns_ready_for_completed_book(auth_client, app):
     assert response.json["redirect"] == f"/library/{book_id}/page/1"
 
 
-def test_cover_route_reads_cover_from_project_data_directory(auth_client, app):
+def test_cover_route_reads_cover_from_project_data_directory(
+    auth_client, app, tmp_path
+):
     book_id, _ = _create_book(app, with_content=True)
 
     with app.app_context():
+        app.config["DATA_DIR"] = str(tmp_path)
         book = Book.query.get(book_id)
-        project_root = os.path.abspath(os.path.join(app.root_path, ".."))
-        cover_dir = os.path.join(project_root, "data", "book_cover")
+        cover_dir = os.path.join(app.config["DATA_DIR"], "data", "book_cover")
         os.makedirs(cover_dir, exist_ok=True)
         cover_path = os.path.join(cover_dir, f"test_cover_{book_id}.png")
 

@@ -5,6 +5,7 @@ import logging
 import os
 from threading import Lock, Thread
 from flask import current_app
+from sqlalchemy import case, func
 from app.core.extensions import db
 from app.core.models import Book, ChapterMode
 from app.modes.chapter.agent import ChapterTeachingAgent
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 _GENERATION_STALE_SECONDS = 300
 _TERMINAL_STATE_TTL_SECONDS = 600
+# NOTE: This state is process-local and only safe in single-process deployments.
 _generation_progress = {}
 _generation_lock = Lock()
 
@@ -79,45 +81,89 @@ def _clear_generation_state(book_id):
         _generation_progress.pop(book_id, None)
 
 
-def _prune_generation_state(book_id, state=None):
+def _prune_generation_state(book_id, state=None, assume_locked=False):
     """Drop stale in-memory generation state and return the live value."""
-    state = state or _get_generation_state(book_id)
-    if not state:
+    if assume_locked:
+        live_state = _generation_progress.get(book_id)
+        if not live_state:
+            return None
+
+        age_seconds = (_utcnow() - live_state["last_update"]).total_seconds()
+        is_terminal = live_state["status"] in {"completed", "error"}
+        max_age = (
+            _TERMINAL_STATE_TTL_SECONDS if is_terminal else _GENERATION_STALE_SECONDS
+        )
+
+        if age_seconds <= max_age:
+            return dict(live_state)
+
+        if state is not None and state.get("last_update") != live_state.get(
+            "last_update"
+        ):
+            return dict(live_state)
+
+        _generation_progress.pop(book_id, None)
         return None
 
-    age_seconds = (_utcnow() - state["last_update"]).total_seconds()
-    is_terminal = state["status"] in {"completed", "error"}
-    max_age = _TERMINAL_STATE_TTL_SECONDS if is_terminal else _GENERATION_STALE_SECONDS
-
-    if age_seconds <= max_age:
-        return state
-
-    _clear_generation_state(book_id)
-    return None
+    with _generation_lock:
+        return _prune_generation_state(book_id, state=state, assume_locked=True)
 
 
 def _compute_book_completion_counts(book):
     """Calculate persisted chapter totals and completion counts for a book."""
+    topic_ids = [bt.topic_id for bt in book.book_topics]
+    if not topic_ids:
+        return {
+            "needs_generation": False,
+            "total_chapters": 0,
+            "completed_chapters": 0,
+        }
+
+    grouped_counts = (
+        db.session.query(
+            ChapterMode.topic_id,
+            func.count(ChapterMode.id).label("total"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            (ChapterMode.content.isnot(None))
+                            & (ChapterMode.content != ""),
+                            1,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("completed"),
+        )
+        .filter(ChapterMode.topic_id.in_(topic_ids))
+        .group_by(ChapterMode.topic_id)
+        .all()
+    )
+
+    counts_by_topic = {
+        row.topic_id: {
+            "total": int(row.total or 0),
+            "completed": int(row.completed or 0),
+        }
+        for row in grouped_counts
+    }
+
     needs_generation = False
     total_chapters = 0
     completed_chapters = 0
 
-    for bt in book.book_topics:
-        chapters = (
-            ChapterMode.query.filter_by(topic_id=bt.topic.id)
-            .order_by(ChapterMode.step_index)
-            .all()
-        )
-        if not chapters:
+    for topic_id in topic_ids:
+        topic_counts = counts_by_topic.get(topic_id)
+        if not topic_counts or topic_counts["total"] == 0:
             needs_generation = True
             continue
 
-        total_chapters += len(chapters)
-        for chapter in chapters:
-            if chapter.content:
-                completed_chapters += 1
-            else:
-                needs_generation = True
+        total_chapters += topic_counts["total"]
+        completed_chapters += topic_counts["completed"]
+        if topic_counts["completed"] < topic_counts["total"]:
+            needs_generation = True
 
     return {
         "needs_generation": needs_generation,
@@ -222,13 +268,13 @@ def start_book_generation(book_id, user_id, user_background):
         logger.info(f"Book {book_id} is already complete")
         return True
 
-    state = _prune_generation_state(book_id)
-    if state and state["status"] == "generating":
-        logger.info(f"Book {book_id} is already generating")
-        return True
-
     total_topics = len(book.book_topics)
     with _generation_lock:
+        state = _prune_generation_state(book_id, assume_locked=True)
+        if state and state["status"] in {"pending", "generating"}:
+            logger.info(f"Book {book_id} is already generating")
+            return True
+
         _generation_progress[book_id] = _create_generation_state(
             book_id, user_id, total_topics
         )
@@ -302,6 +348,10 @@ def generate_book_content_background(app_context, book_id, user_id, user_backgro
                     )
 
                     try:
+                        _set_generation_state(
+                            book_id,
+                            message=f"Generating plan for: {topic.name}",
+                        )
                         plan_steps = planner.generate_study_plan(
                             topic.name, user_background
                         )
@@ -333,6 +383,7 @@ def generate_book_content_background(app_context, book_id, user_id, user_backgro
                         )
                     except Exception as e:
                         logger.error(f"Failed to generate plan for {topic.name}: {e}")
+                        db.session.rollback()
                         _set_generation_state(
                             book_id,
                             message=f"Error generating plan for {topic.name}: {str(e)}",
@@ -388,6 +439,13 @@ def generate_book_content_background(app_context, book_id, user_id, user_backgro
                             f"Generating content for {topic.name} chapter {ch_idx + 1}: {step_title}"
                         )
 
+                        _set_generation_state(
+                            book_id,
+                            current_topic_index=idx,
+                            phase="printing",
+                            message=f"Writing {topic.name}: Chapter {ch_idx + 1}/{len(chapters)}",
+                        )
+
                         material = teacher.generate_teaching_material(
                             step_title, plan_steps, user_background, None
                         )
@@ -404,6 +462,7 @@ def generate_book_content_background(app_context, book_id, user_id, user_backgro
                         logger.error(
                             f"Failed to generate content for {topic.name} chapter {chapter.step_index}: {e}"
                         )
+                        db.session.rollback()
                         _set_generation_state(
                             book_id,
                             message=f"Error in {topic.name} chapter {ch_idx + 1}: {str(e)}",

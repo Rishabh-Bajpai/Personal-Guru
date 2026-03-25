@@ -236,7 +236,8 @@
                 if (stage2Desc) stage2Desc.textContent = message;
             } else {
                 currentStage = 3;
-                const progress = data.total_chapters > 0 ? data.completed_chapters / data.total_chapters : 0;
+                const rawProgress = data.total_chapters > 0 ? data.completed_chapters / data.total_chapters : 0;
+                const progress = Math.max(0, Math.min(rawProgress, 1));
                 percent = 25 + (progress * 65);
                 const stage3Desc = document.getElementById('stage-3-desc-' + bookId);
                 if (stage3Desc) {

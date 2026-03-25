@@ -572,15 +572,18 @@
             let data = initData;
 
             if (initData.status === 'pending') {
-                const startRes = await fetch(`/library/${bookId}/init`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'X-JWE-Token': document.querySelector('meta[name="jwe-token"]').getAttribute('content')
-                    }
-                });
-                data = await startRes.json();
+                const canStartGeneration = initData.can_start_generation || initData.is_owner;
+                if (canStartGeneration) {
+                    const startRes = await fetch(`/library/${bookId}/init`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'X-JWE-Token': document.querySelector('meta[name="jwe-token"]').getAttribute('content')
+                        }
+                    });
+                    data = await startRes.json();
+                }
             }
 
             if (data.status === 'ready') {

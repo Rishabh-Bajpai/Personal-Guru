@@ -20,16 +20,37 @@ POSITIVE_PROMPT_NODE_ID = 45
 
 
 def _normalize_server_address(server_address):
-    """Normalize ComfyUI address to host[:port] without scheme or trailing slash."""
+    """Normalize ComfyUI address to ``(http_scheme, host[:port])``."""
     normalized = (server_address or "").strip()
     if not normalized:
-        return "localhost:8188"
+        return "http", "localhost:8188"
 
-    if "://" in normalized:
-        parsed = urllib.parse.urlparse(normalized)
-        normalized = parsed.netloc or parsed.path
+    has_scheme = "://" in normalized
+    parsed = (
+        urllib.parse.urlparse(normalized)
+        if has_scheme
+        else urllib.parse.urlparse(f"//{normalized}")
+    )
 
-    return normalized.rstrip("/")
+    http_scheme = (parsed.scheme or "http").lower()
+    if has_scheme and http_scheme not in {"http", "https"}:
+        raise ValueError(
+            f"Unsupported ComfyUI URL scheme: {http_scheme}. Use http or https."
+        )
+
+    host = (parsed.netloc or parsed.path or "").rstrip("/")
+    if not host:
+        raise ValueError("ComfyUI server address must include a host")
+
+    if parsed.params or parsed.query or parsed.fragment:
+        raise ValueError(
+            "ComfyUI server address cannot include params, query, or fragment"
+        )
+
+    if has_scheme and parsed.path not in {"", "/"}:
+        raise ValueError("ComfyUI server address cannot include a path")
+
+    return http_scheme, host
 
 
 def _widget_value(node, index, default=None, required=False, field_name=None):
@@ -48,7 +69,12 @@ class BookCoverService:
     """Generates book cover images via ComfyUI API."""
 
     def __init__(self, server_address, workflow_path):
-        self.server_address = _normalize_server_address(server_address)
+        self.http_scheme, self.server_address = _normalize_server_address(
+            server_address
+        )
+        self.ws_scheme = "wss" if self.http_scheme == "https" else "ws"
+        self.http_base_url = f"{self.http_scheme}://{self.server_address}"
+        self.ws_base_url = f"{self.ws_scheme}://{self.server_address}"
         self.workflow_path = workflow_path
         self.client_id = str(uuid.uuid4())
 
@@ -57,7 +83,7 @@ class BookCoverService:
         p = {"prompt": prompt, "client_id": self.client_id}
         data = json.dumps(p).encode("utf-8")
         req = urllib.request.Request(
-            f"http://{self.server_address}/prompt",
+            f"{self.http_base_url}/prompt",
             data=data,
             headers={"Content-Type": "application/json"},
         )
@@ -68,7 +94,7 @@ class BookCoverService:
         params = {"filename": filename, "subfolder": subfolder, "type": folder_type}
         url_values = urllib.parse.urlencode(params)
         with urllib.request.urlopen(
-            f"http://{self.server_address}/view?{url_values}", timeout=60
+            f"{self.http_base_url}/view?{url_values}", timeout=60
         ) as response:
             return response.read()
 
@@ -200,11 +226,9 @@ class BookCoverService:
         try:
             # Check if ComfyUI is reachable
             try:
-                urllib.request.urlopen(
-                    f"http://{self.server_address}/system_stats", timeout=5
-                )
+                urllib.request.urlopen(f"{self.http_base_url}/system_stats", timeout=5)
             except Exception:
-                return False, f"ComfyUI server not reachable at {self.server_address}"
+                return False, f"ComfyUI server not reachable at {self.http_base_url}"
 
             # Load workflow
             if not os.path.exists(self.workflow_path):
@@ -228,7 +252,7 @@ class BookCoverService:
 
             ws = websocket.WebSocket()
             ws.settimeout(120)  # 2 min timeout for generation
-            ws.connect(f"ws://{self.server_address}/ws?clientId={self.client_id}")
+            ws.connect(f"{self.ws_base_url}/ws?clientId={self.client_id}")
 
             logger.info(f"Queueing book cover generation for: {book_title}")
             prompt_response = self._queue_prompt(prompt_api)
