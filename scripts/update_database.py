@@ -38,7 +38,6 @@ TARGET_MODELS = [
     models.Login,
     models.Book,
     models.BookTopic,
-    models.BookGenerationProgress,
 ]
 
 
@@ -107,6 +106,18 @@ def update_database():
         # 1. Create missing tables (Standard SQLAlchemy)
         logger.info("Ensuring all tables exist...")
         db.create_all()
+
+        if "book_generation_progress" in existing_tables:
+            logger.info("Dropping deprecated table: book_generation_progress")
+            try:
+                db.session.execute(
+                    text('DROP TABLE IF EXISTS "book_generation_progress"')
+                )
+                db.session.commit()
+                logger.info(" -> Dropped successfully.")
+            except Exception:
+                logger.exception(" -> Failed to drop deprecated table")
+                db.session.rollback()
 
         # 2. Inspect and Update existing tables
         logger.info("Checking for schema updates...")

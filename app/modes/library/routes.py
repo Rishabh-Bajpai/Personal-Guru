@@ -19,7 +19,9 @@ vector_db_cache = {}
 
 def _get_book_cover_dir():
     """Return the trusted book cover directory used by generation and serving."""
-    data_root = current_app.config.get("DATA_DIR") or current_app.root_path
+    data_root = current_app.config.get("DATA_DIR") or os.path.abspath(
+        os.path.join(current_app.root_path, "..")
+    )
     return os.path.realpath(os.path.join(data_root, "data", "book_cover"))
 
 
@@ -81,7 +83,11 @@ def _resolve_cover_path(candidate_path):
             target_path = fallback_path
 
     if not os.path.isabs(target_path):
-        target_path = os.path.join(current_app.root_path, target_path)
+        target_path = os.path.join(
+            current_app.config.get("DATA_DIR")
+            or os.path.abspath(os.path.join(current_app.root_path, "..")),
+            target_path,
+        )
 
     target_realpath = os.path.realpath(os.path.abspath(os.path.normpath(target_path)))
     if os.path.commonpath([book_cover_dir, target_realpath]) != book_cover_dir:
@@ -301,7 +307,8 @@ def generation_progress(book_id):
     if book.user_id != current_user.userid and not book.is_shared:
         return jsonify({"status": "error", "message": "Unauthorized"}), 403
 
-    # Use the new database-backed progress system
+    # Progress state is currently process-local in app.modes.library.agent and
+    # assumes single-process routing for consistency.
     from app.modes.library.agent import get_generation_progress
 
     progress_data = get_generation_progress(book_id)
@@ -320,26 +327,37 @@ def init_book(book_id):
     if book.user_id != current_user.userid and not book.is_shared:
         return jsonify({"status": "error", "message": "Unauthorized"}), 403
 
+    is_owner = book.user_id == current_user.userid
+
+    def _attach_generation_permissions(payload):
+        payload["is_owner"] = is_owner
+        payload["can_start_generation"] = is_owner
+        payload["owner_id"] = book.user_id
+        return payload
+
     from app.modes.library.agent import start_book_generation, get_generation_progress
 
     # Check current progress
     progress_data = get_generation_progress(book_id)
 
-    if request.method == "GET":
-        return jsonify(progress_data)
-
     if progress_data["status"] == "completed":
-        return jsonify(
+        ready_response = _attach_generation_permissions(
             {
                 "status": "ready",
                 "redirect": url_for("library.read_book", book_id=book.id, page_num=1),
             }
         )
+        if request.method == "GET":
+            return jsonify(ready_response)
+        return jsonify(ready_response)
+
+    if request.method == "GET":
+        return jsonify(_attach_generation_permissions(progress_data))
 
     if progress_data["status"] == "generating":
-        return jsonify(progress_data)
+        return jsonify(_attach_generation_permissions(progress_data))
 
-    if book.user_id != current_user.userid:
+    if not is_owner:
         return jsonify({"status": "error", "message": "Unauthorized"}), 403
 
     from app.common.utils import get_user_context
@@ -351,12 +369,18 @@ def init_book(book_id):
         success = start_book_generation(book_id, current_user.userid, user_background)
 
         if success:
-            return jsonify(get_generation_progress(book_id))
+            return jsonify(
+                _attach_generation_permissions(get_generation_progress(book_id))
+            )
         else:
-            return jsonify({"status": "error", "message": "Failed to start generation"})
+            return jsonify(
+                _attach_generation_permissions(
+                    {"status": "error", "message": "Failed to start generation"}
+                )
+            )
 
     # Fallback
-    return jsonify(progress_data)
+    return jsonify(_attach_generation_permissions(progress_data))
 
 
 @library_bp.route("/<int:book_id>/page/<int:page_num>")
